@@ -5,6 +5,8 @@
 **Audience:** Claude Code working in the local repository  
 **Product principle:** Free forever, local-first, privacy-first, no account, no paid runtime services.
 
+**How to read this file.** This is the product's source of truth. [INITIAL_VISION.md](INITIAL_VISION.md) is the owner's original text and is never edited. **§24 Decision log** records decisions made since; a later row overrides any earlier section it names. How the app is built (architecture, steps, progress) lives in [BUILD_PLAN.md](BUILD_PLAN.md).
+
 ---
 
 ## 1. Executive summary
@@ -19,9 +21,9 @@ The user should be able to:
 4. Add, hide, rename and reorder fields and sections.
 5. Choose a design and language for labels/headings.
 6. See a live A4 document preview while editing.
-7. Download a high-quality, watermark-free PDF (and optionally an image export).
+7. Download a high-quality, watermark-free PDF, and on phones share it straight to WhatsApp or any other app (§24 D3). An image export comes after launch (D19).
 8. Close the tab/browser and return later on the same browser/device to continue editing.
-9. Export a backup and import it on another device/browser.
+9. Export a backup file and import it on another device/browser.
 
 The primary differentiator is that **the application works locally in the browser**. Biodata, photographs and generated documents must not be uploaded to an application server. No registration, server database, paid API, ads, analytics trackers or AI runtime are required.
 
@@ -69,9 +71,9 @@ Typical return journey: the user creates a draft, downloads a PDF, closes the si
 4. **Photo:** Add, crop, reposition, zoom, replace or remove a picture. Photo remains on the device.
 5. **Design:** Choose a template, theme colour and supported typography options.
 6. **Preview:** See an accurate A4 rendering. The preview updates as the user edits.
-7. **Download:** Generate a clean, watermark-free PDF. Clearly show success/error feedback.
+7. **Download:** Generate a clean, watermark-free PDF. Clearly show success/error feedback. Where the device supports sharing files, also offer **Share PDF** (D3).
 8. **Resume:** On a later visit, restore local drafts and continue editing.
-9. **Backup:** User can download a portable JSON backup, then import it elsewhere.
+9. **Backup:** User can download one portable backup file (JSON, photos included; D8), then import it elsewhere.
 
 ## 5. Information architecture and screens
 
@@ -93,12 +95,12 @@ Recommended fixed routes (keep routes compatible with static hosting):
 
 ### Common UI elements
 
-- Header: product logo/name, language selector, light/dark/system theme, drafts menu, help.
+- Header: product logo/name, light/dark/system theme as **Day / Night / Follow device** like the sibling apps (app chrome only; the document is always printed on a light page), drafts menu, help. No app-language selector at launch: the editor UI is English-only (D23); the selector arrives with the first reviewed translation.
 - Save status: “Saving…”, “Saved on this device”, or a clear error.
 - Draft manager: create, rename, duplicate, open and delete drafts.
 - Form section navigation with completion indicators (informational only; do not force completion).
-- Preview toolbar: template, page size/orientation if supported, zoom, download PDF, print.
-- Backup controls: export JSON, import JSON, clear local data.
+- Preview toolbar: template, colour, **document language** (separate from the app language, §8), zoom, page count, Download PDF, Share PDF (where supported), Print.
+- Backup controls: export backup, import backup, clear local data.
 
 ## 6. Biodata data model and form sections
 
@@ -113,17 +115,28 @@ All fields are optional unless stated otherwise. Avoid making sensitive fields m
 | Profile | Full name (recommended required), preferred biodata title, gender (optional), profile photo |
 | Personal details | Date of birth, age (derived only when requested), height, marital status, nationality, mother tongue, current city, native place |
 | Religion and community | Religion, community, caste/sub-caste, denomination or other community detail — all optional and user-controlled |
-| Horoscope | Birth time, birth place, Rashi, Nakshatra, Gotra/Gothram, Manglik, other custom horoscope fields |
+| Horoscope | Birth time, birth place, Rashi, Nakshatra and its pada (quarter, e.g. “Pushyami (3rd pada)”), Gotra/Gothram, maternal Gotra, Manglik, other custom horoscope fields |
 | Education | Highest qualification, university, college, additional qualifications |
 | Career | Occupation, designation, employer, employment type, work location, annual income (optional) |
-| Family | Father's name/occupation, mother's name/occupation, siblings and their details, family type, family values |
+| Family | Family members as a free list of **relation : details** rows (Father and Mother pre-added; Brother (Elder), Sister-in-law, Grandfather, Father-in-law… added freely), family type, family values |
 | Family background | Native place, family origin, residence, other family information |
 | About me | Personality, interests, hobbies, values, lifestyle, short introduction |
-| Partner preferences | Preferred age range, education, occupation, location, values and free-form expectations |
+| Partner preferences | Preferred age range, height range, education, occupation, location, values and free-form expectations |
 | Contact | Contact person's name, relationship, phone, alternate phone, email, address |
 | Custom sections | User-defined section title and fields |
 
 Do not include a default complexion field. If a user adds such a field, treat it like any other optional custom field and never preselect a value.
+
+Field details settled for the MVP (D13, D14):
+
+- **Age** is never stored. A “Show age” switch prints the age computed from the date of birth on the day the PDF is made, so it never goes stale.
+- **Height** is picked in feet and inches (with centimetres shown alongside) and stored in centimetres; the document shows the format the user picks.
+- **Dates** print as DD-MM-YYYY by default, with “15 March 1998” and “15-March-1998” options. **Birth time** is 12-hour with AM/PM.
+- **Select fields** (marital status, Rashi, Nakshatra, family type…) always allow typing a custom value; lists only save typing.
+- **Phone** values are free text with a format hint (Indian numbers with or without +91); validation never blocks saving.
+- **Options follow the document language (D33).** A value picked from a list (e.g. marital status “Never married”) is stored as an option key and printed in the document language; anything typed is printed exactly as typed.
+- **About me** and **Partner preferences** are optional paragraphs with an example placeholder showing what to write, printed as a short quoted block.
+- **Starter field sets (D32).** When creating a draft the user may pick a starting set (General — the default — Hindu, Muslim, Christian, Sikh, Jain) that decides which horoscope/community fields are pre-added. It is an explicit choice, never derived from the Religion field, and every field remains editable or removable.
 
 ### Dynamic field functionality
 
@@ -137,6 +150,7 @@ Users should be able to:
 - Remove a field after a confirmation prompt.
 - Reorder fields and sections.
 - Rename/reorder sections.
+- **Move a field to another section** (real biodatas often put Education and Profession under Personal details, or Partner expectations under Contact).
 - Restore default fields for a section.
 - Choose display style for supported fields (e.g. single line or multiline).
 - Select whether a field is shown in the document.
@@ -147,14 +161,18 @@ Each custom field needs a stable ID, label, value, type, visibility flag, sort o
 
 Represent siblings and any repeatable family member details as arrays of objects with stable IDs, not as fixed “Brother 1 / Brother 2” fields. Allow add, edit, reorder and remove. In the PDF, render a compact list or table based on the selected template.
 
+**Decision D28:** the Family section is one list of **family members**, each `{ relation, details, visible }`. The relation is free text with suggestions (Father, Mother, Brother (Elder), Sister (Younger), Sister-in-law, Brother-in-law, Grandfather, Grandmother, Uncle, Aunt, Father-in-law…) and is printed as the row label; the details are free text (name, occupation, place, phone), printed as the value. This covers parents, siblings and wider family in one control, as real biodatas do.
+
+Reordering uses **Move up / Move down** buttons (keyboard- and phone-friendly) rather than drag and drop (D7).
+
 ## 7. Template and design system
 
 Launch with **8 well-crafted templates**, not dozens of shallow variations. Every template consumes the same profile schema; a template controls only layout, typography, colours, decorative assets and field grouping.
 
 Suggested initial collection:
 
-1. Classic Gold — traditional, restrained gold detailing.
-2. Temple / South Indian — subtle ornamental border and warm neutral palette.
+1. Classic Gold — traditional, restrained gold detailing. **Modelled on the owner's own biodata (D29):** gold foliage in the corners joined by thin gold rules, an optional motif centred at the top, section headings as filled amber bars with bold dark uppercase text, labels in bold warm brown followed by “ :”, values in near-black, the photo top-right beside the first section with softly rounded corners, everything on one A4 page when the content fits. All artwork is drawn for this app.
+2. Temple / South Indian (working name “Kalyanam”) — subtle ornamental border and warm neutral palette.
 3. Sandalwood — minimal regional-inspired palette, no mandatory religious symbol.
 4. Royal Maroon — elegant traditional style.
 5. Executive Navy — contemporary professional style.
@@ -177,6 +195,28 @@ Design requirements:
 
 Create a reusable design token system: page dimensions, margins, colour tokens, type scale, spacing, border styles, photo frame sizes, section headings and divider styles.
 
+### Optional motifs and invocation lines (D21)
+
+A small motif library drawn for this app (original artwork, simple vector paths so it prints crisply), plus an optional invocation/blessing line chosen from a list or typed freely. **Nothing is preselected and nothing is inferred from the Religion field.** The picker offers “None” first.
+
+| Tradition | Example motifs and lines (all optional, all editable) |
+|---|---|
+| Hindu | Om, Ganesha, Kalash, Swastika; “Shri Ganeshaya Namah” |
+| Muslim | Crescent and star; “Bismillah ir-Rahman ir-Rahim” |
+| Christian | Cross; a short verse |
+| Sikh | Ik Onkar, Khanda |
+| Jain | Jain symbol; Navkar mantra opening line |
+| Buddhist | Dharma wheel, lotus |
+| Neutral | Floral, paisley, rings, none |
+
+Lines are stored as the user's text once picked, so they can be edited and are printed exactly as shown. The document title is optional too (“Biodata”, “BIODATA”, “Marriage Biodata”, the localised equivalent, or custom text).
+
+**Typography controls (D31):** text size **Auto** (the largest size in the template's range that fits everything on one page; only if the template's minimum readable size still doesn't fit does content flow to page 2) or a fixed XS–XL step; labels in Normal case or ALL CAPS. The minimum body size is 9 pt, so “fits one page” never means unreadable.
+
+**Template construction (D34):** the eight templates are built on three shared layout skeletons (Classic: heading bars, label/value rows, photo beside the first section; Modern: two columns with a side panel; Minimal: typographic, generous whitespace), each with its own original border artwork, palette and type. This keeps eight templates consistent and cheap to maintain.
+
+**Nothing but the user's content is printed (D35):** no site name, URL, watermark or “made with” line on the document, and no field is ever struck through or hidden behind payment. MVP pages are **A4 portrait**; landscape and other sizes come later.
+
 ## 8. Multilingual support
 
 Initial UI/document label languages:
@@ -196,6 +236,8 @@ Language selection affects UI labels, section headings, field labels, help text 
 
 Store translations in separate JSON dictionaries with English fallback. Avoid hardcoding translated labels inside components. Add RTL-ready architecture only if a later language requires it; do not overbuild for MVP.
 
+**Two separate language choices (D11, D23).** The **document language** sets what is printed: section headings, field labels, date/month names, preset motif lines (about 150 short strings). The **app language** sets the editor's buttons, help and messages. They are independent: a parent may use the app in English but print Telugu labels. **Document labels ship in all ten languages. The editor UI ships in English only** (owner's choice, 2026-11-20); its strings still live in a dictionary (`src/i18n/app/en.json`) so translations can be added later without touching components. Each document dictionary records its review status; translations drafted by Claude are marked “not yet reviewed by a native speaker” until someone checks them, and the document-language picker says so until then.
+
 ### Font and script requirements
 
 - Bundle appropriately licensed static TTF/OTF fonts for each supported script where required.
@@ -204,6 +246,7 @@ Store translations in separate JSON dictionaries with English fallback. Avoid ha
 - Validate both browser preview and generated PDF for Telugu, Hindi, Tamil, Kannada, Malayalam, Bengali, Gujarati and Punjabi.
 - Ensure downloaded documents do not depend on remote fonts or network access.
 - If the PDF engine cannot correctly shape a script, do not silently ship broken output. Use a proven fallback strategy and document any limitation.
+- Font source (D10): Noto Sans family (SIL OFL 1.1), static TTF files, Regular and Bold, one file per script. The Google Fonts builds of each Noto Sans *script* font also contain Latin, so mixed English/Indic values work inside one font. The **same TTF files** feed the browser preview (`@font-face` with `unicode-range`, so a phone only downloads the scripts it shows) and the PDF. Files live in `public/fonts/` with `OFL.txt`, copied there from an npm package by a script; nothing is fetched from Google at runtime.
 
 ## 9. Local-first storage and data safety
 
@@ -234,6 +277,10 @@ You may use a separate store for template-specific settings if the model require
 - Handle failed reads, failed writes, corrupted records and `QuotaExceededError` with clear user messages.
 - Never silently delete a draft or photo to free space.
 - Use versioned IndexedDB schema and explicit data migration tests.
+- Show the last-saved time (“Saved on this device · 4:12 PM”).
+- **Two tabs, one draft (D9):** each profile carries a `revision` number. If another tab saved a newer revision, the stale tab stops autosaving and offers “This draft was changed in another tab — reload it”, so neither tab silently overwrites the other.
+- A profile and its photo change in **one Dexie transaction**, so a crash never leaves a draft pointing at a missing photo.
+- Before destructive actions (delete a draft, delete all data, replace drafts on import) offer “Download a backup first”.
 
 ### Important browser-storage limitation
 
@@ -252,21 +299,20 @@ Therefore:
 
 ### Backup format
 
-- Export a versioned JSON file containing all profile data and associated photos (either safely embedded/encoded with defined limits or bundled in a zip with a manifest).
-- Prefer a ZIP backup containing `manifest.json`, profile JSON and image assets to avoid excessive JSON/base64 memory overhead.
-- Validate imported files before writing anything.
+**Decision D8:** one versioned JSON file per export (`Biodata-backup-YYYY-MM-DD.json`) containing a manifest (app name, backup format version, export time), the selected profiles and each profile's photo as base64. Photos are already resized (D12), so a draft's backup is roughly 0.3–1 MB and the base64/memory overhead that motivated ZIP does not arise; one JSON file also avoids a ZIP dependency and is simpler to validate. Revisit ZIP only if real backups exceed ~25 MB.
+
+- Validate imported files (Zod, size limits, MIME check of decoded photos) before writing anything.
 - Display a preview of imported draft names and timestamps.
 - Let users choose whether to add as new drafts or replace matching drafts; never overwrite silently.
-- Reject malformed/unsupported versions with an actionable message.
-- Do not import executable content or HTML from backups.
+- Reject malformed/unsupported versions with an actionable message. Older backup versions are migrated with the same migration functions as the database.
+- Do not import executable content or HTML from backups. Unknown keys are dropped; all strings are treated as plain text.
 
 ## 10. Photo handling
 
-- Accept JPEG, PNG and WebP initially; consider HEIC only after browser support is tested.
+- Accept JPEG, PNG and WebP initially; consider HEIC only after browser support is tested. (iPhones' photo picker hands the page a JPEG when the input's `accept` lists only JPEG/PNG/WebP, so most iPhone photos work without HEIC support.)
 - Validate file type and reasonable file size before processing.
-- Crop, zoom, reposition and rotate if feasible.
-- Resize to a sensible maximum (e.g. 1200–1600 px long edge) while retaining enough resolution for a printed portrait.
-- Keep the original only if needed for recropping; otherwise store a compressed processed Blob.
+- Crop, zoom, reposition and rotate (90° steps) with our own small cropper (pointer drag, pinch and a zoom slider; no crop library).
+- **D12:** store a downscaled **source** image (≤1600 px long edge, JPEG ≈0.9) plus a normalised crop (`x`, `y`, `zoom`, `rotation`). The cropped picture is drawn at render time, so re-cropping never loses quality. Every template's photo frame uses the same **3:4 portrait** aspect (D30; frames may round corners or use an arch shape inside it).
 - Store photo Blobs in IndexedDB, not remote services.
 - Allow photo removal and show the correct placeholder in templates.
 - Revoke temporary object URLs when no longer needed.
@@ -293,6 +339,27 @@ Also evaluate browser-native HTML/CSS print (`@page`, print styles and `window.p
 
 Avoid using a low-resolution page screenshot as the default PDF strategy. If a raster fallback is offered for a script that cannot be shaped by the selected PDF engine, make the trade-off clear, render at print-quality resolution, and test file size and legibility.
 
+### Proposed rendering architecture (D1 — confirmed or replaced by the Phase 0 spike)
+
+**One document, laid out once, by the browser.** Each template is an HTML/CSS component that lays the biodata out into fixed A4 page boxes (sizes in mm, from the design tokens). Block-level pagination (header, section headings, rows, paragraphs split at line boundaries) distributes content across pages, never shrinking text below the template's minimum size. Those page boxes are, at the same time:
+
+1. **the live preview** (scaled to fit the screen),
+2. **the print output** (`@page { size: A4; margin: 0 }`, one box per sheet), and
+3. **the source of the downloaded PDF.**
+
+The browser already shapes every Indian script correctly (HarfBuzz in Chrome/Firefox, CoreText in Safari), so preview text is right by construction, and “see exactly what you will download” holds because there is only one layout.
+
+For **Download PDF** the spike compares:
+
+| | Candidate | Strengths | Concerns to test |
+|---|---|---|---|
+| A | `@react-pdf/renderer` (separate PDF components) | One-click, vector, selectable | Its fontkit-based shaping has a history of Indic bugs (reph, pre-base matras, conjuncts); needs a second layout for the on-screen preview, or pdf.js to display it (Android Chrome cannot show PDFs inline) |
+| B | Browser print only (`window.print()`) | Perfect shaping, vector, selectable, zero code | Print dialog, not a download; many steps on phones before WhatsApp |
+| C | **Vector PDF from the laid-out pages**: read line boxes from the DOM, shape each line with HarfBuzz (`harfbuzzjs`, WebAssembly) using the same TTF, write glyphs, boxes, images and SVG ornaments with `pdf-lib` | One-click, vector, selectable (ActualText), identical to preview, works offline | Our own ~1k-line renderer limited to the CSS subset templates use; shaping must match the browser; wasm size |
+| D | Raster: pages drawn to canvas at 300 DPI, wrapped in a PDF | Simple, perfect shaping | Not selectable, larger files, Safari's SVG-foreignObject font quirks |
+
+**Expected outcome (hypothesis, not a decision):** C for Download/Share, B offered as “Print”, D kept only as an emergency fallback. A is tested because §11 named it, and adopted only if it shapes all ten languages correctly **and** a single-layout preview remains possible.
+
 ### PDF acceptance requirements
 
 - A4 page size, correct margins and print dimensions.
@@ -308,26 +375,27 @@ Avoid using a low-resolution page screenshot as the default PDF strategy. If a r
 
 ## 12. Recommended technology stack
 
-Use the current stable, supported versions when implementation begins; do not pin stale versions from this document.
+Use the current stable, supported versions when implementation begins; do not pin stale versions from this document. The table below is the **decided** stack (2026-11-20); the original recommendations it replaces are in INITIAL_VISION.md, with reasons in §24.
 
-| Area | Recommendation | Notes |
+| Area | Decision | Notes |
 |---|---|---|
-| Framework | Next.js App Router with static export where practical | Familiar to the owner; no server features needed for MVP |
-| Language | TypeScript | Strict type checking |
-| UI | React | Client-side editor and preview |
-| Styling | Tailwind CSS | Reuse existing conventions |
-| UI components | shadcn/ui + Radix primitives where helpful | Keep dependencies lean and accessible |
-| Icons | Lucide React | Consistent icon set |
-| Form state | React Hook Form | Dynamic sections and validation |
-| Validation | Zod | Validate profile data and imported backups |
-| Browser DB | Dexie.js over IndexedDB | Structured persistent local drafts |
-| Preferences | localStorage | Small, non-sensitive preferences only |
-| Photo processing | Canvas API and Blob | Local crop/resize/compression |
-| PDF | Proof-of-concept `@react-pdf/renderer`; compare browser print | Indic scripts must be tested before final choice |
-| PWA | Web app manifest + service worker; evaluate Serwist compatibility | Cache app shell and required static assets |
-| Tests | Vitest + Playwright | Unit, storage, PDF and end-to-end tests |
-| Hosting | Vercel static deployment or Cloudflare Pages | Choose the simplest reliable static hosting after testing Next static export |
-| CI | GitHub Actions | Lint, typecheck, unit tests, build, browser tests |
+| Framework | Next.js 16 App Router, `output: 'export'` | Same version line as the sibling apps; no server code can exist in a static export (D4) |
+| Language | TypeScript, strict | |
+| UI | React 19 | Client-side editor and preview |
+| Styling | Tailwind CSS v4 via `@tailwindcss/turbopack` | Wired like Family Tree / EnglishEasy (no PostCSS config) |
+| UI components | **None** — native `<dialog>`, `<details>`, `<select>`, our small `src/components/ui/` kit | D7: fewer dependencies, same as the sibling apps |
+| Icons | Inline SVG components | D7 |
+| Form state | **Pure reducer** (`src/biodata/edits.ts`) + React state | D6: no React Hook Form; edits are unit-tested pure functions |
+| Validation | Zod 4 | Profiles, database reads and imported backups |
+| Browser DB | Dexie.js over IndexedDB | `fake-indexeddb` in unit tests |
+| Preferences | localStorage | Theme, app language only |
+| Photo processing | Canvas API and Blob | Own cropper (D12) |
+| PDF | Phase 0 spike decides (D1); expected `harfbuzzjs` + `pdf-lib`, lazy-loaded on first download | Print via `window.print()` as a secondary action |
+| Fonts | Noto Sans static TTFs (OFL), self-hosted | D10 |
+| PWA | Hand-written `public/sw.js` + `manifest.ts` | D5: the EnglishEasy pattern; no Serwist |
+| Tests | Vitest (+ Testing Library, jsdom) and Playwright (installed Chrome locally) | |
+| Hosting | Vercel Hobby serving the static `out/` folder; headers in `vercel.json` | D4; portable to Cloudflare Pages unchanged |
+| CI | GitHub Actions: lint, typecheck, unit, build, e2e | |
 
 ### Explicitly excluded from MVP
 
@@ -349,15 +417,16 @@ Use a service worker to cache the app shell, compiled assets, fonts and static t
 ## 13. Privacy, security and accessibility
 
 - No biodata values, profile names, phone numbers, addresses or photos may be sent in requests to the app's servers.
-- Avoid third-party analytics, session replay, external font CDNs and remote image services.
+- Avoid session replay, external font CDNs and remote image services. **Analytics (D22):** Google Tag Manager runs only on the public marketing pages (`/`, `/templates`, `/help`, `/privacy`), only in Production, and **never** in `/editor`, where personal details are typed. Links from public pages into the editor are full page loads, so GTM can't carry over through client-side navigation. The privacy page states this plainly.
 - Prefer self-hosted fonts and assets.
-- Set a restrictive Content Security Policy compatible with the static app, and standard security headers at the hosting layer where available.
+- Set a restrictive Content Security Policy compatible with the static app, and standard security headers at the hosting layer where available. Concretely (D15): `default-src 'self'; connect-src 'self'; img-src 'self' blob: data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'none'` (a static export inlines Next's bootstrap scripts, so nonces aren't possible). `connect-src 'self'` means even a bug cannot send data to another site.
+- **The privacy promise is tested:** an e2e test runs a full session (create, type fixture values, add a photo, download, back up) while recording every request, and fails on any third-party origin or any request carrying a fixture value.
 - Use safe text rendering; never render user-entered content as raw HTML.
 - Sanitize filenames and validate imported data.
 - Do not store secrets in the client bundle.
 - No external AI service is called from the application.
 - Add clear privacy/help explanations in plain language.
-- Follow accessible labels, keyboard navigation, visible focus, sufficient contrast, semantic headings and touch-friendly controls.
+- Follow accessible labels, keyboard navigation, visible focus, sufficient contrast, semantic headings and touch-friendly controls. Target: WCAG 2.2 AA, touch targets ≥ 44 px (D16).
 - Support screen readers for form controls and save/export status.
 - Respect reduced-motion settings.
 
@@ -382,6 +451,8 @@ Use a service worker to cache the app shell, compiled assets, fonts and static t
 ### Browser support
 
 Test current Chrome, Edge, Firefox and Safari on desktop and mobile. Test Android Chrome and iOS Safari explicitly. Explain unsupported capabilities rather than silently failing.
+
+Baseline (D20): current Chrome/Edge/Firefox, Safari and iOS Safari 16.4+, Android Chrome. Required APIs: IndexedDB, Blob, canvas, `Intl.Segmenter`, WebAssembly. Playwright's WebKit download is blocked on the owner's machine, so Safari/iOS checks are done by the owner on a real iPhone/Mac at the end of each phase that changes the editor, preview or PDF.
 
 ## 15. Testing strategy and acceptance criteria
 
@@ -434,6 +505,8 @@ Use Playwright for desktop and mobile viewports. Cover create → edit → auto-
 ## 16. Implementation phases
 
 Build in small, verified phases. Do not generate the whole application in one large pass.
+
+The phases below are the product-level order. [BUILD_PLAN.md](BUILD_PLAN.md) breaks each one into session-sized steps with exact “Done when” checks, and holds the Progress table. Release priority (from the original planning conversation): **P0** — dynamic form, autosave/restore, live A4 preview, eight templates, watermark-free PDF, photo, backup/restore; **P1** — all ten languages, PWA/offline, custom sections and advanced layouts; **P2 (after launch, §26)** — image export, optional AI writing help, DOCX. All P0 and P1 items are in the phases below and must pass before the public launch.
 
 ### Phase 0 — Repository and rendering spike
 
@@ -510,7 +583,7 @@ Build in small, verified phases. Do not generate the whole application in one la
 
 ## 17. Suggested repository structure
 
-Adapt this to the actual scaffold, but preserve separation of concerns.
+Adapt this to the actual scaffold, but preserve separation of concerns. **The layout actually used is BUILD_PLAN.md §A2**, which follows the sibling apps' convention (pure logic in its own folder with tests beside the code, `e2e/` at the root).
 
 ```text
 src/
@@ -629,7 +702,12 @@ This is a starting sketch, not a demand to force every field into one generic re
 
 ## 19. Product analytics and monetization stance
 
-Do not add ad networks or third-party analytics in the MVP. The product should not track personal biodata creation. If basic aggregate usage measurement is ever considered, it must be opt-in/ privacy-preserving and must never capture form values, photos, profile IDs or document contents. The project is intended to remain free and sustainable through low operating cost, not through gating essential features.
+Decided 2026-11-20 (D22, D24, D25), following the sibling apps:
+
+- **Google Tag Manager on public pages only**, in Production only (`GTM_ID` set in Vercel's Production environment, read at build time, validated as `GTM-…`). The editor never loads it, and its CSP (`connect-src 'self'`) would block it anyway. Public pages get a CSP that additionally allows Google Tag Manager/Analytics origins.
+- **Usage numbers come from Google Analytics reports** (visits, landing-page clicks such as “Create my biodata”). There is **no `/admin` page and no backend**; the app never records drafts, downloads, templates or any form value.
+- **Support:** a “Buy me a coffee” link (the siblings' `SUPPORT_URL`) in the footer and on the help page. It is never a gate, a nag or a condition for downloading.
+- No ad networks, no paywalls. The project stays free through near-zero operating cost.
 
 ## 20. Risks and mitigations
 
@@ -648,6 +726,8 @@ Do not add ad networks or third-party analytics in the MVP. The product should n
 ## 21. Reference products and inspiration
 
 Use these as functional inspiration only. Do not copy their exact designs, copywriting, assets, proprietary templates or branding.
+
+**What weddingbiodata.in does, from a saved copy of its page (2026-11-20), and where this app differs:** its “free” version strikes through some fields unless the user pays (₹0–20); paid downloads keep the biodata on its server for up to 24 hours; it prints its domain at the foot of every biodata; it pre-adds a Complexion select. This app has no paid tier, no server copy, nothing printed but the user's content, and no default complexion field. Worth learning from it (functionally): text size Auto/XS–XL and ALL CAPS labels (D31), document-language option text (D33), starter field sets (D32), quoted About me / Partner preferences paragraphs, optional title and blessing at the top, label + value custom fields with “Add more fields”, the notice “a document tool only; it does not match or connect people”, and its SEO structure (D36).
 
 - https://www.weddingbiodata.in/ — marriage-specific editor, photo, personal/family/contact sections, language labels, preview and template selection.
 - https://www.theweddingbiodata.in/ — examples of traditional, horoscope and family customization.
@@ -693,3 +773,66 @@ Then implement Phase 0 and report its results before moving to Phase 1.
 A person with no technical knowledge can open the website on a phone, create a professional marriage biodata, customize it, see exactly what they will download, obtain a high-quality watermark-free PDF for free, close the browser, and later return on the same device/browser to make corrections — without signing up, paying, uploading personal data or needing AI.
 
 **The best version of this product is a useful, dependable document tool that costs almost nothing to operate and respects the privacy of the families using it.**
+
+---
+
+## 24. Decision log
+
+Later rows override the sections they name. Add a row whenever a product or architecture decision is made; never rewrite an old row (add a new one that supersedes it).
+
+| # | Date | Decision | Why | Overrides |
+|---|---|---|---|---|
+| D1 | 2026-11-20 | One HTML/CSS document laid out into A4 page boxes is the preview, the print output and the PDF source. The Download engine is chosen by the Phase 0 spike (candidates A–D in §11). **Status: proposed until the spike report.** | “See exactly what you download”; the browser already shapes Indic scripts correctly; one layout to maintain | §11 candidate `@react-pdf/renderer`, §12 PDF row |
+| D2 | 2026-11-20 | Browser print is a secondary **Print** action, never labelled as a download | §11 honesty rule | — |
+| D3 | 2026-11-20 | **Share PDF** button where `navigator.canShare({ files })` is true (Android Chrome, iOS Safari) | The main use case is sending the biodata on WhatsApp; this skips the downloads folder | §1, §4 |
+| D4 | 2026-11-20 | Next.js `output: 'export'`; Vercel Hobby serves `out/`; security headers in `vercel.json`. Draft identity is a query parameter: `/editor?d=<id>` (not `/editor/[profileId]`) | A static export can't contain server code, so the no-backend rule is enforced by the build. Dynamic routes for ids that exist only in the browser are unsupported in static export | §5 routes suggested in the planning conversation, §12 Hosting row |
+| D5 | 2026-11-20 | Hand-written service worker (EnglishEasy pattern), no Serwist / next-pwa | Narrow, versioned caching we fully understand; no plugin coupling to Next's build | §12 PWA row |
+| D6 | 2026-11-20 | No React Hook Form; profile edits are pure reducer functions, autosave watches the profile; validation is advisory and never blocks | The data is a dynamic nested document saved on every change; pure functions are easier to test than a form library synced to IndexedDB | §12 Form state row |
+| D7 | 2026-11-20 | No shadcn/ui, Radix, Lucide or drag-and-drop library; native elements, inline SVG icons, Move up/down reordering | Small dependency tree (as in the sibling apps); up/down buttons are accessible and work on phones | §12 UI components and Icons rows, §6 reorder |
+| D8 | 2026-11-20 | Backup = one versioned JSON file with base64 photos | Photos are small after resizing; no ZIP dependency; simple to validate | §9 ZIP preference |
+| D9 | 2026-11-20 | Profile + photo saved in one transaction; per-profile `revision`; stale tabs stop autosaving and ask to reload | Prevents silent overwrites between two tabs and dangling photo references | — (addition to §9) |
+| D10 | 2026-11-20 | Noto Sans static TTFs (OFL), Regular + Bold per script, same files for preview and PDF, self-hosted; Latin display face for traditional templates chosen in Phase 4 | One font file per script = identical shaping in preview and PDF; offline; licence allows bundling | §8 font requirements (refines) |
+| D11 | 2026-11-20 | Separate **document language** (all ten at launch) and **app language** (English + Telugu first, others after review); review status per dictionary | ~150 printed labels can be reviewed carefully; translating the whole UI into ten languages without native review risks embarrassing errors | §8 (scope sequencing) — pending §25 Q2 |
+| D12 | 2026-11-20 | Store downscaled source + normalised crop; one photo frame aspect for all templates (4:5, superseded by D30); own cropper | Lossless re-cropping; one aspect keeps templates interchangeable | §10 |
+| D13 | 2026-11-20 | Age computed from DOB at render time (opt-in); height stored in cm, picked in ft/in | Stored ages go stale; one unit avoids parsing free text | §6 |
+| D14 | 2026-11-20 | Dates DD-MM-YYYY by default; 12-hour birth time | Indian convention | §6 |
+| D15 | 2026-11-20 | CSP with `connect-src 'self'`; e2e test proves no outbound personal data | Makes the privacy promise enforceable and tested | §13 (refines) |
+| D16 | 2026-11-20 | WCAG 2.2 AA, 44 px touch targets | Elders on phones are core users | §13 (refines) |
+| D17 | 2026-11-20 | Product name in one constant (`src/lib/site.ts`); working title “Vivah Bio” | Name is provisional | — |
+| D18 | 2026-11-20 | Code MIT, fonts OFL 1.1 | Same as sibling apps; fonts' licence | — |
+| D19 | 2026-11-20 | Image (PNG/JPEG) export moves after launch | Optional in §1; PDF + Share covers WhatsApp | §1 item 7 |
+| D20 | 2026-11-20 | Browser baseline and owner-run Safari/iOS checks (§14) | WebKit can't be installed for Playwright here | §14 (refines) |
+| D21 | 2026-11-20 | Opt-in motif library of original artwork + editable invocation line; “None” first; A4 portrait only in MVP | Respect for every tradition; no inference from fields | §7 (refines) |
+| D22 | 2026-11-20 | **Owner's choice:** Google Tag Manager on public pages only (`/`, `/templates`, `/help`, `/privacy`), Production only, never in `/editor`; links into the editor are full page loads; per-path CSP in `vercel.json` (public pages allow GTM/GA origins, the editor stays `connect-src 'self'`); an e2e test proves the editor never requests a third-party origin | Same pattern as the sibling apps; personal data is only ever typed in the editor | §13 “avoid third-party analytics”, §19 |
+| D23 | 2026-11-20 | **Owner's choice:** editor UI in **English only** at launch; document labels in all ten languages; app strings still in a dictionary | Smallest translation surface to review; the printed document is what families share | D11 (app-language part), §8, §25 Q2 |
+| D24 | 2026-11-20 | **Owner's choice:** usage numbers from Google Analytics reports; no `/admin` page, no counting backend | A sibling-style `/admin` needs a database; the static, backend-free app is kept | §19 |
+| D25 | 2026-11-20 | **Owner's choice:** “Buy me a coffee” link (footer, help page), never a gate | As in the sibling apps | §19 |
+| D26 | 2026-11-20 | **Owner's choice:** a professional, search-engine-ready landing page like the siblings': `content.ts` with `TITLE`, `DESCRIPTION` (≤ 160 characters, unit-tested), FAQ rendered on the page **and** as `FAQPage` structured data (one source), `WebApplication` structured data (price 0), canonical URLs, Open Graph, `robots.ts`/`sitemap.ts` that allow indexing in Production only, Google Search Console verification tag, real product screenshots as WebP pictures (`next/image` unoptimized) | Discoverability is the only marketing a free app gets | §5 landing, §16 Phase 6 (refines) |
+| D27 | 2026-11-20 | **Owner's choice:** pictures and docs like the siblings': `npm run images` (sharp) builds favicon, apple icon, the link preview `opengraph-image.png` (1200 × 630, < 300 KB for WhatsApp), GitHub's `docs/social-preview.png` (1280 × 640, content 80 px in from the edges) and the landing WebPs from `docs/screenshots/`; README with screenshots; `docs/PROJECT_GUIDE.md`, a beginner's guide to the code kept true as files change | Professional first impression on GitHub, WhatsApp and search results | §16 Phase 6 (refines) |
+| D28 | 2026-11-20 | Family section = one list of family members `{ relation, details }`, relation printed as the label; fields can move between sections; maternal Gotra and Nakshatra pada are default fields; “15-March-1998” date style | Learned from the owner's real biodata, where family rows are free relations with details and Education/Profession sit under Personal details | §6 (siblings, sections, dates) |
+| D29 | 2026-11-20 | The owner's own biodata (`docs/references/`, **git-ignored, never committed**: it holds real names, phone numbers, address and photo) is the model for Classic Gold and for **milestone M1**: the owner makes that same biodata with the app. Its real values never go into code, fixtures, screenshots or commits; tests use a fictional profile with the same shape | The first real user is the owner; the repo is public | §7 Classic Gold, §16 order |
+| D30 | 2026-11-20 | Photo frames are **3:4** portrait | The reference photo is a tall portrait; 4:5 would crop it | D12 aspect |
+| D31 | 2026-11-20 | Text size Auto (largest that fits one page, never below 9 pt body) or XS–XL; labels Normal or ALL CAPS | Families strongly prefer a one-page biodata; seen on the reference site | §11 “do not squeeze” (refines with a floor) |
+| D32 | 2026-11-20 | Optional starter field sets (General default; Hindu, Muslim, Christian, Sikh, Jain) chosen explicitly when creating a draft | Each tradition expects different fields; an explicit choice respects “never infer” | §6 (addition) |
+| D33 | 2026-11-20 | List-picked values stored as option keys and printed in the document language; typed values printed as typed | Telugu labels with English “Never married” would look broken | §8 (refines) |
+| D34 | 2026-11-20 | Eight templates on three layout skeletons (Classic, Modern, Minimal) with distinct artwork, palettes and type | Consistency and low maintenance; competitors' many designs are one skeleton reskinned | §7 (refines) |
+| D35 | 2026-11-20 | Nothing printed except the user's content: no site name/URL/watermark; nothing struck through or gated; footer notice that the app doesn't match or connect people | The main difference from the reference sites | §2, §7 (refines) |
+| D36 | 2026-11-20 | SEO structure modelled on the leading competitor: `hreflang` alternates and `og:locale` alternates for ten static language landing pages (`/te`, `/hi`, …, each in that language), five tradition pages (Hindu, Muslim, Christian, Sikh, Jain biodata format), a template gallery of real sample images, a “what to write in each part” guide; structured data `Organization`, `WebSite`, `WebApplication` (`isAccessibleForFree`, price 0), `BreadcrumbList`, `FAQPage`, image `ItemList`. No `HowTo` (Google stopped showing it), no fake counters (“biodatas created today”) since nothing is counted | Search is the only marketing; honest numbers only | D26 (extends), §25 Q4 |
+
+## 25. Open questions for the owner
+
+| # | Question | Default if not answered |
+|---|---|---|
+| Q1 | Final product name and domain? | Keep “Vivah Bio” as the working title on a `*.vercel.app` address |
+| Q2 | ~~App (UI) languages at launch~~ — answered 2026-11-20: English only (D23) | — |
+| Q3 | Who can review the document-label translations for each language before they are marked reviewed? | Ship marked “not yet reviewed” |
+| Q4 | Per-language and per-tradition landing pages for search (D36)? The leading competitor has both. | Yes: ten language pages and five tradition pages, static, written once, with real sample pictures |
+| Q5 | Does the privacy page need a cookie notice for Google Analytics on public pages (India's DPDP Act)? The siblings have none. | Plain-language disclosure on the privacy page, no banner |
+
+## 26. After launch (not in the MVP)
+
+- Image export (PNG/JPEG of each page) for WhatsApp status.
+- Landscape and other page sizes.
+- DOCX export.
+- Optional, user-controlled AI writing help (About me, partner expectations). It must stay optional, off by default, and never required for any essential flow; it would need a separate privacy decision because text would leave the device.
+- More templates, motif artwork and font presets.
