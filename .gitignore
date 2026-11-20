@@ -11,3 +11,6 @@ playwright-report/
 
 # The owner's real biodata and other private reference files: never committed (public repo)
 docs/references/
+
+# Pre-build mockups: local reference only; real screenshots go in docs/screenshots/ once the app exists
+docs/mockups/

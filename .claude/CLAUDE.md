@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Vivah Bio (working title, VISION §25 Q1): a free, open-source, local-first Indian marriage biodata maker. Static Next.js 16 export on Vercel; editor UI in English, printed labels in ten Indian languages; drafts and photos live only in the browser (IndexedDB via Dexie); PDFs are made in the browser. No backend, login, payment, analytics or AI at runtime.
+Free Wedding Biodata (https://free-wedding-biodata.vercel.app, VISION D37): a free, open-source, local-first Indian marriage biodata maker. Static Next.js 16 export on Vercel; editor UI in English, printed labels in ten Indian languages; drafts and photos live only in the browser (IndexedDB via Dexie); PDFs are made in the browser. No backend, login, payment, analytics or AI at runtime.
 
 ## Documents that drive all work
 
@@ -12,15 +12,16 @@ Vivah Bio (working title, VISION §25 Q1): a free, open-source, local-first Indi
 - **`docs/VISION.md`**: the product. **§24 Decision log** overrides earlier sections; §25 open questions; §26 after launch.
 - `docs/INITIAL_VISION.md`: the owner's original text. Never edit it.
 - `docs/spikes/`: Phase 0 evidence (PDF spike report and images).
+- `docs/mockups/`: pre-build look of every page (local only, git-ignored; `bash docs/mockups/tools/render.sh`). Screens should match them.
 
 Read only the sections a task needs (`grep -n '^#' <file>`, then `Read` with `offset`/`limit`).
 
 ## Working agreement with the owner
 
-- Before building a step, its BUILD_PLAN section must be detailed and agreed; draft it there with open questions if it's only an outline.
-- One step per session. At the end: run its "Done when" checks, stop, show results and a "Try this" list, and wait for the owner's OK.
-- After the OK: commit on a `step-<n>-<name>` branch. The owner pushes (github.com is blocked here), checks the Vercel preview and merges to `main`.
-- Commit messages never end with a `Co-Authored-By` line or any other AI attribution trailer.
+- **Commit and continue** (owner's choice, 2026-11-20; BUILD_PLAN Part B rules 9–10): build a step, detailing its BUILD_PLAN section first if it's only an outline (sensible defaults, recorded in its notes); run its "Done when" checks; commit straight to `main`; then start the next step without waiting.
+- Commit message: a clear imperative title (≤ 72 characters, e.g. `Step 1.3: Save drafts to IndexedDB with honest autosave status`), then a description of what the step adds, decisions and deviations, test results (counts) and anything the owner should check by hand. Never a `Co-Authored-By` line or any other AI attribution trailer. The Progress table is updated in the same commit.
+- Push only when the owner asks; otherwise the owner pushes. Owner-only checks (real phones, Vercel, Search Console) go in the step's Progress notes and don't block the next step.
+- Stop and ask only for product-direction changes, anything needing an account, payment or external service, a check that can't be fixed within the step, or a step that needs the owner (milestone M1).
 - Deviations go in the step's Progress notes (and Part A if architecture changes) in the same commit; product decisions also get a VISION §24 row.
 
 ## Invariants

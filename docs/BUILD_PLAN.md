@@ -1,8 +1,10 @@
-# Vivah Bio — Build Plan
+# Free Wedding Biodata — Build Plan
 
 **Product:** [VISION.md](VISION.md) (§ numbers and decisions D1… below refer to it) · **Started:** 2026-11-20
 
-This file says **how** the app is built: architecture (Part A), rules every step follows (Part B), the steps (Part C) and the Progress table (Part D). Status lives only in the Progress table. Each step is sized for one session and ends with its checks passing, a short "Try this" list, and the owner's OK before the next step starts. Phase 0 is detailed now; later steps are outlines that get detailed (and agreed) before they are built, as in Family Tree.
+This file says **how** the app is built: architecture (Part A), rules every step follows (Part B), the steps (Part C) and the Progress table (Part D). Status lives only in the Progress table. Each step ends with its checks passing and a commit straight to `main`; the next step then starts without waiting (owner's choice, 2026-11-20, see Part B rules 9–10). Phase 0 is detailed now; later steps are outlines that are detailed in this file, in the same commit as the code, as each one starts.
+
+**Look and feel:** `docs/mockups/` (local only, git-ignored, owner's choice 2026-11-20) shows every page (landing, editor on desktop and phone in Day and Night, phone preview, templates, help, privacy) and the Classic Gold biodata, drawn with a fictional profile; `bash docs/mockups/tools/render.sh` re-renders them. Once the owner agrees them, steps that build a screen match its mockup and record any deliberate change in the step notes. Only real screenshots of the built app are committed (`docs/screenshots/`, Step 6.1).
 
 **Milestone M1 (VISION D29): the owner makes their own biodata with the app**, matching their reference PDF (`docs/references/`, git-ignored) in the Classic Gold template, and downloads it. M1 is reached at the end of Step 4.1; the steps up to it build exactly what that biodata needs first.
 
@@ -49,7 +51,7 @@ src/document/                the shared render contract (A4)
   motifs/                    original SVG motif artwork (D21)
 src/pdf/                     the Download engine chosen in Step 0.2 (lazy-loaded)
 src/lib/                     browser services (thin, mockable)
-  site.ts                    product name, URL, SUPPORT_URL, robotsFor/sitemapFor (Production-only indexing) (D17, D25, D26)
+  site.ts                    product name ("Free Wedding Biodata"), URL (https://free-wedding-biodata.vercel.app), TITLE/DESCRIPTION source (D37), SUPPORT_URL, robotsFor/sitemapFor (Production-only indexing) (D17, D25, D26)
   tag-manager.ts             PURE gtmId(env): GTM_ID if it looks like GTM-…, else nothing (D22)
   db.ts                      Dexie database, versions, upgrade functions
   profile-repo.ts            the single persistence service (A5)
@@ -73,6 +75,7 @@ e2e/                         Playwright specs
 docs/screenshots/            README and landing pictures (copied from e2e screenshots)
 docs/social-preview.png      GitHub's social preview (npm run images)
 docs/PROJECT_GUIDE.md        beginner's guide to the code (D27)
+docs/mockups/                pre-build look of every page (HTML + PNG; local only, git-ignored)
 docs/spikes/                 Phase 0 evidence (PDFs, page images, report)
 ```
 
@@ -153,8 +156,9 @@ Hand-written `public/sw.js` like EnglishEasy's: precache the app shell pages and
 6. Printed labels come from `src/i18n/doc/*`, app text from `src/i18n/app/*`; no hardcoded user-facing strings in components after Step 1.1.
 7. App chrome supports light and dark (every colour class has a `dark:` twin); the document is always a light page.
 8. Pure logic lives in `src/biodata/` or `src/document/` with unit tests beside it. A bug the owner finds gets a test that fails without the fix.
-9. **Done when** for every step: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` and `npm run test:e2e` all pass, plus the step's own checks. Then stop, report results and a "Try this" list, and wait for the owner's OK.
-10. After the OK: commit on a `step-<n>-<name>` branch (commit messages carry no AI attribution trailer). The owner pushes, checks the Vercel preview and merges to `main`.
+9. **Done when** for every step: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` and `npm run test:e2e` all pass, plus the step's own checks. A step whose outline is short gets its detailed section written here first (decisions with sensible defaults, recorded in its notes) rather than waiting for agreement.
+10. **Commit and continue** (owner's choice, 2026-11-20): when the checks pass, commit straight to `main` with a clear title (imperative, ≤ 72 characters, e.g. `Step 1.3: Save drafts to IndexedDB with honest autosave status`) and a description that says what the step adds, decisions and deviations, the test results (counts), and anything the owner should check by hand. No AI attribution trailer. Update the Progress table in the same commit, then start the next step without waiting. Push only when the owner asks (otherwise the owner pushes). Owner-only checks (real iPhone/Android, Vercel, Search Console) are listed in the step's Progress notes and collected; they don't block the next step.
+    **Stop and ask only when:** a decision would change the product direction (VISION) or needs an account, payment or external service; a check fails and can't be fixed within the step; or the next step depends on something only the owner can do (e.g. milestone M1, which is the owner's own biodata).
 11. A deviation from this plan goes in the step's Progress-table notes (and Part A if architecture changes) in the same commit; a product decision also gets a VISION §24 row.
 12. `docs/PROJECT_GUIDE.md` stays true: a new or renamed folder, file or page goes in it in the same commit. README screenshots are refreshed when the screens they show change.
 
@@ -199,8 +203,9 @@ Hand-written `public/sw.js` like EnglishEasy's: precache the app shell pages and
   - Rasterise every PDF page with macOS's own PDF renderer and compare each script line side by side with Chrome's screenshot of the reference page (images in `docs/spikes/pdf/`).
   - Text extraction (copy/paste) per PDF: does the extracted text equal the fixture?
   - File size, generation time in Chrome on desktop and on a throttled phone profile, lazy-loaded bundle size (wasm + JS).
+  - **Image export (D38):** for the leading candidate, draw page 1 to a canvas at 1240 × 1754 from the same data and compare it with the PDF page; record JPEG/PNG sizes.
   - Owner checks on a real iPhone (Safari) and an Android phone: candidate C's download and Share, B's print flow.
-- **Decision rule:** pick the candidate that (1) matches the Chrome reference glyph-for-glyph in all ten languages, (2) gives a one-click download and Share on Android Chrome and iOS Safari, (3) keeps one layout for preview and export, (4) has selectable text, (5) adds the least code and dependency surface. Record it as a new VISION §24 row superseding D1's "proposed" status, and update A1/A4.
+- **Decision rule:** pick the candidate that (1) matches the Chrome reference glyph-for-glyph in all ten languages, (2) gives a one-click download and Share on Android Chrome and iOS Safari, and can also produce a matching page image (D38), (3) keeps one layout for preview and export, (4) has selectable text, (5) adds the least code and dependency surface. Record it as a new VISION §24 row superseding D1's "proposed" status, and update A1/A4.
 - **After the decision:** spike code that isn't the chosen engine is deleted; the fixture, font script and evaluation report stay.
 - **Done when:** report written with images; decision recorded; Part B checks pass.
 
@@ -225,7 +230,7 @@ Hand-written `public/sw.js` like EnglishEasy's: precache the app shell pages and
 
 ## Phase 4 — PDF and template collection
 
-- **4.1** Download PDF (engine from 0.2), Share PDF, Print, filename `Marriage-Biodata-<FirstName>.pdf`, progress and error feedback, no main-thread freeze. **Ends with milestone M1:** the owner builds their own biodata in the app and compares the PDF with their reference.
+- **4.1** Download PDF (engine from 0.2), Share PDF, **Save/Share as image** (JPEG/PNG per page from the same display list, VISION D38), Print, filenames `Marriage-Biodata-<FirstName>.pdf` / `-page-<n>.jpg`, progress and error feedback, no main-thread freeze. **Ends with milestone M1:** the owner builds their own biodata in the app and compares the PDF with their reference.
 - **4.2** All ten document dictionaries and fonts; script fixture PDFs regenerated and reviewed (VISION §15 PDF/script tests).
 - **4.3** Templates 3–5 (adds the Modern and Minimal skeletons, D34); **4.4** templates 6–8 and the motif library (D21).
 
@@ -246,7 +251,7 @@ Hand-written `public/sw.js` like EnglishEasy's: precache the app shell pages and
 
 | Step | What | Status |
 |---|---|---|
-| 0.0 | Prerequisites (owner): npm token, sandbox allowlist, Vercel project | Waiting: the mirror returns E401 (2026-11-20) |
+| 0.0 | Prerequisites (owner): npm token, sandbox allowlist, Vercel project | npm token refreshed 2026-11-20 (`npm login`; all Phase 0 packages resolve). Sandbox allowlist and Vercel project still to do |
 | 0.1 | Skeleton and static-hosting proof | Not started |
 | 0.2 | PDF and Indian-script spike | Not started |
 | 1.1 | App shell | Not started |
@@ -259,7 +264,7 @@ Hand-written `public/sw.js` like EnglishEasy's: precache the app shell pages and
 | 3.1 | Photo | Not started |
 | 3.2 | Document engine and first two templates | Not started |
 | 3.3 | Live preview | Not started |
-| 4.1 | Download, Share, Print | Not started |
+| 4.1 | Download, Share, image export, Print | Not started |
 | M1 | Owner's own biodata made with the app (VISION D29) | Not started |
 | 4.2 | Ten languages in the document | Not started |
 | 4.3 | Templates 3–5 | Not started |

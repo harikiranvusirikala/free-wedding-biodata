@@ -1,7 +1,8 @@
 # Wedding Biodata Maker — Product Vision and Build Specification
 
 **Document type:** Product vision + technical requirements + implementation brief  
-**Working title:** Vivah Bio (name is provisional; keep product name configurable)  
+**Product name:** Free Wedding Biodata (D37; kept in one constant so it can change)  
+**URL:** https://free-wedding-biodata.vercel.app  
 **Audience:** Claude Code working in the local repository  
 **Product principle:** Free forever, local-first, privacy-first, no account, no paid runtime services.
 
@@ -10,6 +11,17 @@
 ---
 
 ## 1. Executive summary
+
+**Identity (D37, owner's choice 2026-11-20):**
+
+| | |
+|---|---|
+| App name | Free Wedding Biodata |
+| URL | https://free-wedding-biodata.vercel.app |
+| SEO title | Free Wedding Biodata Maker – Create & Download Biodata PDF |
+| Homepage H1 | Free Wedding Biodata Maker |
+| Short description (on the page) | Create a beautiful wedding biodata online for free. Add your personal, education, career, family and horoscope details, customize the design, and download a high-quality PDF. |
+| Meta description (≤ 160 characters) | Create a beautiful wedding biodata online for free. Add personal, education, career, family and horoscope details, pick a design and download a PDF. |
 
 Build a polished, responsive, installable web application that lets anyone create, edit, preview, save and download a beautiful Indian marriage biodata without creating an account or paying.
 
@@ -21,7 +33,7 @@ The user should be able to:
 4. Add, hide, rename and reorder fields and sections.
 5. Choose a design and language for labels/headings.
 6. See a live A4 document preview while editing.
-7. Download a high-quality, watermark-free PDF, and on phones share it straight to WhatsApp or any other app (§24 D3). An image export comes after launch (D19).
+7. Download a high-quality, watermark-free PDF, and on phones share it straight to WhatsApp or any other app (§24 D3). Also save or share each page as an **image (PNG/JPEG)**, e.g. for a WhatsApp status (D38).
 8. Close the tab/browser and return later on the same browser/device to continue editing.
 9. Export a backup file and import it on another device/browser.
 
@@ -71,7 +83,7 @@ Typical return journey: the user creates a draft, downloads a PDF, closes the si
 4. **Photo:** Add, crop, reposition, zoom, replace or remove a picture. Photo remains on the device.
 5. **Design:** Choose a template, theme colour and supported typography options.
 6. **Preview:** See an accurate A4 rendering. The preview updates as the user edits.
-7. **Download:** Generate a clean, watermark-free PDF. Clearly show success/error feedback. Where the device supports sharing files, also offer **Share PDF** (D3).
+7. **Download:** Generate a clean, watermark-free PDF. Clearly show success/error feedback. Where the device supports sharing files, also offer **Share PDF** (D3). **Save as image** gives one PNG/JPEG per page, also shareable (D38).
 8. **Resume:** On a later visit, restore local drafts and continue editing.
 9. **Backup:** User can download one portable backup file (JSON, photos included; D8), then import it elsewhere.
 
@@ -99,7 +111,7 @@ Recommended fixed routes (keep routes compatible with static hosting):
 - Save status: “Saving…”, “Saved on this device”, or a clear error.
 - Draft manager: create, rename, duplicate, open and delete drafts.
 - Form section navigation with completion indicators (informational only; do not force completion).
-- Preview toolbar: template, colour, **document language** (separate from the app language, §8), zoom, page count, Download PDF, Share PDF (where supported), Print.
+- Preview toolbar: template, colour, **document language** (separate from the app language, §8), zoom, page count, Download PDF, Share PDF (where supported), Save as image, Print.
 - Backup controls: export backup, import backup, clear local data.
 
 ## 6. Biodata data model and form sections
@@ -371,6 +383,13 @@ For **Download PDF** the spike compares:
 - Long content flows to additional pages gracefully.
 - Empty fields and sections are omitted.
 - Filename is sensible, e.g. `Marriage-Biodata-FirstName.pdf` (sanitize user input).
+
+### Image export (D38)
+
+- **Save as image** produces one image per page: JPEG by default (small enough for WhatsApp), PNG on request, A4 proportions at about 1240 × 1754 px (150 dpi) so text stays sharp when zoomed on a phone. Files are named `Marriage-Biodata-FirstName-page-1.jpg`.
+- It is drawn from the **same laid-out pages and the same shaping** as the PDF (the Download engine's display list drawn onto a canvas), never a separate layout, so the image and the PDF match.
+- Where `navigator.canShare({ files })` is true, **Share image** sends the page image(s) straight to WhatsApp (status or chat); elsewhere the image downloads.
+- Entirely client-side, no watermark, no site name, same omission of hidden/empty fields as the PDF.
 - PDF generation happens entirely client-side.
 
 ## 12. Recommended technology stack
@@ -506,7 +525,7 @@ Use Playwright for desktop and mobile viewports. Cover create → edit → auto-
 
 Build in small, verified phases. Do not generate the whole application in one large pass.
 
-The phases below are the product-level order. [BUILD_PLAN.md](BUILD_PLAN.md) breaks each one into session-sized steps with exact “Done when” checks, and holds the Progress table. Release priority (from the original planning conversation): **P0** — dynamic form, autosave/restore, live A4 preview, eight templates, watermark-free PDF, photo, backup/restore; **P1** — all ten languages, PWA/offline, custom sections and advanced layouts; **P2 (after launch, §26)** — image export, optional AI writing help, DOCX. All P0 and P1 items are in the phases below and must pass before the public launch.
+The phases below are the product-level order. [BUILD_PLAN.md](BUILD_PLAN.md) breaks each one into session-sized steps with exact “Done when” checks, and holds the Progress table. Release priority (from the original planning conversation): **P0** — dynamic form, autosave/restore, live A4 preview, eight templates, watermark-free PDF, photo, backup/restore; **P1** — all ten languages, PWA/offline, custom sections and advanced layouts; **P2 (after launch, §26)** — optional AI writing help, DOCX. (Image export moved into the launch scope, D38.) All P0 and P1 items are in the phases below and must pass before the public launch.
 
 ### Phase 0 — Repository and rendering spike
 
@@ -798,9 +817,9 @@ Later rows override the sections they name. Add a row whenever a product or arch
 | D14 | 2026-11-20 | Dates DD-MM-YYYY by default; 12-hour birth time | Indian convention | §6 |
 | D15 | 2026-11-20 | CSP with `connect-src 'self'`; e2e test proves no outbound personal data | Makes the privacy promise enforceable and tested | §13 (refines) |
 | D16 | 2026-11-20 | WCAG 2.2 AA, 44 px touch targets | Elders on phones are core users | §13 (refines) |
-| D17 | 2026-11-20 | Product name in one constant (`src/lib/site.ts`); working title “Vivah Bio” | Name is provisional | — |
+| D17 | 2026-11-20 | Product name in one constant (`src/lib/site.ts`); working title “Vivah Bio” (superseded by D37) | Name is provisional | — |
 | D18 | 2026-11-20 | Code MIT, fonts OFL 1.1 | Same as sibling apps; fonts' licence | — |
-| D19 | 2026-11-20 | Image (PNG/JPEG) export moves after launch | Optional in §1; PDF + Share covers WhatsApp | §1 item 7 |
+| D19 | 2026-11-20 | Image (PNG/JPEG) export moves after launch (superseded by D38) | Optional in §1; PDF + Share covers WhatsApp | §1 item 7 |
 | D20 | 2026-11-20 | Browser baseline and owner-run Safari/iOS checks (§14) | WebKit can't be installed for Playwright here | §14 (refines) |
 | D21 | 2026-11-20 | Opt-in motif library of original artwork + editable invocation line; “None” first; A4 portrait only in MVP | Respect for every tradition; no inference from fields | §7 (refines) |
 | D22 | 2026-11-20 | **Owner's choice:** Google Tag Manager on public pages only (`/`, `/templates`, `/help`, `/privacy`), Production only, never in `/editor`; links into the editor are full page loads; per-path CSP in `vercel.json` (public pages allow GTM/GA origins, the editor stays `connect-src 'self'`); an e2e test proves the editor never requests a third-party origin | Same pattern as the sibling apps; personal data is only ever typed in the editor | §13 “avoid third-party analytics”, §19 |
@@ -818,12 +837,14 @@ Later rows override the sections they name. Add a row whenever a product or arch
 | D34 | 2026-11-20 | Eight templates on three layout skeletons (Classic, Modern, Minimal) with distinct artwork, palettes and type | Consistency and low maintenance; competitors' many designs are one skeleton reskinned | §7 (refines) |
 | D35 | 2026-11-20 | Nothing printed except the user's content: no site name/URL/watermark; nothing struck through or gated; footer notice that the app doesn't match or connect people | The main difference from the reference sites | §2, §7 (refines) |
 | D36 | 2026-11-20 | SEO structure modelled on the leading competitor: `hreflang` alternates and `og:locale` alternates for ten static language landing pages (`/te`, `/hi`, …, each in that language), five tradition pages (Hindu, Muslim, Christian, Sikh, Jain biodata format), a template gallery of real sample images, a “what to write in each part” guide; structured data `Organization`, `WebSite`, `WebApplication` (`isAccessibleForFree`, price 0), `BreadcrumbList`, `FAQPage`, image `ItemList`. No `HowTo` (Google stopped showing it), no fake counters (“biodatas created today”) since nothing is counted | Search is the only marketing; honest numbers only | D26 (extends), §25 Q4 |
+| D37 | 2026-11-20 | **Owner's choice:** name **Free Wedding Biodata**; URL `free-wedding-biodata.vercel.app`; SEO title “Free Wedding Biodata Maker – Create & Download Biodata PDF” (58 characters); homepage H1 “Free Wedding Biodata Maker”; the short description is shown on the page in full (174 characters) and trimmed to 148 characters for the meta description, which the D26 test keeps ≤ 160 | The name says what it does and matches the repository and the address; Google truncates descriptions near 160 characters | D17, §25 Q1, the working title in the header |
+| D38 | 2026-11-20 | **Owner's choice:** image export (PNG/JPEG per page, Save and Share) is in the launch scope, built with the PDF in Step 4.1 from the same display list | Families share biodatas as WhatsApp statuses and chat images, not only as PDFs | D19, §1 item 7, §26 |
 
 ## 25. Open questions for the owner
 
 | # | Question | Default if not answered |
 |---|---|---|
-| Q1 | Final product name and domain? | Keep “Vivah Bio” as the working title on a `*.vercel.app` address |
+| Q1 | ~~Final product name and domain~~ — answered 2026-11-20: Free Wedding Biodata at free-wedding-biodata.vercel.app (D37) | — |
 | Q2 | ~~App (UI) languages at launch~~ — answered 2026-11-20: English only (D23) | — |
 | Q3 | Who can review the document-label translations for each language before they are marked reviewed? | Ship marked “not yet reviewed” |
 | Q4 | Per-language and per-tradition landing pages for search (D36)? The leading competitor has both. | Yes: ten language pages and five tradition pages, static, written once, with real sample pictures |
@@ -831,7 +852,6 @@ Later rows override the sections they name. Add a row whenever a product or arch
 
 ## 26. After launch (not in the MVP)
 
-- Image export (PNG/JPEG of each page) for WhatsApp status.
 - Landscape and other page sizes.
 - DOCX export.
 - Optional, user-controlled AI writing help (About me, partner expectations). It must stay optional, off by default, and never required for any essential flow; it would need a separate privacy decision because text would leave the device.
