@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AsideCard, ContentPage, ContentSection, Prose } from "@/components/ContentPage";
+import { DeleteAllCard } from "@/components/DeleteAllDialog";
 import { ExternalLink } from "@/components/ExternalLink";
 import { Rich } from "@/components/Rich";
 import { button } from "@/components/ui/button";
@@ -15,7 +16,8 @@ export const metadata: Metadata = {
 };
 
 // The local-storage explanation (VISION §9, mockup: privacy) as a content page (BUILD_PLAN A7). It says only
-// what is true today: backups and the delete buttons are described as coming, not offered (Part B rule 4).
+// what is true today: backups are described as coming, not offered (Part B rule 4); Delete all my local data
+// works from the aside (Step 1.4).
 
 const SECTIONS = [
   { id: "overview", label: t("privacy.nav.overview") },
@@ -65,6 +67,7 @@ export default function PrivacyPage() {
               {t("privacy.help.action")}
             </a>
           </AsideCard>
+          <DeleteAllCard />
         </>
       }
     >

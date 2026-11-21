@@ -2,9 +2,9 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
-// The app's drop-down menus (BUILD_PLAN A7; the sibling apps' pattern): the theme menu now, the drafts menu
-// later. The WAI-ARIA menu button: when it opens, the checked item (or the first) takes the focus; arrows,
-// Home and End move; Escape closes and returns to the button; Tab closes. A tap anywhere else closes it
+// The app's drop-down menus (BUILD_PLAN A7; the sibling apps' pattern): the theme menu and the drafts menu.
+// The WAI-ARIA menu button: when it opens, the checked item (or the first) takes the focus; arrows, Home and
+// End move; Escape closes and returns to the button; Tab closes. A tap anywhere else closes it
 // (pointerdown, so a touch counts too). A page Next.js keeps for Back comes back with its menus closed.
 
 const ITEMS = '[role="menuitem"]:not([disabled]), [role="menuitemradio"]:not([disabled]), [role="menuitemcheckbox"]:not([disabled])';
@@ -38,10 +38,12 @@ export function Menu(props: {
   disabled?: boolean;
   align?: "start" | "end";
   menuClassName?: string;
+  /** Called as the menu opens (the drafts menu refreshes its list). */
+  onOpen?: () => void;
   /** The items; `close` closes the menu and returns the focus to its button. */
   children: (close: () => void) => ReactNode;
 }) {
-  const { label, button, buttonLabel, buttonClassName, buttonTitle, disabled, align = "end", menuClassName = "w-56", children } = props;
+  const { label, button, buttonLabel, buttonClassName, buttonTitle, disabled, align = "end", menuClassName = "w-56", onOpen, children } = props;
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -95,11 +97,15 @@ export function Menu(props: {
         aria-label={buttonLabel}
         title={buttonTitle}
         disabled={disabled}
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (!open) onOpen?.();
+          setOpen(!open);
+        }}
         onKeyDown={(event) => {
           // ArrowDown or ArrowUp on the closed button opens it, as Enter and Space do (they click).
           if ((event.key === "ArrowDown" || event.key === "ArrowUp") && !open) {
             event.preventDefault();
+            onOpen?.();
             setOpen(true);
           }
         }}

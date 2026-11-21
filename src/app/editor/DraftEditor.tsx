@@ -7,17 +7,22 @@ import { Icon } from "@/components/ui/icons";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { pageWidth } from "@/components/ui/page";
 import type { AutosaveController } from "@/lib/autosave";
+import type { BiodataDb } from "@/lib/db";
+import type { ProfileRepo } from "@/lib/profile-repo";
 import { t } from "@/lib/i18n";
 import { useAutosave } from "@/lib/use-autosave";
+import { DraftsMenu } from "./DraftsMenu";
 import { EditorFrame } from "./EditorFrame";
 import { PersonalCard } from "./PersonalCard";
 import { SaveProblem, SaveStatus } from "./SaveStatus";
+import { StorageCard } from "./StorageCard";
 
 /**
- * The open draft: save status in the header, the form, and a note on where it is kept. Edits go straight to the
- * autosave controller, which writes them after a pause and when the page is hidden or closed (VISION §9).
+ * The open draft: the drafts menu and save status in the header, the form, and where it is kept (with the
+ * storage status). Edits go straight to the autosave controller, which writes them after a pause and when the
+ * page is hidden or closed (VISION §9).
  */
-export function DraftEditor({ controller }: { controller: AutosaveController }) {
+export function DraftEditor({ controller, repo, db }: { controller: AutosaveController; repo: ProfileRepo; db: BiodataDb }) {
   const { profile, status } = useAutosave(controller);
   const conflict = status.state === "error" && status.kind === "conflict";
 
@@ -31,10 +36,18 @@ export function DraftEditor({ controller }: { controller: AutosaveController }) 
   }, [controller]);
 
   /**
-   * Links out of the editor (logo, Help) are full page loads; pagehide can't wait for a write, so a click with
-   * changes pending writes them first and then follows the link. If the write fails the page stays, showing why,
-   * unless another tab owns the draft (those changes can't be saved anyway).
+   * Leaves the editor, or this draft (the drafts menu), with a full page load. pagehide can't wait for a write,
+   * so changes pending are written first. If the write fails the page stays, showing why, unless another tab
+   * owns the draft (those changes can't be saved anyway).
    */
+  async function leave(url: string | URL) {
+    if (controller.getSnapshot().unsaved) await controller.flush();
+    const after = controller.getSnapshot();
+    const lost = after.status.state === "error" && after.status.kind === "conflict";
+    if (!after.unsaved || lost) window.location.assign(url);
+  }
+
+  /** Links out of the editor (logo, Help): with changes pending, they're written before the link is followed. */
   function onClickCapture(event: React.MouseEvent) {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const link = (event.target as Element).closest?.("a[href]");
@@ -43,24 +56,23 @@ export function DraftEditor({ controller }: { controller: AutosaveController }) 
     if (url.origin !== window.location.origin || (url.pathname === window.location.pathname && url.hash)) return;
     if (!controller.getSnapshot().unsaved) return;
     event.preventDefault();
-    void controller.flush().then(() => {
-      const after = controller.getSnapshot();
-      const lost = after.status.state === "error" && after.status.kind === "conflict";
-      if (!after.unsaved || lost) window.location.assign(url);
-    });
+    void leave(url);
   }
 
   return (
     <div onClickCapture={onClickCapture} className="contents">
-      <EditorFrame status={<SaveStatus status={status} />}>
+      <EditorFrame
+        status={<SaveStatus status={status} />}
+        drafts={<DraftsMenu controller={controller} profile={profile} repo={repo} db={db} leave={leave} locked={conflict} />}
+      >
         <div className={`${pageWidth} grid items-start gap-6 py-8 sm:py-10 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-8`}>
           <div className="min-w-0 space-y-6">
             <PageHeader title={t("editor.title")} description={t("editor.lead")} />
             <SaveProblem status={status} onRetry={() => void controller.flush()} />
             <PersonalCard profile={profile} onChange={controller.update} readOnly={conflict} />
           </div>
-          <aside className={`${noteCard} lg:sticky lg:top-24`}>
-            <div className="flex gap-3">
+          <aside className="grid gap-4 sm:grid-cols-2 lg:sticky lg:top-24 lg:grid-cols-1">
+            <div className={`${noteCard} flex gap-3`}>
               <Icon name="lock" className="mt-0.5 size-5 text-gold" />
               <div className="min-w-0">
                 <h2 className={`${cardTitle} text-[15px]`}>{t("editor.note.title")}</h2>
@@ -70,6 +82,7 @@ export function DraftEditor({ controller }: { controller: AutosaveController }) 
                 </a>
               </div>
             </div>
+            <StorageCard savedAt={status.state === "saved" ? status.at.getTime() : undefined} />
           </aside>
         </div>
       </EditorFrame>

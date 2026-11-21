@@ -111,6 +111,13 @@
       transform: translateY(-4px) scale(0.98);
     }
   }
+  /* Something that appears once the page has read this browser's storage (Continue editing). */
+  --animate-fade-in: fade-in 240ms ease-out;
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
   --animate-dialog-in: dialog-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
   @keyframes dialog-in {
     from {

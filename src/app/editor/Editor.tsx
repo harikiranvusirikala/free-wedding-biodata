@@ -7,29 +7,35 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingNote, Skeleton } from "@/components/ui/Skeleton";
 import { pageWidth } from "@/components/ui/page";
 import { createAutosave, type AutosaveController } from "@/lib/autosave";
-import { openDb } from "@/lib/db";
+import { openDb, type BiodataDb } from "@/lib/db";
 import { t } from "@/lib/i18n";
-import { createDraft, openDraft, type OpenDraftResult } from "@/lib/open-draft";
-import { createProfileRepo } from "@/lib/profile-repo";
+import { createDraft, draftRequest, openDraft, openNewDraft, type OpenDraftResult } from "@/lib/open-draft";
+import { createProfileRepo, type ProfileRepo } from "@/lib/profile-repo";
 import { DraftEditor } from "./DraftEditor";
 import { EditorFrame } from "./EditorFrame";
 
-// The editor's start (BUILD_PLAN Step 1.3): open the database, then the draft in the address (?d=<id>), else the
-// last one opened here, else a new one, whose id goes into the address so a reload reopens it. Each way it can
-// fail has its own screen; a draft that can't be opened is never replaced or deleted.
+// The editor's start (BUILD_PLAN Steps 1.3, 1.4): open the database, then the draft in the address (?d=<id>), a
+// new one for ?new=1 (Create my biodata, New draft), else the last one opened here, else a new one. Its id goes
+// into the address (replacing ?new=1) so a reload reopens it. Each way it can fail has its own screen; a draft
+// that can't be opened is never replaced or deleted.
 
-type EditorState = { kind: "loading" } | Exclude<OpenDraftResult, { kind: "ready" }> | { kind: "ready"; controller: AutosaveController };
+type EditorState =
+  | { kind: "loading" }
+  | Exclude<OpenDraftResult, { kind: "ready" }>
+  | { kind: "ready"; controller: AutosaveController; repo: ProfileRepo; db: BiodataDb };
 
 // One start per page load. The editor is only ever reached by a full page load (links into it are plain <a>), and
 // React's development double effects must not create two drafts.
 let started: Promise<EditorState> | undefined;
 
 async function start(): Promise<EditorState> {
-  const repo = createProfileRepo(openDb());
-  const result = await openDraft(repo, new URLSearchParams(window.location.search).get("d"));
+  const db = openDb();
+  const repo = createProfileRepo(db);
+  const request = draftRequest(window.location.search);
+  const result = request.fresh ? await openNewDraft(repo) : await openDraft(repo, request.id);
   if (result.kind === "ready") {
     showInAddress(result.profile.id);
-    return { kind: "ready", controller: createAutosave({ repo, initial: result.profile }) };
+    return { kind: "ready", controller: createAutosave({ repo, initial: result.profile }), repo, db };
   }
   // A broken last-opened draft is named in the address too, so a reload shows the same thing.
   if (result.kind === "broken") showInAddress(result.id);
@@ -39,7 +45,8 @@ async function start(): Promise<EditorState> {
 /** Puts ?d=<id> in the address without a new history entry (Next.js keeps its router in step). */
 function showInAddress(id: string) {
   const url = new URL(window.location.href);
-  if (url.searchParams.get("d") === id) return;
+  if (url.searchParams.get("d") === id && !url.searchParams.has("new")) return;
+  url.searchParams.delete("new");
   url.searchParams.set("d", id);
   window.history.replaceState(null, "", url);
 }
@@ -57,7 +64,7 @@ export function Editor() {
     };
   }, []);
 
-  if (state.kind === "ready") return <DraftEditor controller={state.controller} />;
+  if (state.kind === "ready") return <DraftEditor controller={state.controller} repo={state.repo} db={state.db} />;
   return (
     <EditorFrame>
       {state.kind === "loading" ? <LoadingEditor /> : <OpenProblem state={state} />}

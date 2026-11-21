@@ -2,7 +2,7 @@ import "fake-indexeddb/auto";
 import { afterEach, describe, expect, it } from "vitest";
 import { createProfile } from "@/biodata/defaults";
 import { openDb, type BiodataDb } from "./db";
-import { createDraft, openDraft } from "./open-draft";
+import { createDraft, draftRequest, openDraft, openNewDraft } from "./open-draft";
 import { createProfileRepo, type ProfileRepo } from "./profile-repo";
 
 const opened: BiodataDb[] = [];
@@ -105,5 +105,44 @@ describe("openDraft", () => {
     const blocked = openDb(`blocked-${crypto.randomUUID()}`, { indexedDB: blockedFactory, IDBKeyRange });
     opened.push(blocked);
     expect(await openDraft(createProfileRepo(blocked), null)).toEqual({ kind: "unavailable" });
+  });
+});
+
+describe("openNewDraft (Create my biodata, New draft)", () => {
+  it("makes a new draft and remembers it, leaving the others alone", async () => {
+    const { repo, db } = setup();
+    const kept = { ...createProfile({ draftName: "Kept" }), revision: 2 };
+    await repo.create(kept);
+    await repo.setLastOpened(kept.id);
+    const result = await openNewDraft(repo);
+    expect(result).toMatchObject({ kind: "ready", created: true });
+    expect(result.kind === "ready" && result.profile.id).not.toBe(kept.id);
+    expect(await db.profiles.count()).toBe(2);
+    expect(await repo.getLastOpened()).toEqual({ ok: true, value: result.kind === "ready" && result.profile.id });
+  });
+
+  it("reopens the last draft instead when it is untouched, so empty drafts don't pile up", async () => {
+    const { repo, db } = setup();
+    const first = await openNewDraft(repo);
+    const second = await openNewDraft(repo);
+    expect(second).toMatchObject({ kind: "ready", created: false });
+    expect(first.kind === "ready" && second.kind === "ready" && second.profile.id === first.profile.id).toBe(true);
+    expect(await db.profiles.count()).toBe(1);
+  });
+
+  it("makes a new one when the last draft was ever saved, even if it is empty now", async () => {
+    const { repo, db } = setup();
+    const first = await openNewDraft(repo);
+    if (first.kind !== "ready") throw new Error("not ready");
+    await repo.save(first.profile, { expectedRevision: 0 });
+    expect(await openNewDraft(repo)).toMatchObject({ kind: "ready", created: true });
+    expect(await db.profiles.count()).toBe(2);
+  });
+
+  it("reads the request from the address", () => {
+    expect(draftRequest("?d=abc")).toEqual({ id: "abc", fresh: false });
+    expect(draftRequest("?new=1")).toEqual({ id: null, fresh: true });
+    expect(draftRequest("?d=abc&new=1")).toEqual({ id: "abc", fresh: false });
+    expect(draftRequest("")).toEqual({ id: null, fresh: false });
   });
 });

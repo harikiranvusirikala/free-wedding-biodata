@@ -1,6 +1,7 @@
-import { systemClock, type Clock } from "@/biodata/defaults";
+import { newUuid, systemClock, type Clock, type NewId } from "@/biodata/defaults";
+import { fullNameOf } from "@/biodata/draft-name";
 import { migrate, type MigrateErrorCode } from "@/biodata/migrate";
-import type { BiodataProfile } from "@/biodata/types";
+import type { BiodataProfile, PhotoRef } from "@/biodata/types";
 import type { BiodataDb, PhotoRecord } from "./db";
 
 // The only code that writes IndexedDB (BUILD_PLAN A5, VISION §9). Every method resolves to a result instead of
@@ -39,12 +40,15 @@ export type LoadResult =
   | { ok: false; error: LoadError };
 
 export type DraftSummary =
-  | { ok: true; id: string; draftName: string; updatedAt: string }
+  /** `fullName` gives a draft with no name of its own its automatic one (src/biodata/draft-name.ts). */
+  | { ok: true; id: string; draftName: string; fullName: string; updatedAt: string }
   /** A record that can't be opened. Its name and time are shown when they can still be read, else "". */
   | { ok: false; id: string; draftName: string; updatedAt: string; error: { code: MigrateErrorCode; message: string } };
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: RepoError };
 export type SaveResult = { ok: true; profile: BiodataProfile } | { ok: false; error: RepoError };
+/** A copy can't be made of a draft that is missing or can't be opened (`missing`, `broken`). */
+export type DuplicateResult = { ok: true; profile: BiodataProfile } | { ok: false; error: LoadError };
 
 /** A photo to store with a save; its profileId and updatedAt are filled in by the repo. */
 export type PhotoInput = Pick<PhotoRecord, "id" | "blob" | "mimeType" | "width" | "height">;
@@ -63,6 +67,11 @@ export interface ProfileRepo {
   save(profile: BiodataProfile, options: SaveOptions): Promise<SaveResult>;
   /** Stores a new draft as given (revision 0 from createProfile); fails if the id is already taken. */
   create(profile: BiodataProfile): Promise<SaveResult>;
+  /**
+   * Copies a draft and its photos in one transaction (Step 1.4): a new id for the draft and for each photo, the
+   * given name, revision 0 and the time now; everything else exactly as stored.
+   */
+  duplicate(id: string, options: { draftName: string }): Promise<DuplicateResult>;
   /** Deletes a draft and all of its photos together; called only after the user confirms. */
   remove(id: string): Promise<Result<void>>;
   getPhoto(id: string): Promise<Result<PhotoRecord | undefined>>;
@@ -77,7 +86,15 @@ class ConflictError extends Error {
   override name = "ConflictError";
 }
 
-export function createProfileRepo(db: BiodataDb, { now = systemClock }: { now?: Clock } = {}): ProfileRepo {
+/** Thrown inside a duplicate's transaction when the source can't be copied; turned into its LoadError. */
+class SourceError extends Error {
+  override name = "SourceError";
+  constructor(readonly error: LoadError) {
+    super(error.message);
+  }
+}
+
+export function createProfileRepo(db: BiodataDb, { now = systemClock, newId = newUuid }: { now?: Clock; newId?: NewId } = {}): ProfileRepo {
   return {
     async load(id) {
       try {
@@ -141,6 +158,36 @@ export function createProfileRepo(db: BiodataDb, { now = systemClock }: { now?: 
       }
     },
 
+    async duplicate(id, { draftName }) {
+      try {
+        const copy = await db.transaction("rw", [db.profiles, db.photos], async () => {
+          const raw: unknown = await db.profiles.get(id);
+          if (raw === undefined) throw new SourceError({ kind: "missing", message: `No draft ${id}` });
+          const result = migrate(raw);
+          if (!result.ok) throw new SourceError({ kind: "broken", ...result.error });
+          const photos = await db.photos.where("profileId").equals(id).toArray();
+          const photoIds = new Map(photos.map((photo) => [photo.id, newId()]));
+          const timestamp = now().toISOString();
+          const profile: BiodataProfile = {
+            ...withPhotoIds(structuredClone(result.profile), photoIds),
+            id: newId(),
+            revision: 0,
+            draftName,
+            createdAt: timestamp,
+            updatedAt: timestamp,
+          };
+          await db.profiles.add(profile);
+          for (const photo of photos) {
+            await db.photos.add({ ...photo, id: photoIds.get(photo.id)!, profileId: profile.id, updatedAt: timestamp });
+          }
+          return profile;
+        });
+        return { ok: true, profile: copy };
+      } catch (error) {
+        return { ok: false, error: error instanceof SourceError ? error.error : toRepoError(error) };
+      }
+    },
+
     async remove(id) {
       return attempt(() =>
         db.transaction("rw", [db.profiles, db.photos, db.appMeta], async () => {
@@ -185,7 +232,7 @@ function summarise(raw: unknown): DraftSummary {
   const result = migrate(raw);
   if (result.ok) {
     const { id, draftName, updatedAt } = result.profile;
-    return { ok: true, id, draftName, updatedAt };
+    return { ok: true, id, draftName, fullName: fullNameOf(result.profile), updatedAt };
   }
   return {
     ok: false,
@@ -194,6 +241,17 @@ function summarise(raw: unknown): DraftSummary {
     updatedAt: typeof record.updatedAt === "string" ? record.updatedAt : "",
     error: result.error,
   };
+}
+
+/** The profile with every photo reference pointed at its copy's id (a reference with no stored photo is kept). */
+function withPhotoIds(profile: BiodataProfile, ids: Map<string, string>): BiodataProfile {
+  const swap = <T extends PhotoRef>(ref: T): T => ({ ...ref, id: ids.get(ref.id) ?? ref.id });
+  const next = { ...profile };
+  if (next.photo) next.photo = swap(next.photo);
+  if (next.secondPhoto) next.secondPhoto = swap(next.secondPhoto);
+  if (next.horoscopeChart) next.horoscopeChart = swap(next.horoscopeChart);
+  if (next.photoPages) next.photoPages = { ...next.photoPages, photos: next.photoPages.photos.map(swap) };
+  return next;
 }
 
 /** A stored record's revision, or NaN when it has none: a broken record never matches, so it is never overwritten. */

@@ -300,6 +300,17 @@ Every screen is built **production-quality the first time**, to the standard of 
 - **Tests:** unit with fake-indexeddb (quota, conflict, blocked, atomic profile + photo, broken records); `e2e/drafts.spec.ts`: reload restores, Saving before Saved and the value on disk, last draft, link flush, two tabs, unknown id, broken record, blocked storage.
 - **Deviations:** the quota message has no "Download a backup" button until 5.1; Date of birth is free text until 2.1 (2.1 must read typed values); the editor is one column + aside, not the three panes (Phase 2); `save` takes `{ expectedRevision, photos: { put, delete } }`. Storage layer and editor wiring built by two subagents (the second in parallel with 3.2).
 
+### Step 1.4: Drafts and storage status (built 2026-11-21)
+
+- **Drafts menu** (`DraftsMenu.tsx`, editor header): the open draft's name; drafts newest first with "Edited 2 days ago"; switching writes pending changes, then a full load; New draft, Rename…, Duplicate, Delete…, Delete all my local data…; broken drafts show "Can't be opened" with Delete only.
+- **Names** (`src/biodata/draft-name.ts`, pure): `draftName` "" means automatic, from the Full name ("Sai Teja Mandapati" → "Sai Teja's biodata"; initials skipped; long names → first word), else "Untitled biodata". Rename stores the trimmed name; empty goes back to automatic. Never printed.
+- **Repo:** `duplicate(id, { draftName })` copies profile + photos with new ids in one transaction; summaries carry `fullName`.
+- **New drafts:** `/editor?new=1` (`openNewDraft`) from Create my biodata (hero, header, footer) and New draft; an untouched last draft (revision 0, blank) is reopened rather than piling up empty drafts; the address becomes `?d=`. Duplicate opens the copy ("<name> (copy)"); Delete opens the newest remaining draft, else a new one.
+- **Landing:** "Continue editing <name>" under Create my biodata in a reserved line (fades in, no layout jump); `local-data.ts` is loaded by `import()` after hydration and checks `Dexie.exists` first, so a first visit creates no database.
+- **Storage** (`storage-status.ts`, `StorageCard`, editor aside): space used, protected or not, "Keep my drafts safe" (`persist()`, the browser's answer shown as given), a warning that clearing browsing data deletes drafts.
+- **Delete all** (`local-data.ts`, `DeleteAllDialog`, drafts menu + privacy aside): type DELETE; deletes the database (closed for good) and this site's localStorage, then goes to `/`.
+- **Deviations:** Continue sits under the main button, not beside it (no layout jump); the privacy aside has Delete all but no backup card (5.1); storage sits in the aside, not a menu panel. Also fixed `e2e/theme.spec.ts`'s outside-click target (the open menu covered the heading on phones).
+
 ## Phase 2 — Editor and dynamic fields
 
 - **2.0** Editor opening (VISION D43): the Top of your biodata card (motif / invocation / title, None first, in template colours), the language notice, tradition field chips.
@@ -353,7 +364,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 | 1.1 | App shell | Done 2026-11-21. Unit 182 (30 new), e2e 44 passed (+24 phone skips by design), A7 screenshots of 7 screens × 3 sizes × Day/Night reviewed by the agent and spot-checked (fixed: phone header overflow at 360 px, tablet dead space, tall cards on phones, duplicate coffee card, uneven gallery cards, sub-44 px footer links). See the Step 1.1 section for decisions and mockup deviations |
 | 1.2 | Profile model | Done 2026-11-21 (built by a subagent in parallel with 1.1; committed first since it doesn't depend on it). Unit 71 in `src/biodata/`. Deviations: option lists by key, not stored; photo slots for D40/D41; see the Step 1.2 section. VISION gaps noted there (tradition chip contents, Partner preferences display style) |
 | 1.3 | Persistence and autosave | Done 2026-11-21. Unit 248 at the time (incl. 3.2's in-progress tests), e2e: all 1.3 tests pass (8 new in `drafts.spec.ts`); screenshots of editor, saved, conflict, not-found and blocked-storage states at 3 sizes × Day/Night reviewed. Fixed during the step: Try again after a failed save now shows Saving… (test fails without the fix). See the Step 1.3 section |
-| 1.4 | Drafts and storage status | Not started |
+| 1.4 | Drafts and storage status | Done 2026-11-21. Unit 304 at the time (55 new), e2e 92 passed (+36 skips by design); drafts menu, delete/rename/delete-all dialogs, editor, landing with Continue and privacy reviewed at 3 sizes × Day/Night (fixed: tablet aside cards two across). See the Step 1.4 section. **Phase 1 complete** |
 | 2.0 | Editor opening: top element card, language notice, tradition chips | Not started |
 | 2.1 | Editor inputs | Not started |
 | 2.2 | Field and section management | Not started |

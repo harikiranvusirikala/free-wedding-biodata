@@ -94,7 +94,8 @@ test("a click outside closes the theme menu", async ({ page }) => {
   await page.goto("/");
   await themeButton(page).click();
   await expect(page.getByRole("menu")).toBeVisible();
-  await page.getByRole("heading", { level: 1 }).click();
+  // Well clear of the open menu: on a phone the menu reaches down over the headline's middle.
+  await page.getByRole("heading", { name: "Stays on your device" }).click();
   await expect(page.getByRole("menu")).toHaveCount(0);
 });
 

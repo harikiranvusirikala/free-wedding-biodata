@@ -257,3 +257,69 @@ describe("profile repo: errors", () => {
     expect(toRepoError("a string").kind).toBe("unknown");
   });
 });
+
+describe("profile repo: duplicate (Step 1.4)", () => {
+  const crop = { x: 0, y: 0, zoom: 1, rotation: 0 as const };
+
+  it("copies the draft and its photos under new ids, with the given name, leaving the original alone", async () => {
+    const { db, repo } = setup();
+    const source = { ...newProfile("Original"), photo: { id: "main", crop, frame: "3:4" as const }, horoscopeChart: { id: "chart", crop } };
+    await repo.create(source);
+    const saved = await repo.save(source, { expectedRevision: 0, photos: { put: [photo("main", "face"), photo("chart", "chart")] } });
+    expect(saved.ok).toBe(true);
+
+    const result = await repo.duplicate(source.id, { draftName: "Original (copy)" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const copy = result.profile;
+    expect(copy.id).not.toBe(source.id);
+    expect(copy).toMatchObject({ draftName: "Original (copy)", revision: 0, createdAt: SAVED_AT.toISOString(), updatedAt: SAVED_AT.toISOString() });
+    expect(copy.sections).toEqual(source.sections);
+    expect(copy.photo?.id).not.toBe("main");
+    expect(copy.horoscopeChart?.id).not.toBe("chart");
+
+    const copiedPhoto = await db.photos.get(copy.photo!.id);
+    expect(copiedPhoto).toMatchObject({ profileId: copy.id, width: 30 });
+    expect(await copiedPhoto?.blob.text()).toBe("face");
+    expect(await db.photos.where("profileId").equals(copy.id).count()).toBe(2);
+
+    // Each draft owns its photos: deleting the copy leaves the original's pictures.
+    await repo.remove(copy.id);
+    expect(await db.photos.where("profileId").equals(source.id).count()).toBe(2);
+    const original = await repo.load(source.id);
+    expect(original.ok && original.profile).toMatchObject({ draftName: "Original", photo: { id: "main" }, revision: 1 });
+  });
+
+  it("the copy is a draft like any other: it loads, lists and saves", async () => {
+    const { repo } = setup();
+    const source = newProfile("Mine");
+    await repo.create(source);
+    const result = await repo.duplicate(source.id, { draftName: "Mine (copy)" });
+    if (!result.ok) throw new Error("not copied");
+    expect((await repo.load(result.profile.id)).ok).toBe(true);
+    const listed = await repo.list();
+    expect(listed.ok && listed.value.map((d) => d.draftName).sort()).toEqual(["Mine", "Mine (copy)"]);
+    expect((await repo.save(result.profile, { expectedRevision: 0 })).ok).toBe(true);
+  });
+
+  it("refuses to copy a missing or broken draft", async () => {
+    const { db, repo } = setup();
+    const missing = await repo.duplicate("nope", { draftName: "x" });
+    expect(missing.ok === false && missing.error.kind).toBe("missing");
+    await db.profiles.put({ id: "broken", schemaVersion: 1, revision: 1, sections: 3 } as unknown as BiodataProfile);
+    const broken = await repo.duplicate("broken", { draftName: "x" });
+    expect(broken.ok === false && broken.error).toMatchObject({ kind: "broken", code: "invalid" });
+    expect(await db.profiles.count()).toBe(1);
+  });
+
+  it("lists each draft with its Full name, for its automatic name", async () => {
+    const { repo } = setup();
+    const profile = newProfile("");
+    const sections = profile.sections.map((s) =>
+      s.kind === "fields" ? { ...s, fields: s.fields.map((f) => (f.key === "fullName" ? { ...f, value: "Asha Rani" } : f)) } : s,
+    );
+    await repo.create({ ...profile, sections });
+    const listed = await repo.list();
+    expect(listed.ok && listed.value[0]).toMatchObject({ ok: true, draftName: "", fullName: "Asha Rani" });
+  });
+});

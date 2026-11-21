@@ -10,11 +10,13 @@ interface Screen {
   init?: () => void;
   /** Runs once before the screenshots (e.g. typing into a new draft, which /editor then reopens). */
   setup?: (page: Page) => Promise<void>;
+  /** Waits, after each load, for something that appears once the page has read storage (Continue editing). */
+  ready?: (page: Page) => Promise<void>;
 }
 
 /** Fills the first fields of a new draft (fictional values) and waits until they are saved. */
-async function fillDraft(page: Page) {
-  await page.goto("/editor");
+async function fillDraft(page: Page, path = "/editor") {
+  await page.goto(path);
   for (const [label, value] of [["Full name", "Sai Teja Mandapati"], ["Date of birth", "15-03-1998"], ["Nationality", "Indian"], ["Current city", "Hyderabad"], ["Native place", "Guntur"]]) {
     await page.getByLabel(label).fill(value);
   }
@@ -23,6 +25,7 @@ async function fillDraft(page: Page) {
 
 const SCREENS: Screen[] = [
   { name: "home", path: "/" },
+  { name: "home-continue", path: "/", setup: fillDraft, ready: (page) => expect(page.getByTestId("continue-editing")).toBeVisible() },
   { name: "help", path: "/help" },
   { name: "privacy", path: "/privacy" },
   { name: "editor", path: "/editor", setup: fillDraft },
@@ -52,8 +55,9 @@ test.describe("screens", () => {
           await page.emulateMedia({ colorScheme: theme });
           await page.goto(screen.path);
           await expect(page.getByTestId("editor-loading")).toHaveCount(0); // the editor opens its draft after load
+          await screen.ready?.(page);
           await expect(page.locator("html")).toHaveClass(theme === "dark" ? /dark/ : /^(?!.*dark)/);
-          await page.screenshot({ path: `test-results/screenshots/${screen.name}-${size.name}-${theme === "light" ? "day" : "night"}.png`, fullPage: true });
+          await page.screenshot({ path: `test-results/screenshots/${screen.name}-${size.name}-${theme === "light" ? "day" : "night"}.png`, fullPage: true, animations: "disabled" });
         }
       }
     });
@@ -84,6 +88,32 @@ test("editor with a save problem at every size, Day and Night", async ({ page, c
   await other.getByLabel("Full name").fill("Sai Teja");
   await expect(other.getByTestId("save-problem")).toBeVisible();
   await shootAll(other, "editor-conflict");
+});
+
+// The drafts menu open (two drafts, the open one ticked), the Delete draft dialog and Delete all my local data
+// (Step 1.4), shot as they are: the theme and size change without a reload, which would close them.
+test("drafts menu and its dialogs at every size, Day and Night", async ({ page, isMobile }) => {
+  test.skip(isMobile, "sizes are set here, so one project is enough");
+  await page.goto("/editor?new=1");
+  await page.getByLabel("Full name").fill("Asha Rani");
+  await expect(page.getByTestId("save-status")).toHaveText(/Saved on this device · \d/);
+  await fillDraft(page, "/editor?new=1");
+  await page.getByTestId("draft-title").click();
+  await expect(page.getByRole("menu", { name: "Drafts" })).toBeVisible();
+  await shootAll(page, "editor-drafts-menu");
+  await page.getByRole("menuitem", { name: "Delete…" }).click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await shootAll(page, "editor-delete-dialog");
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await page.getByTestId("draft-title").click();
+  await page.getByRole("menuitem", { name: "Rename…" }).click();
+  await page.getByLabel("Draft name").fill("For the Rao family");
+  await shootAll(page, "editor-rename-dialog");
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await page.getByTestId("draft-title").click();
+  await page.getByRole("menuitem", { name: "Delete all my local data…" }).click();
+  await page.getByLabel("Type DELETE to confirm").fill("DEL");
+  await shootAll(page, "editor-delete-all-dialog");
 });
 
 /** Screenshots a page as it is (no reload) at every size, Day and Night; colour transitions are finished first. */

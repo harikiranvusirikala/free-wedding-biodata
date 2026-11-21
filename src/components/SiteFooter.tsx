@@ -32,7 +32,7 @@ export function SiteFooter() {
             <h2 className={heading}>{t("footer.use")}</h2>
             <ul className="space-y-2.5 pointer-coarse:space-y-0">
               <li>
-                <a href="/editor" className={link}>
+                <a href="/editor?new=1" className={link}>
                   {t("footer.create")}
                 </a>
               </li>

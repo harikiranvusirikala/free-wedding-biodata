@@ -16,7 +16,7 @@ Free Wedding Biodata (https://free-wedding-biodata.vercel.app, VISION D37): a fr
 
 Read only the sections a task needs (`grep -n '^#' <file>`, then `Read` with `offset`/`limit`).
 
-**Current state:** Phase 0 is done: the skeleton (0.1) and the PDF spike (0.2), which chose HarfBuzz + pdf-lib fed by the laid-out pages (VISION D49, `docs/spikes/PDF_SPIKE.md`); its working code is in `src/pdf-spike/`. Phase 1: 1.1 (app shell) and 1.2 (profile model) are built; 1.3 (drafts saved in IndexedDB with honest autosave) is built. Check the Progress table for the latest. Check the Progress table for what's actually built before assuming any file below exists. `docs/PROJECT_GUIDE.md` lists every folder and page.
+**Current state:** Phase 0 is done: the skeleton (0.1) and the PDF spike (0.2), which chose HarfBuzz + pdf-lib fed by the laid-out pages (VISION D49, `docs/spikes/PDF_SPIKE.md`); its working code is in `src/pdf-spike/`. Phase 1: 1.1 (app shell) and 1.2 (profile model) are built; Phase 1 is complete (shell, profile model, autosave in IndexedDB, drafts menu); 3.2 (document engine, Classic Gold and Minimal Ivory) is built ahead of Phase 2. Check the Progress table for the latest. Check the Progress table for what's actually built before assuming any file below exists. `docs/PROJECT_GUIDE.md` lists every folder and page.
 
 ## Commands
 
@@ -73,6 +73,7 @@ A single e2e file (`npx playwright test e2e/<file>.spec.ts`) isn't allowlisted: 
 - **Next 16 `error.tsx`** gets `retry` (use it; `reset` still exists).
 - **Screenshots after `emulateMedia`** with no reload catch `transition-colors` mid-fade: pass `animations: "disabled"`.
 - **Dexie reads `indexedDB` once, at import.** To fake blocked storage: in unit tests pass an `indexedDB` factory to `openDb`; in e2e hide `window.indexedDB` with an init script.
+- **Lint rejects `window.location.assign("/relative")`:** pass `new URL(path, location.href)`. `Dexie.exists(name)` checks without creating the database. Full-page screenshots of a modal `<dialog>` dim only the first viewport.
 - **Parallel agents** may share the working tree: check `git status` and stage only a step's own files when committing.
 - **`next build` type-checks every `.ts`/`.mts` file**, including `scripts/` and `e2e/`: import local modules without the `.ts` extension, and run `npx tsc --noEmit` before a build.
 - **Next.js 16 differs from older versions:** read `node_modules/next/dist/docs/` before writing Next.js code.

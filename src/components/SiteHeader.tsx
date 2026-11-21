@@ -19,7 +19,7 @@ export function SiteHeader() {
         <NavLinks className="hidden sm:block" />
         <div className="ml-auto flex items-center gap-3">
           <ThemeMenu />
-          <a href="/editor" className={`${button("primary")} max-sm:hidden`}>
+          <a href="/editor?new=1" className={`${button("primary")} max-sm:hidden`}>
             {t("header.create")}
           </a>
         </div>

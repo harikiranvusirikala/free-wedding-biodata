@@ -1,10 +1,14 @@
+import { ContinueEditing } from "@/components/landing/ContinueEditing";
+import { button } from "@/components/ui/button";
 import { card, cardText, cardTitle } from "@/components/ui/card";
+import { Icon } from "@/components/ui/icons";
 import { pageWidth } from "@/components/ui/page";
 import { t } from "@/lib/i18n";
 import { HEADLINE, SHORT_DESCRIPTION } from "@/lib/site";
 
-// Step 0.1: what the app is and the privacy promise. The full landing page (buttons, product pictures,
-// templates, FAQ) comes in Step 6.1 (BUILD_PLAN A7, landing composition).
+// What the app is, Create my biodata (always a new draft) with Continue editing under it when this browser has a
+// draft (Step 1.4), and the privacy promise. The full landing page (product pictures, templates, FAQ) comes in
+// Step 6.1 (BUILD_PLAN A7, landing composition). Links into the editor are plain <a> (VISION D22).
 
 const PROMISES = ["device", "free", "language"] as const;
 
@@ -32,9 +36,16 @@ export default function Home() {
             {tail}
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-pretty text-ink-2">{SHORT_DESCRIPTION}</p>
+          <div className="mt-8 flex w-full flex-col items-center gap-2">
+            <a href="/editor?new=1" className={`${button("primary", "lg")} h-12 px-6 text-base`}>
+              <Icon name="edit" className="size-[18px]" />
+              {t("header.create")}
+            </a>
+            <ContinueEditing />
+          </div>
         </div>
 
-        <ul className="mx-auto mt-14 grid max-w-5xl gap-4 sm:grid-cols-3">
+        <ul className="mx-auto mt-10 grid max-w-5xl gap-4 sm:grid-cols-3">
           {PROMISES.map((id) => (
             <li key={id} className={`${card} p-5`}>
               <h2 className={cardTitle}>{t(`home.promise.${id}.title`)}</h2>
