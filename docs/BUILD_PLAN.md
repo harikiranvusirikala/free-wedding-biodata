@@ -17,8 +17,8 @@ This file says **how** the app is built: architecture (Part A), rules every step
 - **Next.js 16** (App Router, Turbopack) with **`output: 'export'`**: `next build` writes a static `out/` folder. No route handlers, server actions, `proxy.ts`, `headers()`, cookies or default image loader (unsupported in static export, and not wanted). Don't enable `cacheComponents`.
 - **React 19**, **TypeScript 5** strict (TypeScript 7 exists but Next.js's tooling and the siblings use 5), **Tailwind CSS v4** wired like the sibling apps (`@tailwindcss/turbopack` loader in `next.config.ts`, no PostCSS config).
 - **zod 4** (profile, database reads, backup import), **Dexie** (IndexedDB), `fake-indexeddb` (unit tests only).
-- **PDF:** decided by Step 0.2. Expected: **`harfbuzzjs`** (text shaping, WebAssembly) + **`pdf-lib`** (PDF writing), both lazy-loaded on the first download. Print through `window.print()`.
-- **Fonts:** Noto Sans static TTFs (OFL 1.1) copied into `public/fonts/` by `npm run fonts` from an npm package that ships TTFs (candidate `@expo-google-fonts/noto-sans-*`; confirmed in Step 0.2).
+- **PDF (decided in Step 0.2, VISION D49):** **`harfbuzzjs`** (text shaping, WebAssembly; `turbopack.resolveAlias` maps its Node-only `module` import to `src/lib/empty-module.ts` in browser builds) + **`pdf-lib`** (PDF writing), lazy-loaded on the first download, fed by the display list read from the laid-out pages. Page images: the same display list drawn on a canvas. Print through `window.print()`. Spike evidence: `docs/spikes/PDF_SPIKE.md`.
+- **Fonts:** Noto Sans static TTFs (OFL 1.1), Regular and Bold, copied into `public/fonts/` with `OFL.txt` by `npm run fonts` from the `@expo-google-fonts/noto-sans*` packages (dev dependencies; 3.4 MB for nine families, confirmed in Step 0.2).
 - **No** UI library, icon package, form library, state library, drag-and-drop library, PWA plugin, backend, auth or AI SDK (D5–D7). **Analytics:** Google Tag Manager on public pages only, Production only (D22); no `/admin`, no counting backend (D24).
 - **Pictures:** `npm run images` (`scripts/site-images.mts`, using `sharp`, which comes with Next.js) builds icons, the link preview, GitHub's social preview and the landing WebPs (D27).
 - **Tests:** Vitest (+ Testing Library, jsdom) and Playwright (installed Google Chrome locally, `channel: "chrome"`; CI installs Chromium).
@@ -50,7 +50,8 @@ src/document/                the shared render contract (A4)
   templates/<id>/            one folder per design (20, D46) on three skeletons (classic, modern, minimal, D34)
   frames/                    original SVG frame families (corner/border art, D46)
   motifs/                    original SVG motif artwork (D21)
-src/pdf/                     the Download engine chosen in Step 0.2 (lazy-loaded)
+src/pdf/                     the Download engine chosen in Step 0.2 (D49): display list → HarfBuzz + pdf-lib PDF, canvas page images (lazy-loaded)
+src/pdf-spike/               Step 0.2's spike: display-list reader, vector writer (C), canvas drawing (D), reference page; moved into src/pdf/ and src/document/ in Steps 3.2 and 4.1
 src/lib/                     browser services (thin, mockable)
   site.ts                    product name ("Free Wedding Biodata"), URL (https://free-wedding-biodata.vercel.app), TITLE/DESCRIPTION source (D37), SUPPORT_URL, robotsFor/sitemapFor (Production-only indexing) (D17, D25, D26)
   tag-manager.ts             PURE gtmId(env): GTM_ID if it looks like GTM-…, else nothing (D22)
@@ -134,7 +135,7 @@ Dexie stores (`src/lib/db.ts`): `profiles` (`id`, `updatedAt`), `photos` (`profi
 1. `toDocument(profile, dict, today)` (pure) → `DocModel`: only visible, non-empty fields and sections; labels from the dictionary unless renamed; formatted values; age if `showAge`.
 2. A template renders the `DocModel` as a list of **blocks** (header with photo, section heading, row, paragraph line group, family rows) using shared primitives and its tokens.
 3. Blocks are measured once in an off-screen container at true size (after `document.fonts.ready`); `paginate()` (pure) assigns them to A4 pages: a section heading never ends a page, rows never split, long paragraphs split at line boundaries.
-4. The resulting pages render in the preview (scaled), in print (`@page { size: A4; margin: 0 }`) and are the input to the Download engine. User text is always a React text node, never HTML.
+4. The resulting pages render in the preview (scaled), in print (`@page { size: A4; margin: 0 }`, last page `break-after: auto`) and are the input to the Download engine: a **display list** read from the laid-out pages (each text line with its baseline, font, size and colour; boxes; photo; SVG ornaments) is written as a vector PDF (HarfBuzz shaping with the same TTFs, subset fonts, `/ActualText`) or drawn on a canvas for page images (D49). User text is always a React text node, never HTML.
 
 ## A5. Persistence (VISION §9)
 
@@ -305,7 +306,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 |---|---|---|
 | 0.0 | Prerequisites (owner): npm token, sandbox allowlist, Vercel project | npm token refreshed 2026-11-20. Sandbox: the existing allowlist entries (`npm run build`, `npm run dev`, `npm run test:e2e`, `npm run images`) work here. Vercel project still to do |
 | 0.1 | Skeleton and static-hosting proof | Done 2026-11-21. Unit 15, e2e 16 (+8 phone duplicates of the screenshot spec skipped), A7 screenshots of 4 screens × 3 sizes × Day/Night reviewed (home hero centred until 6.1 brings the product shot; privacy aside fixed). Also added beyond the step: `robots.ts` (preview/local builds disallow all), `vercel.json` header unit test, `e2e/screens.spec.ts` (screenshots + 360 px overflow), HSTS and `X-Frame-Options` headers. Night follows the device until 1.1's theme menu. Owner: import the repo in Vercel, open `/`, `/privacy`, `/editor?d=abc` on the preview and check `curl -I <preview>/editor` shows the strict CSP; upload `docs/social-preview.png` in GitHub Settings → Social preview |
-| 0.2 | PDF and Indian-script spike | Not started |
+| 0.2 | PDF and Indian-script spike | Done 2026-11-21: **C chosen** (VISION D49, `docs/spikes/PDF_SPIKE.md`). Candidates A and C ran as parallel subagents; B and D in e2e. Unit 57, e2e 19 (+11 phone skips), including the spike specs (reference screenshots, display list, Chrome PDF, raster PDF + page images, C in the browser from the static build). A's code and `@react-pdf/renderer`/`@pdf-lib/fontkit` removed; C, D, the display list and the reference page stay in `src/pdf-spike/` until 3.2/4.1 move them. Found: harfbuzzjs needs a Turbopack alias for `module` (added); display-list gaps to close in 4.1 (text-align, exact baseline, spaces between runs, italic). Also: social preview now shows two biodata pages (owner asked for more than the icon). Owner: phone download/Share checks move to 4.1 (the spike page is dev-only) |
 | 1.1 | App shell | Not started |
 | 1.2 | Profile model | Not started |
 | 1.3 | Persistence and autosave | Not started |

@@ -1,0 +1,13 @@
+{
+  "firstMs": {
+    "load": 22,
+    "pdf": 325
+  },
+  "warmMs": 224,
+  "cpu4xWarmMs": 593,
+  "pdfKB": 177,
+  "wasmKB": {
+    "harfbuzz.2im_fd_sx5883.wasm": 434,
+    "harfbuzz-subset.0n87rldgnzoou.wasm": 668
+  }
+}

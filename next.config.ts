@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   images: { unoptimized: true },
   turbopack: {
+    // harfbuzzjs (PDF text shaping) has a Node-only `await import("module")` that browsers never run; give the
+    // bundler an empty stand-in so it can build the browser chunk.
+    resolveAlias: { module: { browser: "./src/lib/empty-module.ts" } },
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],

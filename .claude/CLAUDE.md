@@ -16,7 +16,7 @@ Free Wedding Biodata (https://free-wedding-biodata.vercel.app, VISION D37): a fr
 
 Read only the sections a task needs (`grep -n '^#' <file>`, then `Read` with `offset`/`limit`).
 
-**Current state:** Step 0.1 is built (skeleton: `/`, `/privacy`, `/editor?d=`, not-found, `vercel.json` headers, CI, icons). Next is 0.2 (PDF/Indic-script spike), whose result decides the PDF engine (VISION D1). Check the Progress table for what's actually built before assuming any file below exists. `docs/PROJECT_GUIDE.md` lists every folder and page.
+**Current state:** Phase 0 is done: the skeleton (0.1) and the PDF spike (0.2), which chose HarfBuzz + pdf-lib fed by the laid-out pages (VISION D49, `docs/spikes/PDF_SPIKE.md`); its working code is in `src/pdf-spike/`. Next is Phase 1 (1.1 app shell ∥ 1.2 profile model, see the dependency map in BUILD_PLAN Part B). Check the Progress table for what's actually built before assuming any file below exists. `docs/PROJECT_GUIDE.md` lists every folder and page.
 
 ## Commands
 
@@ -29,7 +29,7 @@ npm run build          # static export to out/ (allowlisted; run alone)
 npm run test:e2e       # Playwright: builds, serves out/ on port 3100, phone + desktop projects (allowlisted; run alone)
                        # e2e/screens.spec.ts writes the A7 screenshots to test-results/screenshots/
 npm run serve          # serve out/ like Vercel (port 3100; scripts/serve-out.mts)
-npm run fonts          # copy the Noto TTFs + OFL.txt into public/fonts/ (Step 0.2)
+npm run fonts          # copy the Noto TTFs + OFL.txt into public/fonts/
 npm run images         # icons, link preview, docs/social-preview.png, landing pictures (sharp)
 ```
 
@@ -37,7 +37,7 @@ A single e2e file (`npx playwright test e2e/<file>.spec.ts`) isn't allowlisted: 
 
 ## Architecture in brief (details: BUILD_PLAN Part A)
 
-- **One document, laid out once** (A4, VISION D1): `src/biodata/document.ts` turns a profile + document-language dictionary into a `DocModel` (hidden/empty fields dropped, labels, formatted values) → a template in `src/document/templates/<id>/` renders it as blocks → blocks are measured off-screen and `src/document/paginate.ts` assigns them to A4 pages → those same pages are the live preview, the print output (`@page` A4) and the input to the Download engine in `src/pdf/` (lazy-loaded), which also draws page images (D38). Never build a second layout for export.
+- **One document, laid out once** (A4, VISION D1): `src/biodata/document.ts` turns a profile + document-language dictionary into a `DocModel` (hidden/empty fields dropped, labels, formatted values) → a template in `src/document/templates/<id>/` renders it as blocks → blocks are measured off-screen and `src/document/paginate.ts` assigns them to A4 pages → those same pages are the live preview and the print output (`@page` A4); a display list read from them (every text line, box, photo, SVG) feeds the Download engine in `src/pdf/` (lazy-loaded; HarfBuzz shaping + pdf-lib, D49) and the canvas page images (D38). Never build a second layout for export. Prototype: `src/pdf-spike/`.
 - **Pure vs browser code:** `src/biodata/` and `src/document/` are pure and unit-tested (edits are reducer functions, D6; migrations shared by the database and backups). Browser services live in `src/lib/` (Dexie DB, `profile-repo.ts` as the only writer, autosave, photos, storage status).
 - **Persistence:** one Dexie transaction writes profile + photo; each profile has a `revision`, and a tab that finds a newer one stops autosaving and asks to reload (D9). Reads go through zod + `migrate()`; bad records are kept and reported, never deleted.
 - **Templates:** twenty designs (D46) on three skeletons (classic, modern, minimal; D34), each a combination of top element, frame family, paper tint, heading-bar style and three colour variants (D39); motifs take the template's colours (D45).
@@ -67,6 +67,7 @@ A single e2e file (`npx playwright test e2e/<file>.spec.ts`) isn't allowlisted: 
 
 - **npm mirror:** `.npmrc` keeps `package-lock.json` free of `resolved` URLs; after any install `grep -c '"resolved"' package-lock.json` must print `0`. Installs are slow; use long timeouts. Fix peer conflicts with versions, not `--legacy-peer-deps`. An `E401` means the owner's mirror token expired.
 - **Sandbox blocks local ports:** `npm run build`, `npm run dev`, `npm run test:e2e`, `npm run images` work only typed exactly like that, alone (no `cd … &&`, pipes like `| tail`, `timeout` or env prefixes): Turbopack's CSS step binds a port and headless Chrome binds a socket, both refused in the sandbox. Now and then even the exact command runs sandboxed ("binding to a port: Operation not permitted"); retry, or ask the owner to run it.
+- **harfbuzzjs in the browser** needs `turbopack.resolveAlias` for `module` (in `next.config.ts`); its WebAssembly is found via `new URL(…, import.meta.url)`, which Turbopack emits.
 - **`next build` type-checks every `.ts`/`.mts` file**, including `scripts/` and `e2e/`: import local modules without the `.ts` extension, and run `npx tsc --noEmit` before a build.
 - **Next.js 16 differs from older versions:** read `node_modules/next/dist/docs/` before writing Next.js code.
 - **No Google Fonts CDN** (blocked, and against the privacy rule): fonts are self-hosted TTFs in `public/fonts/`.

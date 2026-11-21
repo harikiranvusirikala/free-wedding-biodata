@@ -4,7 +4,7 @@
 //   public/icons (192, 512 and a maskable 512).
 // - src/app/opengraph-image.png (1200 x 630, under 300 KB): the link preview WhatsApp, search results and social
 //   sites show; docs/social-preview.png (1280 x 640): GitHub's social preview, the same drawing.
-//   Until real screens exist (Step 6.1) the previews show the icon, the name and what it does.
+//   The previews show two biodata pages from docs/screenshots/ (Step 6.1 adds real app screens).
 // Text is drawn with the fonts of the machine that runs this (Helvetica Neue on macOS).
 // sharp is Next.js's own image library, installed with it.
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -60,29 +60,42 @@ await writeFile("public/icons/icon-maskable-512.png", await sharp(Buffer.from(ma
 /** What it is, in short lines (VISION §1). */
 const LINES = ["Pick a design, add your photo and details,", "and download an A4 biodata as PDF or PNG.", "No login. Saved only on your device."];
 
+/** A biodata page (a real render, docs/screenshots/biodata-*.png) tilted `angle` degrees, with a soft shadow. */
+function sheet(x: number, y: number, w: number, href: string, angle: number): string {
+  const h = Math.round(w * (1123 / 794));
+  return `<g transform="rotate(${angle} ${x + w / 2} ${y + h / 2})">
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="#fffdf8" filter="url(#shadow)"/>
+    <image x="${x}" y="${y}" width="${w}" height="${h}" href="${href}" preserveAspectRatio="xMidYMid slice"/>
+    <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="none" stroke="#e7d9bf" stroke-width="1"/>
+  </g>`;
+}
+
 /**
  * The brand card: the icon and name, the headline with "Wedding Biodata" in the landing page's gradient, what it
- * does, the address, and a large icon on the right. Everything stays `margin` px in from every edge (GitHub's
- * template asks for 80 px; chat apps may crop the sides).
+ * does, the address, and two biodata pages on the right (English in front, Telugu behind, slightly tilted).
+ * Everything that matters stays `margin` px in from every edge (GitHub's template asks for 80 px; chat apps
+ * may crop the sides).
  */
-function brandCard(width: number, height: number, margin: number): string {
+function brandCard(width: number, height: number, margin: number, front: string, back: string): string {
   const text = (x: number, y: number, size: number, weight: number, fill: string, content: string) =>
     `<text x="${x}" y="${y}" font-family="${FONT}" font-size="${size}" font-weight="${weight}" fill="${fill}">${content}</text>`;
   const [first, second, third, ...rest] = HEADLINE.split(" "); // Free / Wedding Biodata / Maker
-  const art = height - 2 * margin;
-  const artX = width - margin - art;
   const top = margin;
+  const pageW = Math.round((height - 2 * margin + 30) / (1123 / 794));
+  const frontX = width - margin - pageW + 10;
+  const backX = frontX - Math.round(pageW * 0.42);
+  const pageY = margin - 10;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <defs>
     <linearGradient id="phrase" x1="0" y1="0" x2="1" y2="0.2">
       <stop offset="0" stop-color="#8a1c2b"/><stop offset="0.45" stop-color="#be123c"/><stop offset="1" stop-color="#ea580c"/>
     </linearGradient>
-    <radialGradient id="glow"><stop offset="0" stop-color="#f2cd6b" stop-opacity="0.45"/><stop offset="1" stop-color="#f2cd6b" stop-opacity="0"/></radialGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#f2cd6b" stop-opacity="0.5"/><stop offset="1" stop-color="#f2cd6b" stop-opacity="0"/></radialGradient>
     <radialGradient id="rose"><stop offset="0" stop-color="#be123c" stop-opacity="0.12"/><stop offset="1" stop-color="#be123c" stop-opacity="0"/></radialGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="22" stdDeviation="24" flood-color="#6e1420" flood-opacity="0.28"/></filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#6e1420" flood-opacity="0.25"/></filter>
   </defs>
   <rect width="${width}" height="${height}" fill="#fafaf9"/>
-  <circle cx="${artX + art / 2}" cy="${height / 2}" r="${height * 0.62}" fill="url(#glow)"/>
+  <circle cx="${(backX + frontX + pageW) / 2}" cy="${height / 2}" r="${height * 0.6}" fill="url(#glow)"/>
   <circle cx="${margin + 60}" cy="${height - 20}" r="260" fill="url(#rose)"/>
 
   <image x="${margin}" y="${top}" width="64" height="64" href="${dataUrl("image/svg+xml", icon)}"/>
@@ -93,14 +106,20 @@ function brandCard(width: number, height: number, margin: number): string {
   ${LINES.map((line, i) => text(margin, top + 378 + i * 32, 24, 400, "#57534e", line)).join("")}
   ${text(margin, height - margin, 21, 600, MAROON, PRODUCTION_URL.replace("https://", ""))}
 
-  <g filter="url(#shadow)"><image x="${artX}" y="${margin}" width="${art}" height="${art}" href="${dataUrl("image/svg+xml", icon)}"/></g>
+  ${sheet(backX, pageY + 18, pageW, back, -5)}
+  ${sheet(frontX, pageY, pageW, front, 3)}
 </svg>`;
 }
 
 /** As small a PNG as looks the same: chat apps skip big link previews (WhatsApp's limit is about 300 KB). */
 const smallPng = (svg: string) => sharp(Buffer.from(svg)).png({ palette: true, quality: 90, effort: 10 }).toBuffer();
-await writeFile("src/app/opengraph-image.png", await smallPng(brandCard(1200, 630, 64)));
+// Two biodata pages drawn by the app (docs/screenshots/; from the PDF spike's reference page until Step 6.1
+// renders the real templates).
+const page = async (name: string) => dataUrl("image/png", await sharp(`docs/screenshots/${name}.png`).resize({ width: 640 }).png().toBuffer());
+const english = await page("biodata-en");
+const telugu = await page("biodata-te");
+await writeFile("src/app/opengraph-image.png", await smallPng(brandCard(1200, 630, 64, english, telugu)));
 await writeFile("src/app/opengraph-image.alt.txt", `${SITE_NAME}: ${HEADLINE}. Create a marriage biodata and download it as PDF or PNG.`);
 await mkdir("docs", { recursive: true });
-await writeFile("docs/social-preview.png", await smallPng(brandCard(1280, 640, 80)));
+await writeFile("docs/social-preview.png", await smallPng(brandCard(1280, 640, 80, english, telugu)));
 console.log("Wrote favicon.ico, apple-icon.png, public/icons/*, opengraph-image.png, docs/social-preview.png");

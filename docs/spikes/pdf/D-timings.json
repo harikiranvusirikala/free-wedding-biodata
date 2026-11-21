@@ -1,0 +1,15 @@
+{
+  "desktop": {
+    "pdfMs": 1035,
+    "imageMs": 311
+  },
+  "cpu4x": {
+    "pdfMs": 2035,
+    "imageMs": 162
+  },
+  "sizesKB": {
+    "pdf": 6452,
+    "jpeg": 387,
+    "png": 588
+  }
+}
