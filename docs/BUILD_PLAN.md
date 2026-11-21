@@ -72,6 +72,7 @@ public/sw.js                 hand-written service worker (Step 5.2)
 scripts/*.mts                fonts, images (site-images.mts), serve-out; run with node --import tsx
 test/                        setup, fixtures (ten-language profiles, long-content profile)
 e2e/                         Playwright specs
+docs/brand/app-icon.svg      the approved app icon (VISION D48), source for every icon size
 docs/screenshots/            README and landing pictures (copied from e2e screenshots)
 docs/social-preview.png      GitHub's social preview (npm run images)
 docs/PROJECT_GUIDE.md        beginner's guide to the code (D27)
@@ -212,7 +213,7 @@ Every screen is built **production-quality the first time**, to the standard of 
   - `src/lib/site.ts` (D17). Vitest + Testing Library + jsdom (`test/setup.ts`), Playwright config like EnglishEasy (phone + desktop projects, installed Chrome locally). For a static export, Playwright's web server is `npm run build` then a tiny static file server script (`scripts/serve-out.mts`, no dependency) on port 3100.
   - CI workflow (`.github/workflows/ci.yml`): `npm ci`, lint, typecheck, test, build, Playwright Chromium, e2e.
   - `.gitignore` (`.DS_Store`, `node_modules/`, `.next/`, `out/`, `test-results/`, `playwright-report/`, `*.tsbuildinfo`, `next-env.d.ts`), README (what, why, run locally, known limitations), MIT `LICENSE`, `.claude/CLAUDE.md`.
-  - A hand-written `src/app/icon.svg` (system fonts only, as sharp can't see web fonts) and a first `npm run images`: favicon, apple icon, `opengraph-image.png` and **`docs/social-preview.png`** from the icon, name and tagline (no screenshots exist yet; Step 6.1 rebuilds both with real screens). The owner uploads the social preview in the GitHub repo settings.
+  - `src/app/icon.svg` copied from the approved `docs/brand/app-icon.svg` (VISION D48; no text, so sharp renders it exactly) and a first `npm run images`: favicon, apple icon, `opengraph-image.png` and **`docs/social-preview.png`** from the icon, name and tagline (no screenshots exist yet; Step 6.1 rebuilds both with real screens). The owner uploads the social preview in the GitHub repo settings.
   - A first `docs/PROJECT_GUIDE.md` (folders and pages so far, one Mermaid diagram), linked from the README.
 - **Tests:** unit test for `site.ts`; e2e: `/`, `/privacy`, `/editor?d=abc` load from the static server; a reload of `/editor?d=abc` keeps `abc`; no request leaves `localhost`.
 - **Done when:** Part B checks; `out/` contains `index.html`, `editor.html`, `privacy.html`; owner: Vercel preview opens all three routes and `curl -I` on the preview shows the CSP header.
@@ -246,14 +247,14 @@ Every screen is built **production-quality the first time**, to the standard of 
 
 ## Phase 2 — Editor and dynamic fields
 
-- **2.1** Section navigation and inputs for every field type (date, time, height picker, select with custom value, phone, email hints, textarea).
+- **2.1** Section navigation and inputs for every field type (first letter of labels and values capitalised automatically, VISION D47) (date, time, height picker, select with custom value, phone, email hints, textarea).
 - **2.2** Field and section management: add, rename, change type/display style, hide, remove (confirm), move up/down, **move to another section**, custom sections, restore defaults.
 - **2.0** Editor opening (VISION D43): the Top of your biodata card (motif / invocation / title, None first, in template colours), the language notice, tradition field chips.
 - **2.3** References section and multi-contact relations (D44); family members list (D28: relation with suggestions + details; add, edit, reorder, remove), sample profile ("Open a sample", always a new draft, fictional), completion indicators.
 
 ## Phase 3 — Photo and live preview
 
-- **3.1** Photo: pick, validate, downscale (≤ 3000 px long edge), own cropper (drag, pinch, zoom slider, rotate) with a 3:4 or tall 2:3 frame, replace, remove, optional second photo, empty-state tips (VISION D12, D40).
+- **3.1** Photo: pick, validate, downscale (≤ 3000 px long edge), own cropper (drag, pinch, zoom slider, rotate) with a 3:4 or tall 2:3 frame, replace, remove, optional second photo, empty-state tips, and a low-resolution warning below ~200 dpi at the chosen frame size (VISION D12, D40, D47).
 - **3.2** Document primitives, tokens, `toDocument`, `paginate` (with D31 Auto text size: try the template's sizes largest first until one page fits, floor 9 pt), the **Classic skeleton** (D34); **Classic Gold first**, matched against the owner's reference side by side (original foliage and Ganesha artwork, D21/D29), then Minimal Ivory; document labels en + te.
 - **3.3** Preview pane (desktop sticky, tablet collapsible; on phones the floating Preview pill and bottom sheet with preview, design/colour chips, text size and Download / Share / Save image, VISION D45), zoom, fit, page count, template/colour/document-language pickers, text size (Auto, XS–XL) and label case (D31), title and motif pickers.
 
@@ -262,7 +263,8 @@ Every screen is built **production-quality the first time**, to the standard of 
 - **4.1** Download PDF (engine from 0.2), Share PDF, **Save/Share as image** (JPEG/PNG per page from the same display list, VISION D38), Print, filenames `Marriage-Biodata-<FirstName>.pdf` / `-page-<n>.jpg`, progress and error feedback, no main-thread freeze. **Ends with milestone M1:** the owner builds their own biodata in the app and compares the PDF with their reference.
 - **4.2** All ten document dictionaries and fonts; script fixture PDFs regenerated and reviewed (VISION §15 PDF/script tests).
 - **4.2b** Photo pages (up to 4 extra photos, 1/2/4 per page, inside the template frame) and the attached horoscope page (VISION D40, D41).
-- **4.3** Templates 3–5 (adds the Modern and Minimal skeletons, D34); **4.4** templates 6–8 and the motif library (D21).
+- **4.3** Designs 3–10 and their frame families (adds the Modern and Minimal skeletons, D34, D46).
+- **4.4** Designs 11–20, the motif library with glyph motifs converted to paths (D21, D45, D47), and three colour variants for every design.
 
 ## Phase 5 — Backup and offline
 
@@ -273,7 +275,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 
 - **6.1 Landing and search engines (D22, D26, D27):** the professional landing page modelled on Family Tree's and EnglishEasy's (hero with a real biodata picture and "Create my biodata" / "Continue editing", how it works, templates strip, privacy promise, languages, FAQ, footer with support link); `content.ts` (`TITLE`, `DESCRIPTION` ≤ 160 chars with a unit test, `FAQ` rendered and in `FAQPage` JSON-LD, `WebApplication` JSON-LD with price 0, `GOOGLE_SITE_VERIFICATION`); canonical and Open Graph metadata per public page; `robots.ts`/`sitemap.ts` index Production only; `GoogleTagManager` in the public layout with `gtmId()` unit tests; e2e `capture.spec.ts` takes clean screens → `docs/screenshots/` → `npm run images` rebuilds the landing WebPs, link preview and **social preview** from real screens; README gets the screenshots; `/templates` gallery and `/help` FAQ. Plus the D36 search structure: ten language landing pages with `hreflang`/`og:locale` alternates, five tradition pages, the image gallery, the "what to write in each part" guide, and the structured data list (no `HowTo`, no counters). Footer notice: a document tool only; it doesn't match or connect people (D35). E2e: the editor loaded from the landing page's button makes no third-party request.
 - **6.2** Accessibility pass (WCAG 2.2 AA), phone QA, night-theme screenshots of every screen, PROJECT_GUIDE review.
-- **6.3** Production checks on real devices, README deployment/rollback/troubleshooting, launch.
+- **6.3** Owner checks before launch: community review of the Khanda and Jain motifs and native-speaker review of the label translations (VISION D47); production checks on real devices, README deployment/rollback/troubleshooting, launch.
 
 ---
 
@@ -299,8 +301,8 @@ Every screen is built **production-quality the first time**, to the standard of 
 | M1 | Owner's own biodata made with the app (VISION D29) | Not started |
 | 4.2 | Ten languages in the document | Not started |
 | 4.2b | Photo pages and attached horoscope page | Not started |
-| 4.3 | Templates 3–5 | Not started |
-| 4.4 | Templates 6–8 and motifs | Not started |
+| 4.3 | Designs 3–10 and frame families | Not started |
+| 4.4 | Designs 11–20, motif library, colour variants | Not started |
 | 5.1 | Backup and restore | Not started |
 | 5.2 | Offline and privacy checks | Not started |
 | 6.1 | Landing, search engines, gallery, help, pictures | Not started |
