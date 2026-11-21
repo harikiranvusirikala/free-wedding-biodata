@@ -25,6 +25,7 @@ flowchart LR
 | `src/app/robots.ts` | Writes `robots.txt`: search engines may read the public pages on the live site only. |
 | `src/app/icon.svg` | The app icon (a copy of `docs/brand/app-icon.svg`), used for the browser tab. `favicon.ico`, `apple-icon.png` and `opengraph-image.png` (the link preview) beside it are made from it by `npm run images`. |
 | `src/app/dev/` | Development-only pages, a "page not found" on the live site unless built with `ENABLE_DEV_PAGES=1` (the e2e tests do). `/dev/pdf-spike` shows the PDF spike's reference pages. |
+| `src/biodata/` | The biodata itself, as pure TypeScript: profile types and zod schema, a new draft's default sections and fields, the fictional sample, format migrations, and every edit as a small pure function (unit-tested, no browser code). |
 | `src/components/` | Pieces of screen shared by several pages (`Logo.tsx`). |
 | `src/lib/site.ts` | The product's name, address, title and descriptions in one place. |
 | `src/lib/empty-module.ts` | An empty stand-in the bundler uses for Node's `module` in the browser (needed by the PDF text shaper). |
