@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 // Step 0.1: the static export serves every route, keeps ?d= across a reload, and makes no request off this site.
-// Step 1.1: the help page, the headers, and the error screen.
+// Step 1.1: the help page, the headers, and the error screen. Step 1.3: the editor opens real drafts.
 
 test.beforeEach(async ({ page }) => {
   // The privacy promise (VISION D15): nothing is requested from another origin.
@@ -40,15 +40,17 @@ test("the public header links only to pages that exist, and into the editor with
   await expect(nav.getByRole("link")).toHaveText(["Help", "Privacy"]);
   await expect(nav.getByRole("link", { name: "Help" })).toHaveAttribute("aria-current", "page");
   await header.getByRole("link", { name: "Create my biodata" }).click();
-  await expect(page).toHaveURL(/\/editor$/);
-  await expect(page.getByTestId("draft-id")).toHaveText("No draft selected.");
+  // A new draft is made and named in the address (e2e/drafts.spec.ts covers saving).
+  await expect(page).toHaveURL(/\/editor\?d=[0-9a-f-]{36}$/);
+  await expect(page.getByLabel("Full name")).toBeVisible();
 });
 
 test("the editor reads the draft id from the address and keeps it on reload", async ({ page }) => {
   await page.goto("/editor?d=abc");
-  await expect(page.getByTestId("draft-id")).toContainText("abc");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Draft not found");
   await page.reload();
-  await expect(page.getByTestId("draft-id")).toContainText("abc");
+  await expect(page).toHaveURL("/editor?d=abc");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Draft not found");
   await expect(page.getByRole("banner").getByRole("link", { name: "Help" })).toHaveAttribute("href", "/help");
 });
 

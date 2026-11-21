@@ -18,6 +18,7 @@
     "images": "node --import tsx scripts/site-images.mts"
   },
   "dependencies": {
+    "dexie": "^4.4.7",
     "harfbuzzjs": "^1.6.4",
     "next": "16.4.6",
     "pdf-lib": "^1.17.1",
@@ -45,6 +46,7 @@
     "@vitejs/plugin-react": "^6.3.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.4.6",
+    "fake-indexeddb": "^6.2.8",
     "jsdom": "^31.0.1",
     "tailwindcss": "^4.3.5",
     "tsx": "^4.23.15",

@@ -20,7 +20,7 @@ flowchart LR
 |---|---|
 | `src/app/` | The pages. Each folder with a `page.tsx` is an address on the site. |
 | `src/app/(public)/` | Pages for everyone and for search engines: `/` (home) and `/privacy`. The brackets mean the folder name is not part of the address; its `layout.tsx` is the shared header and footer (and, from Step 6.1, the only place analytics loads). |
-| `src/app/editor/` | `/editor`, where a biodata is made. It reads which draft to open from the address (`/editor?d=<id>`). For now it only shows that id. |
+| `src/app/editor/` | `/editor`, where a biodata is made. `Editor.tsx` opens the draft in the address (`?d=<id>`), else the last one, else a new one, and explains drafts that can't be opened; `DraftEditor.tsx` is the open draft; `PersonalCard.tsx` the first form card; `SaveStatus.tsx` says Saving…/Saved and what to do when a save fails. |
 | `src/app/not-found.tsx`, `error.tsx` | The "page not found" and "Something went wrong" screens. |
 | `src/app/robots.ts` | Writes `robots.txt`: search engines may read the public pages on the live site only. |
 | `src/app/icon.svg` | The app icon (a copy of `docs/brand/app-icon.svg`), used for the browser tab. `favicon.ico`, `apple-icon.png` and `opengraph-image.png` (the link preview) beside it are made from it by `npm run images`. |
@@ -30,6 +30,7 @@ flowchart LR
 | `src/components/ui/` | The design kit (BUILD_PLAN A7): class-string recipes (button, card, field, badge, page) and `Menu`, `Dialog`, `Toast`, `Switch`, `SegmentedControl`, `Skeleton`, `EmptyState`, `PageHeader`, icons. |
 | `src/i18n/app/en.json` | Every word the app shows, read with `t()` from `src/lib/i18n.ts`. |
 | `src/lib/theme-script.ts`, `settings-store.ts` | Day / Night / Follow device: set before the first paint, saved in this browser. |
+| `src/lib/db.ts`, `profile-repo.ts`, `autosave.ts`, `use-autosave.ts`, `open-draft.ts` | Drafts saved in this browser's IndexedDB (Dexie): the database layout; the repo, the only code that writes it (one transaction per save, checked against other tabs); autosave (writes after a short pause and when the page is hidden; "Saved" only after the write); which draft the editor opens. |
 | `src/lib/site.ts` | The product's name, address, title and descriptions in one place. |
 | `src/lib/empty-module.ts` | An empty stand-in the bundler uses for Node's `module` in the browser (needed by the PDF text shaper). |
 | `src/pdf-spike/` | The PDF spike (Step 0.2), which picked how PDFs are made: `display-list.ts` reads every line, box and picture from the laid-out pages; `vector/` writes them as a PDF, shaping Indian scripts with HarfBuzz; `raster/` draws them on a canvas for page images; `reference/` is the Classic Gold test page. Moves into `src/pdf/` and `src/document/` in Steps 3.2 and 4.1. |
@@ -57,7 +58,7 @@ flowchart LR
 | `/` | `src/app/(public)/page.tsx` | What the app is, how it works and the privacy promise. The full landing page comes in Step 6.1. |
 | `/help` | `src/app/(public)/help/page.tsx` | How it works, saving, languages, printing, questions, support. |
 | `/privacy` | `src/app/(public)/privacy/page.tsx` | Where a biodata is kept and how to remove it. |
-| `/editor` | `src/app/editor/page.tsx` | A placeholder that proves `?d=<id>` works on a static site. |
+| `/editor` | `src/app/editor/page.tsx` | Opens or creates a draft and saves it as you type: one Personal details card for now; the full form comes in Phase 2. |
 | `/dev/ui` | `src/app/dev/ui/page.tsx` | Development only: every kit component in every state. |
 | `/dev/error` | `src/app/dev/error/page.tsx` | Development only: shows the error screen. |
 | `/dev/pdf-spike` | `src/app/dev/pdf-spike/page.tsx` | Development only: the PDF spike's eleven reference pages. |
