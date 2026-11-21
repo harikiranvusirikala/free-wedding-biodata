@@ -1,0 +1,77 @@
+import { expect, type Page } from "@playwright/test";
+import { SAMPLE_PROFILE } from "../src/biodata/defaults";
+import type { BiodataProfile } from "../src/biodata/types";
+
+// Shared by the editor's e2e specs: reading a draft straight from IndexedDB, and putting one there (the fictional
+// sample, or a variation of it) without going through the form.
+
+export const SAVED = /Saved on this device · \d/;
+
+/** The draft as the browser has it on disk. */
+export function readStored(page: Page, id: string): Promise<BiodataProfile> {
+  return page.evaluate(
+    (draftId) =>
+      new Promise<BiodataProfile>((resolve, reject) => {
+        const open = indexedDB.open("free-wedding-biodata");
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const db = open.result;
+          const get = db.transaction("profiles").objectStore("profiles").get(draftId);
+          get.onerror = () => reject(get.error);
+          get.onsuccess = () => {
+            db.close();
+            resolve(get.result as BiodataProfile);
+          };
+        };
+      }),
+    id,
+  );
+}
+
+/** A copy of the fictional sample (VISION D29: never real data) with its own id, ready to store. */
+export function sampleDraft(id: string, change?: (profile: BiodataProfile) => void): BiodataProfile {
+  const profile = structuredClone(SAMPLE_PROFILE) as BiodataProfile;
+  profile.id = id;
+  profile.draftName = "";
+  profile.revision = 1;
+  change?.(profile);
+  return profile;
+}
+
+/**
+ * Stores a draft in this browser and opens it (which also makes it the last one opened, so a plain /editor
+ * reopens it). The editor is opened once first so its database exists.
+ */
+export async function openStoredDraft(page: Page, profile: BiodataProfile) {
+  await page.goto("/editor");
+  await expect(page.getByTestId("editor-form")).toBeVisible();
+  await page.evaluate(
+    (record) =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open("free-wedding-biodata");
+        open.onerror = () => reject(open.error);
+        open.onsuccess = () => {
+          const tx = open.result.transaction("profiles", "readwrite");
+          tx.objectStore("profiles").put(record);
+          tx.oncomplete = () => {
+            open.result.close();
+            resolve();
+          };
+          tx.onerror = () => reject(tx.error);
+        };
+      }),
+    profile,
+  );
+  await page.goto(`/editor?d=${profile.id}`);
+  await expect(page.getByTestId("editor-form")).toBeVisible();
+}
+
+/** A field's stored record, by its key. */
+export function storedField(profile: BiodataProfile, key: string) {
+  return profile.sections.flatMap((s) => (s.kind === "fields" ? s.fields : [])).find((f) => f.key === key);
+}
+
+/** A family member's stored record, by its relation key. */
+export function storedMember(profile: BiodataProfile, relationKey: string) {
+  return profile.sections.flatMap((s) => (s.kind === "family" ? s.members : [])).find((m) => m.relationKey === relationKey);
+}

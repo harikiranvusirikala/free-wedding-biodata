@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 // context, so its own empty database.
 
 const status = (page: Page) => page.getByTestId("save-status");
-const fullName = (page: Page) => page.getByLabel("Full name");
+const fullName = (page: Page) => page.getByLabel("Name", { exact: true });
 const SAVED = /Saved on this device · \d/;
 
 /** Opens /editor in an empty browser: a new draft is made and its id put in the address. */
@@ -52,13 +52,13 @@ test.beforeEach(async ({ page }) => {
 test("what you type is saved, and a reload brings it back with the same address", async ({ page }) => {
   const id = await openNewDraft(page);
   await fullName(page).fill("Sai Teja Mandapati");
-  await page.getByLabel("Current city").fill("Hyderabad");
+  await page.getByLabel("Current City", { exact: true }).fill("Hyderabad");
   await expect(status(page)).toHaveText(SAVED);
 
   await page.reload();
   await expect(page).toHaveURL(`/editor?d=${id}`);
   await expect(fullName(page)).toHaveValue("Sai Teja Mandapati");
-  await expect(page.getByLabel("Current city")).toHaveValue("Hyderabad");
+  await expect(page.getByLabel("Current City", { exact: true })).toHaveValue("Hyderabad");
 });
 
 test("Saved appears only after the write: Saving… first, and the value is on disk by then", async ({ page }) => {

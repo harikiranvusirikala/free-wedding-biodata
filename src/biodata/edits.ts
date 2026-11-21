@@ -1,5 +1,5 @@
 import { systemClock, type Clock } from "./defaults";
-import type { BiodataProfile, Field, FieldsSection, Section } from "./types";
+import type { BiodataProfile, FamilyMember, FamilySection, Field, FieldsSection, Section } from "./types";
 
 // Every change to a profile is a small pure function: (profile, …) → new profile (VISION D6). Nothing is mutated,
 // so React sees a new object exactly when something changed, undo is "keep the old one", and each edit is a
@@ -66,6 +66,30 @@ function updateField(
     if (!sectionChanged) return section;
     changed = true;
     return { ...section, fields } satisfies FieldsSection;
+  });
+  return changed ? touch(profile, sections, now) : profile;
+}
+
+/** Applies `change` to the family member with this id, in whichever relation list holds it; same rules. */
+function updateMember(
+  profile: BiodataProfile,
+  memberId: string,
+  change: (member: FamilyMember) => FamilyMember,
+  now: Clock,
+): BiodataProfile {
+  let changed = false;
+  const sections = profile.sections.map((section) => {
+    if (section.kind !== "family") return section;
+    let sectionChanged = false;
+    const members = section.members.map((member) => {
+      if (member.id !== memberId) return member;
+      const next = change(member);
+      if (next !== member) sectionChanged = true;
+      return next;
+    });
+    if (!sectionChanged) return section;
+    changed = true;
+    return { ...section, members } satisfies FamilySection;
   });
   return changed ? touch(profile, sections, now) : profile;
 }
@@ -151,4 +175,14 @@ export function resetSectionTitle(profile: BiodataProfile, sectionId: string, no
     },
     now,
   );
+}
+
+/** A family member's details (name, occupation, place, phone), as typed (D28). */
+export function setMemberDetails(profile: BiodataProfile, memberId: string, details: string, now: Clock = systemClock) {
+  return updateMember(profile, memberId, (m) => (m.details === details ? m : { ...m, details }), now);
+}
+
+/** Show or hide a family member in the document; a hidden member keeps its details (§6). */
+export function setMemberVisible(profile: BiodataProfile, memberId: string, visible: boolean, now: Clock = systemClock) {
+  return updateMember(profile, memberId, (m) => (m.visible === visible ? m : { ...m, visible }), now);
 }

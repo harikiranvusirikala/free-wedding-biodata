@@ -318,6 +318,17 @@ Every screen is built **production-quality the first time**, to the standard of 
 - **2.2** Field and section management: add, rename, change type/display style, hide, remove (confirm), move up/down, **move to another section**, custom sections, restore defaults.
 - **2.3** References section and multi-contact relations (D44); family members list (D28: relation with suggestions + details; add, edit, reorder, remove), sample profile ("Open a sample", always a new draft, fictional), completion indicators.
 
+### Step 2.1: Section navigation and inputs (built 2026-11-21, before 2.0)
+
+- **Layout (A7):** ≥ 1280 px a 232 px rail (dot, name, "3/9"; the highlight follows scroll; a click scrolls and focuses the card title); 1024–1279 an icon rail; below, sticky chips with short names. Form 440–580 px of section cards; the right column holds the aside cards until 3.3 (no placeholder preview); below `lg` they follow the form.
+- **Inputs:** text, phone (tel), email; textareas grow (advisory 600/500 counts, D44); address multiline; date typed day-first (month names too), stored ISO, a calendar button opens the native picker; time typed, stored `HH:mm`, shown 12-hour; height one ft/in list 4'0"–7'6" with cm, stored in cm; family rows: relation label + wrapping details.
+- **Select (D33):** an editable ARIA combobox (filters as you type; Enter picks; Esc closes) instead of select + "Other…": one control, and long lists filter. Typing clears `optionKey`; typing an option's full name picks it.
+- **Hidden:** eye toggle (`aria-pressed`), muted row + "Hidden" badge, values kept; hidden rows leave the completion count (`src/biodata/completion.ts`).
+- **D47 capitalisation:** on blur, only if typed during this focus, Latin text only; "iPhone" left alone; putting the small letter back turns it off for that field (per session).
+- **Old values:** 1.3's free-text dates show tidily when readable and are stored ISO once the field is left; other text stays as typed with a hint (`src/biodata/inputs.ts`).
+- Labels and options in the editor come from the English document dictionary; edits go through one stable `edit()` with memoised cards and rows (typing stays instant on a 50-field profile).
+- **Deviations:** built before 2.0 (2.0's top card sits inside this structure); no ⋯ field menus (2.2); About Me repeats its title as the field label. Built by a subagent in parallel with 3.1 and the 4.2 labels.
+
 ## Phase 3 — Photo and live preview
 
 - **3.1** Photo: pick, validate, downscale (≤ 3000 px long edge), own cropper (drag, pinch, zoom slider, rotate) with a 3:4 or tall 2:3 frame, replace, remove, optional second photo, empty-state tips, and a low-resolution warning below ~200 dpi at the chosen frame size (VISION D12, D40, D47).
@@ -384,7 +395,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 | 1.3 | Persistence and autosave | Done 2026-11-21. Unit 248 at the time (incl. 3.2's in-progress tests), e2e: all 1.3 tests pass (8 new in `drafts.spec.ts`); screenshots of editor, saved, conflict, not-found and blocked-storage states at 3 sizes × Day/Night reviewed. Fixed during the step: Try again after a failed save now shows Saving… (test fails without the fix). See the Step 1.3 section |
 | 1.4 | Drafts and storage status | Done 2026-11-21. Unit 304 at the time (55 new), e2e 92 passed (+36 skips by design); drafts menu, delete/rename/delete-all dialogs, editor, landing with Continue and privacy reviewed at 3 sizes × Day/Night (fixed: tablet aside cards two across). See the Step 1.4 section. **Phase 1 complete** |
 | 2.0 | Editor opening: top element card, language notice, tradition chips | Not started |
-| 2.1 | Editor inputs | Not started |
+| 2.1 | Editor inputs | Done 2026-11-21. Unit 419 at the time (25 new), e2e 118 passed (6 new in `editor-inputs.spec.ts`); editor screens (sample and empty draft, desktop, 1180 px, tablet, phone, Day/Night, open combobox, conflict) reviewed (fixed: sticky chips, wrapping family details, cut rail names, duplicate phone hint, faint Night dots). See the Step 2.1 section |
 | 2.2 | Field and section management | Not started |
 | 2.3 | Family members and sample profile | Not started |
 | 3.1 | Photo | Component done 2026-11-21 (unit 419 at the time, 37 new; e2e 118 passed, 7 new on `/dev/photo`; photo screens reviewed at 3 sizes × Day/Night, fixed: Done off-screen on phones, 360 px overflow, Remove contrast in Night, slider focus ring). Editor integration next |

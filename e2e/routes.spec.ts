@@ -42,7 +42,7 @@ test("the public header links only to pages that exist, and into the editor with
   await header.getByRole("link", { name: "Create my biodata" }).click();
   // A new draft is made and named in the address (e2e/drafts.spec.ts covers saving).
   await expect(page).toHaveURL(/\/editor\?d=[0-9a-f-]{36}$/);
-  await expect(page.getByLabel("Full name")).toBeVisible();
+  await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
 });
 
 test("the editor reads the draft id from the address and keeps it on reload", async ({ page }) => {

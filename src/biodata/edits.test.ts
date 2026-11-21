@@ -8,10 +8,12 @@ import {
   resetSectionTitle,
   setFieldValue,
   setFieldVisible,
+  setMemberDetails,
+  setMemberVisible,
   setSectionVisible,
 } from "./edits";
 import { profileSchema } from "./schema";
-import type { BiodataProfile, Field, FieldsSection } from "./types";
+import type { BiodataProfile, FamilySection, Field, FieldsSection } from "./types";
 
 const CREATED = new Date("2026-11-21T10:00:00.000Z");
 const LATER = new Date("2026-11-21T10:05:00.000Z");
@@ -151,5 +153,31 @@ describe("section edits", () => {
     const before = Date.now();
     const next = setSectionVisible(profile, personal.id, false);
     expect(Date.parse(next.updatedAt)).toBeGreaterThanOrEqual(before);
+  });
+});
+
+describe("family member edits", () => {
+  it("sets a member's details as typed and hides a member, keeping the details", () => {
+    const { profile, snapshot } = setup();
+    const family = profile.sections.find((s) => s.kind === "family") as FamilySection;
+    const father = family.members[0];
+    const typed = setMemberDetails(profile, father.id, "Venkata Rao, Retired ", later);
+    const hidden = setMemberVisible(typed, father.id, false, later);
+    const after = (hidden.sections.find((s) => s.id === family.id) as FamilySection).members[0];
+    expect(after).toMatchObject({ relationKey: "father", details: "Venkata Rao, Retired ", visible: false });
+    expect(hidden.updatedAt).toBe(LATER.toISOString());
+    // Other sections are shared, not copied.
+    expect(hidden.sections.filter((s) => s.id !== family.id)).toEqual(profile.sections.filter((s) => s.id !== family.id));
+    expect(hidden.sections[1]).toBe(profile.sections[1]);
+    expect(profileSchema.safeParse(hidden).success).toBe(true);
+    expect(profile).toEqual(snapshot);
+  });
+
+  it("returns the same profile when nothing changes", () => {
+    const { profile } = setup();
+    const family = profile.sections.find((s) => s.kind === "family") as FamilySection;
+    expect(setMemberDetails(profile, family.members[0].id, "", later)).toBe(profile);
+    expect(setMemberVisible(profile, family.members[0].id, true, later)).toBe(profile);
+    expect(setMemberDetails(profile, "no-such-id", "x", later)).toBe(profile);
   });
 });

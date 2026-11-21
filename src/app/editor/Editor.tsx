@@ -5,7 +5,6 @@ import { button } from "@/components/ui/button";
 import { card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingNote, Skeleton } from "@/components/ui/Skeleton";
-import { pageWidth } from "@/components/ui/page";
 import { createAutosave, type AutosaveController } from "@/lib/autosave";
 import { openDb, type BiodataDb } from "@/lib/db";
 import { t } from "@/lib/i18n";
@@ -72,17 +71,22 @@ export function Editor() {
   );
 }
 
-/** The ready layout's outline while the draft is read (usually a blink). */
+/** The ready layout's outline while the draft is read (usually a blink): rail, form cards and the right column. */
 function LoadingEditor() {
   return (
-    <div className={`${pageWidth} grid gap-6 py-8 sm:py-10 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-8`} data-testid="editor-loading">
+    <div className="flex-1 lg:grid lg:grid-cols-[4rem_minmax(27.5rem,36.25rem)_minmax(0,1fr)] xl:grid-cols-[14.5rem_minmax(27.5rem,36.25rem)_minmax(0,1fr)]" data-testid="editor-loading">
       <LoadingNote />
-      <div className="min-w-0">
-        <Skeleton className="h-8 w-48 rounded-lg" />
-        <Skeleton className="mt-3 h-5 w-full max-w-md rounded-md" />
-        <div className={`mt-6 ${card} h-[22rem]`} />
+      <div className="space-y-2 border-r border-line bg-surface px-3 py-5 max-lg:hidden">
+        {Array.from({ length: 8 }, (_, i) => (
+          <Skeleton key={i} className="h-7 rounded-lg" />
+        ))}
       </div>
-      <Skeleton className="h-36 rounded-2xl" />
+      <div className="h-[3.25rem] border-b border-line bg-surface lg:hidden" />
+      <div className="mx-auto w-full max-w-3xl space-y-4 px-4 py-4 sm:px-6 sm:py-6 lg:mx-0 lg:max-w-none lg:px-5">
+        <div className={`${card} h-48`} />
+        <div className={`${card} h-[26rem]`} />
+      </div>
+      <div className="max-lg:hidden lg:border-l lg:border-line lg:bg-sunken/40" />
     </div>
   );
 }

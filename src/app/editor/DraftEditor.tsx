@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
+import type { BiodataProfile } from "@/biodata/types";
 import { cardTitle, noteCard } from "@/components/ui/card";
 import { textLink } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { pageWidth } from "@/components/ui/page";
 import type { AutosaveController } from "@/lib/autosave";
 import type { BiodataDb } from "@/lib/db";
 import type { ProfileRepo } from "@/lib/profile-repo";
@@ -13,18 +12,29 @@ import { t } from "@/lib/i18n";
 import { useAutosave } from "@/lib/use-autosave";
 import { DraftsMenu } from "./DraftsMenu";
 import { EditorFrame } from "./EditorFrame";
-import { PersonalCard } from "./PersonalCard";
 import { SaveProblem, SaveStatus } from "./SaveStatus";
+import { SectionCard } from "./SectionCard";
+import { SectionJump, SectionRail, useCurrentSection } from "./SectionNav";
 import { StorageCard } from "./StorageCard";
 
 /**
- * The open draft: the drafts menu and save status in the header, the form, and where it is kept (with the
- * storage status). Edits go straight to the autosave controller, which writes them after a pause and when the
- * page is hidden or closed (VISION §9).
+ * The open draft: the drafts menu and save status in the header; the section rail (chips on tablets and phones),
+ * the form as one scroll of section cards, and the right column, which holds where the draft is kept (with the
+ * storage status) until the live preview takes it in Step 3.3 (BUILD_PLAN A7 Editor rule). Edits go straight to
+ * the autosave controller, which writes them after a pause and when the page is hidden or closed (VISION §9).
  */
 export function DraftEditor({ controller, repo, db }: { controller: AutosaveController; repo: ProfileRepo; db: BiodataDb }) {
   const { profile, status } = useAutosave(controller);
   const conflict = status.state === "error" && status.kind === "conflict";
+  const ids = useMemo(() => profile.sections.map((s) => s.id), [profile.sections]);
+  const { current, jump } = useCurrentSection(ids);
+
+  // One stable function for every row: it applies the edit to the latest profile, so memoised cards and rows
+  // re-render only when their own part of the profile changes.
+  const edit = useCallback(
+    (change: (profile: BiodataProfile) => BiodataProfile) => controller.update(change(controller.getSnapshot().profile)),
+    [controller],
+  );
 
   useEffect(() => {
     const detach = controller.attachLifecycle(window);
@@ -65,24 +75,43 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
         status={<SaveStatus status={status} />}
         drafts={<DraftsMenu controller={controller} profile={profile} repo={repo} db={db} leave={leave} locked={conflict} />}
       >
-        <div className={`${pageWidth} grid items-start gap-6 py-8 sm:py-10 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-8`}>
-          <div className="min-w-0 space-y-6">
-            <PageHeader title={t("editor.title")} description={t("editor.lead")} />
-            <SaveProblem status={status} onRetry={() => void controller.flush()} />
-            <PersonalCard profile={profile} onChange={controller.update} readOnly={conflict} />
+        <h1 className="sr-only">{t("editor.title")}</h1>
+        <div className="flex-1 lg:grid lg:grid-cols-[4rem_minmax(27.5rem,36.25rem)_minmax(0,1fr)] xl:grid-cols-[14.5rem_minmax(27.5rem,36.25rem)_minmax(0,1fr)]">
+          <div className="border-r border-line bg-surface max-lg:hidden">
+            <SectionRail sections={profile.sections} current={current} onJump={jump} />
           </div>
-          <aside className="grid gap-4 sm:grid-cols-2 lg:sticky lg:top-24 lg:grid-cols-1">
-            <div className={`${noteCard} flex gap-3`}>
-              <Icon name="lock" className="mt-0.5 size-5 text-gold" />
-              <div className="min-w-0">
-                <h2 className={`${cardTitle} text-[15px]`}>{t("editor.note.title")}</h2>
-                <p className="mt-1 text-[13.5px] leading-relaxed text-pretty text-ink-2">{t("editor.note.text")}</p>
-                <a href="/help#saving" className={`mt-2.5 inline-flex items-center pointer-coarse:min-h-11 text-[13.5px] ${textLink}`}>
-                  {t("editor.note.action")}
-                </a>
+          {/* Sticky here, not inside: the chips stay under the header for the whole form. */}
+          <div className="sticky top-14 z-20 lg:hidden">
+            <SectionJump sections={profile.sections} current={current} onJump={jump} />
+          </div>
+          <div className="mx-auto w-full max-w-3xl min-w-0 space-y-4 px-4 pt-4 pb-6 sm:px-6 sm:pt-6 lg:mx-0 lg:max-w-none lg:px-5 lg:pb-8" data-testid="editor-form">
+            <SaveProblem status={status} onRetry={() => void controller.flush()} />
+            {profile.sections.map((section) => (
+              <SectionCard
+                key={section.id}
+                section={section}
+                edit={edit}
+                readOnly={conflict}
+                dateFormat={profile.options.dateFormat}
+                heightFormat={profile.options.heightFormat}
+              />
+            ))}
+          </div>
+          {/* The live preview's place from Step 3.3; for now, how the draft is kept. */}
+          <aside className="mx-auto w-full max-w-3xl px-4 pb-8 sm:px-6 lg:mx-0 lg:max-w-none lg:border-l lg:border-line lg:bg-sunken/40 lg:px-6 lg:py-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:sticky lg:top-20 lg:max-w-[34rem] lg:grid-cols-1">
+              <div className={`${noteCard} flex gap-3`}>
+                <Icon name="lock" className="mt-0.5 size-5 text-gold" />
+                <div className="min-w-0">
+                  <h2 className={`${cardTitle} text-[15px]`}>{t("editor.note.title")}</h2>
+                  <p className="mt-1 text-[13.5px] leading-relaxed text-pretty text-ink-2">{t("editor.note.text")}</p>
+                  <a href="/help#saving" className={`mt-2.5 inline-flex items-center pointer-coarse:min-h-11 text-[13.5px] ${textLink}`}>
+                    {t("editor.note.action")}
+                  </a>
+                </div>
               </div>
+              <StorageCard savedAt={status.state === "saved" ? status.at.getTime() : undefined} />
             </div>
-            <StorageCard savedAt={status.state === "saved" ? status.at.getTime() : undefined} />
           </aside>
         </div>
       </EditorFrame>

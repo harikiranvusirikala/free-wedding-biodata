@@ -74,6 +74,8 @@ A single e2e file (`npx playwright test e2e/<file>.spec.ts`) isn't allowlisted: 
 - **Screenshots after `emulateMedia`** with no reload catch `transition-colors` mid-fade: pass `animations: "disabled"`.
 - **Dexie reads `indexedDB` once, at import.** To fake blocked storage: in unit tests pass an `indexedDB` factory to `openDb`; in e2e hide `window.indexedDB` with an init script.
 - **Lint rejects `window.location.assign("/relative")`:** pass `new URL(path, location.href)`. `Dexie.exists(name)` checks without creating the database. Full-page screenshots of a modal `<dialog>` dim only the first viewport.
+- **Waiting for another agent's run:** `pgrep -f "playwright test"` also matches your own wait loop; use `pgrep -f "bin/(playwright|next) "`. Any Playwright run wipes `test-results/`, so copy screenshots out before reviewing them.
+- **Sticky bars:** `sticky` on an element inside a wrapper only as tall as itself never sticks; put it on the wrapper. `getByLabel` also matches `aria-label`s and labelled regions: use `{ exact: true }` or `getByRole`.
 - **Parallel agents** may share the working tree: check `git status` and stage only a step's own files when committing.
 - **`next build` type-checks every `.ts`/`.mts` file**, including `scripts/` and `e2e/`: import local modules without the `.ts` extension, and run `npx tsc --noEmit` before a build.
 - **Next.js 16 differs from older versions:** read `node_modules/next/dist/docs/` before writing Next.js code.
