@@ -313,6 +313,15 @@ Every screen is built **production-quality the first time**, to the standard of 
 - **3.2** Document primitives, tokens, `toDocument`, `paginate` (with D31 Auto text size: try the template's sizes largest first until one page fits, floor 9 pt), the **Classic skeleton** (D34); **Classic Gold first**, matched against the owner's reference side by side (original foliage and Ganesha artwork, D21/D29), then Minimal Ivory; document labels en + te.
 - **3.3** Preview pane (desktop sticky, tablet collapsible; on phones the floating Preview pill and bottom sheet with preview, design/colour chips, text size and Download / Share / Save image, VISION D45), zoom, fit, page count, template/colour/document-language pickers, text size (Auto, XS–XL) and label case (D31), title and motif pickers.
 
+### Step 3.2: Document engine and first two templates (built 2026-11-21)
+
+- **Built:** document dictionaries `src/i18n/doc/` en + te (Telugu drafted, unreviewed, 22 notes in `meta.reviewNotes` for the D47 native review; English fallback key by key); `toDocument`/`docTexts` (`src/biodata/document.ts`) and `format.ts`; `src/document/` (`tokens`, `blocks/`, `Page`, `paginate` (pure), `measure` (browser), `DocumentView`, `document.css`, `frames/Foliage`, `motifs/` Ganesha); Classic Gold and Minimal Ivory × 3 colours with a registry; dev-only `/dev/document` (19 variants, `window.__doc`); `e2e/document.spec.ts` (desktop).
+- **Pagination:** blocks measured off-screen per text size; rows never split; headings and a section's last two items keep together; paragraphs split by lines (2-line orphan/widow); D31 Auto tries XL → XS, floor 9 pt.
+- **Decisions:** XS 12 px … XL 15 px; Classic margins 88 px clear of the frame (56 px with a top element); the photo sits beside the first section that starts with rows; Minimal drops the name row (the name heads the page). Noto Sans only, no serif (the PDF needs the same TTFs); opacity and side borders avoided (simpler for the PDF writer).
+- **Deviations:** `SAMPLE_PROFILE` takes 2 pages even at 9 pt (49 rows, 11 headings), so the one-page check uses a "short" fixture (education and work inside Personal, as real biodatas do). No List primitive yet (waits for D44 display styles); family rows reuse Row; a continued section doesn't repeat its heading.
+- **Open:** native review of `te.json`; a section beside the photo taller than a page would be clipped. For 3.3: pass `DocumentView` a memoised `doc` (it re-measures when the object changes, keeping old pages until then); scale the page wrapper, never page widths. For 4.1: pages are `[data-page][lang]` (the display list works unchanged); Latin text and ₹ on Indic pages use the Indic font's Latin glyphs, so the writer must fall back per glyph to Noto Sans; the photo needs a JPEG/PNG data URL.
+- Built by a subagent in parallel with Steps 1.3 and 1.4.
+
 ## Phase 4 — PDF and template collection
 
 - **4.1** Download PDF (engine from 0.2), Share PDF, **Save/Share as image** (JPEG/PNG per page from the same display list, VISION D38), Print, filenames `Marriage-Biodata-<FirstName>.pdf` / `-page-<n>.jpg`, progress and error feedback, no main-thread freeze. **Ends with milestone M1:** the owner builds their own biodata in the app and compares the PDF with their reference.
@@ -350,7 +359,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 | 2.2 | Field and section management | Not started |
 | 2.3 | Family members and sample profile | Not started |
 | 3.1 | Photo | Not started |
-| 3.2 | Document engine and first two templates | Not started |
+| 3.2 | Document engine and first two templates | Done 2026-11-21 (ahead of Phase 2, since it depends only on 1.2). Unit 304 at the time (58 new), e2e 68 passed (+32 skips by design); document screenshots for both templates × en/te × short/sample/long/split reviewed (fixed: Minimal's header band, a third page on long variants, a lone row opening page 2, and a paragraph-split bug with blank lines that overflowed 167 px). See the Step 3.2 section |
 | 3.3 | Live preview | Not started |
 | 4.1 | Download, Share, image export, Print | Not started |
 | M1 | Owner's own biodata made with the app (VISION D29) | Not started |

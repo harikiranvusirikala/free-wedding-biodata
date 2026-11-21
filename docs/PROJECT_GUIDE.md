@@ -25,7 +25,9 @@ flowchart LR
 | `src/app/robots.ts` | Writes `robots.txt`: search engines may read the public pages on the live site only. |
 | `src/app/icon.svg` | The app icon (a copy of `docs/brand/app-icon.svg`), used for the browser tab. `favicon.ico`, `apple-icon.png` and `opengraph-image.png` (the link preview) beside it are made from it by `npm run images`. |
 | `src/app/dev/` | Development-only pages, a "page not found" on the live site unless built with `ENABLE_DEV_PAGES=1` (the e2e tests do). `/dev/pdf-spike` shows the PDF spike's reference pages. |
-| `src/biodata/` | The biodata itself, as pure TypeScript: profile types and zod schema, a new draft's default sections and fields, the fictional sample, format migrations, and every edit as a small pure function (unit-tested, no browser code). |
+| `src/biodata/` | The biodata itself, as pure TypeScript: profile types and zod schema, a new draft's default sections and fields, the fictional sample, format migrations, every edit as a small pure function, and `document.ts`/`format.ts` which turn a profile into what gets printed (labels, dates, height, age). Unit-tested, no browser code. |
+| `src/document/` | The document engine: page tokens, blocks, the A4 `Page`, `paginate` (pure: blocks → pages), `measure` (browser: sizes blocks off-screen), `DocumentView`; `templates/` holds one folder per design with a registry (Classic Gold, Minimal Ivory); `frames/` and `motifs/` the original artwork. |
+| `src/i18n/doc/` | Printed labels per document language (English, Telugu so far); `index.ts` loads them with English fallback. |
 | `src/components/` | Shared screen parts: `Logo`, `SiteHeader`/`SiteFooter` (public pages), `AppHeader` (editor), `ThemeMenu`, `ContentPage` and `SectionNav` (help and privacy), `MessageScreen` (not found, error), `Rich`, `ExternalLink`, `SkipLink`. |
 | `src/components/ui/` | The design kit (BUILD_PLAN A7): class-string recipes (button, card, field, badge, page) and `Menu`, `Dialog`, `Toast`, `Switch`, `SegmentedControl`, `Skeleton`, `EmptyState`, `PageHeader`, icons. |
 | `src/i18n/app/en.json` | Every word the app shows, read with `t()` from `src/lib/i18n.ts`. |
@@ -61,4 +63,5 @@ flowchart LR
 | `/editor` | `src/app/editor/page.tsx` | Opens or creates a draft and saves it as you type: one Personal details card for now; the full form comes in Phase 2. |
 | `/dev/ui` | `src/app/dev/ui/page.tsx` | Development only: every kit component in every state. |
 | `/dev/error` | `src/app/dev/error/page.tsx` | Development only: shows the error screen. |
+| `/dev/document` | `src/app/dev/document/page.tsx` | Development only: every template × English/Telugu × short/sample/long/split profiles at true size. |
 | `/dev/pdf-spike` | `src/app/dev/pdf-spike/page.tsx` | Development only: the PDF spike's eleven reference pages. |
