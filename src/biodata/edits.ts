@@ -1,5 +1,18 @@
-import { systemClock, type Clock } from "./defaults";
-import type { BiodataProfile, FamilyMember, FamilySection, Field, FieldsSection, Section } from "./types";
+import {
+  DEFAULT_SECTIONS,
+  FIELD_CATALOG,
+  QUICK_PICK_SECTIONS,
+  createField,
+  createSection,
+  newUuid,
+  systemClock,
+  type Clock,
+  type FieldKey,
+  type NewId,
+  type SectionDef,
+} from "./defaults";
+import { dateToText, heightToInches, parseDateText, parseTimeText, splitInches, timeToText } from "./inputs";
+import type { BiodataProfile, FamilyMember, FamilySection, Field, FieldType, FieldsSection, Section } from "./types";
 
 // Every change to a profile is a small pure function: (profile, …) → new profile (VISION D6). Nothing is mutated,
 // so React sees a new object exactly when something changed, undo is "keep the old one", and each edit is a
@@ -185,4 +198,341 @@ export function setMemberDetails(profile: BiodataProfile, memberId: string, deta
 /** Show or hide a family member in the document; a hidden member keeps its details (§6). */
 export function setMemberVisible(profile: BiodataProfile, memberId: string, visible: boolean, now: Clock = systemClock) {
   return updateMember(profile, memberId, (m) => (m.visible === visible ? m : { ...m, visible }), now);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Field and section management (BUILD_PLAN Step 2.2, VISION §6 "Dynamic field functionality"). Same rules as
+// above: immutable, unchanged parts shared, a no-op returns the same profile, ids and time injected. Positions are
+// array order (no order numbers), so every move is a splice.
+
+/** The types a field the user adds can have; select lists and the height picker belong to catalogue fields. */
+export const CUSTOM_FIELD_TYPES = ["text", "textarea", "date", "time", "phone", "email"] as const satisfies readonly FieldType[];
+export type CustomFieldType = (typeof CUSTOM_FIELD_TYPES)[number];
+
+const isFieldKey = (key: string | undefined): key is FieldKey => key !== undefined && Object.hasOwn(FIELD_CATALOG, key);
+
+/** Every field in the profile, in order. */
+function allFields(profile: BiodataProfile): Field[] {
+  return profile.sections.flatMap((section) => (section.kind === "fields" ? section.fields : []));
+}
+
+/** The section holding a field, with the field's index in it. */
+export function locateField(profile: BiodataProfile, fieldId: string): { section: FieldsSection; index: number } | undefined {
+  for (const section of profile.sections) {
+    if (section.kind !== "fields") continue;
+    const index = section.fields.findIndex((field) => field.id === fieldId);
+    if (index >= 0) return { section, index };
+  }
+  return undefined;
+}
+
+/** A copy of `list` with the item at `from` moved to `to` (both in range). */
+function moved<T>(list: readonly T[], from: number, to: number): T[] {
+  const next = [...list];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
+}
+
+/** Replaces one fields section by id; `change` returns the new field list (or the same list for no change). */
+function updateFields(
+  profile: BiodataProfile,
+  sectionId: string,
+  change: (fields: Field[], section: FieldsSection) => Field[],
+  now: Clock,
+): BiodataProfile {
+  return updateSection(
+    profile,
+    sectionId,
+    (section) => {
+      if (section.kind !== "fields") return section;
+      const fields = change(section.fields, section);
+      return fields === section.fields ? section : { ...section, fields };
+    },
+    now,
+  );
+}
+
+/**
+ * A field the user makes (§6 "Add a field to any section"): their own label and one of the custom types, empty and
+ * shown, appended to the section. The label is stored as typed; a blank label is refused (the row would have no
+ * name), as is a section that holds relations rather than fields.
+ */
+export function addCustomField(
+  profile: BiodataProfile,
+  sectionId: string,
+  { label, type }: { label: string; type: CustomFieldType },
+  newId: NewId = newUuid,
+  now: Clock = systemClock,
+) {
+  if (!label.trim()) return profile;
+  return updateFields(profile, sectionId, (fields) => [...fields, { id: newId(), label, type, value: "", visible: true }], now);
+}
+
+/** The catalogue keys that aren't in the profile yet, anywhere (moved fields count as present). */
+export function missingCatalogKeys(profile: BiodataProfile): FieldKey[] {
+  const present = new Set(allFields(profile).map((field) => field.key));
+  return (Object.keys(FIELD_CATALOG) as FieldKey[]).filter((key) => !present.has(key));
+}
+
+/** The default definition of a keyed section (a default section or a quick pick), if it has one. */
+export function sectionDefOf(section: Pick<Section, "key">): SectionDef | undefined {
+  if (section.key === undefined) return undefined;
+  return [...DEFAULT_SECTIONS, ...QUICK_PICK_SECTIONS].find((def) => def.key === section.key);
+}
+
+/**
+ * Where a default field goes back in its home section: straight after the nearest field before it in the default
+ * order that is still in the section, else straight before the nearest one after it, else at the end. Custom and
+ * moved-in fields stay where the user put them.
+ */
+function defaultIndex(keys: readonly (string | undefined)[], order: readonly string[], key: string): number {
+  const at = order.indexOf(key);
+  for (let i = at - 1; i >= 0; i--) {
+    const index = keys.indexOf(order[i]);
+    if (index >= 0) return index + 1;
+  }
+  for (let i = at + 1; i < order.length; i++) {
+    const index = keys.indexOf(order[i]);
+    if (index >= 0) return index;
+  }
+  return keys.length;
+}
+
+/**
+ * A catalogue field the profile doesn't have yet ("Add a field" suggestions). In its own default section it goes
+ * back to its default place; anywhere else it is appended. A key already present anywhere is a no-op, so one key
+ * always means one field.
+ */
+export function addCatalogField(
+  profile: BiodataProfile,
+  sectionId: string,
+  key: FieldKey,
+  newId: NewId = newUuid,
+  now: Clock = systemClock,
+) {
+  if (!isFieldKey(key) || allFields(profile).some((field) => field.key === key)) return profile;
+  return updateFields(
+    profile,
+    sectionId,
+    (fields, section) => {
+      const def = sectionDefOf(section);
+      const order = def?.kind === "fields" ? def.fields : [];
+      const index = order.includes(key) ? defaultIndex(fields.map((f) => f.key), order, key) : fields.length;
+      const next = [...fields];
+      next.splice(index, 0, createField(key, newId));
+      return next;
+    },
+    now,
+  );
+}
+
+/** Feet and inches for a stored height, as text ("178" → "5 ft 10 in"); null when it isn't one. */
+function heightText(value: string): string | null {
+  const inches = heightToInches(value);
+  if (inches === null) return null;
+  const { ft, in: inch } = splitInches(inches);
+  return `${ft} ft ${inch} in`;
+}
+
+/** A value carried over to another type: kept as it reads; stored in the new type's format when it can be. */
+function convertValue(value: string, from: FieldType, to: FieldType): string {
+  if (!value.trim()) return value;
+  // Out of a stored format into free text: the text the editor showed, so nothing reads differently.
+  let text = value;
+  if (from === "date") text = dateToText(value);
+  else if (from === "time") text = timeToText(value);
+  else if (from === "height") text = heightText(value) ?? value;
+  // Into a stored format when the text reads as one, else exactly as it was (the input says "prints as typed").
+  if (to === "date") return parseDateText(text) ?? text;
+  if (to === "time") return parseTimeText(text) ?? text;
+  if (to === "height") return heightToInches(text) !== null ? text.trim() : text;
+  return text;
+}
+
+/**
+ * A field's input type (§6 "Change a field's value and input type where sensible"). The value is kept: a date,
+ * time or height becomes the text the editor showed for it ("1998-03-15" → "15-03-1998"); text that reads as the
+ * new type is stored in its format ("15 March 1998" → "1998-03-15"); anything else stays exactly as typed, and the
+ * input says it prints as typed. A picked option's key is dropped unless it stays a list (the English text stays),
+ * a paragraph with line breaks becomes a multi-line row so nothing is joined unseen, and `multiline` is kept only
+ * on text rows. Custom fields can take only the custom types; a catalogue field may also go back to its own type.
+ */
+export function changeFieldType(profile: BiodataProfile, fieldId: string, type: FieldType, now: Clock = systemClock) {
+  return updateField(
+    profile,
+    fieldId,
+    (field) => {
+      if (field.type === type) return field;
+      const own = isFieldKey(field.key) ? FIELD_CATALOG[field.key].type : undefined;
+      if (!(CUSTOM_FIELD_TYPES as readonly FieldType[]).includes(type) && type !== own) return field;
+      let next: Field = { ...field, type, value: convertValue(field.value, field.type, type) };
+      if (type !== "select") next = without(next, "optionKey");
+      if (type === "text" && field.type === "textarea" && field.value.includes("\n")) next.multiline = true;
+      else if (type !== "text") next = without(next, "multiline");
+      return next;
+    },
+    now,
+  );
+}
+
+/** Display style for a text row (§6 "single line or multiline"): a multi-line row may hold line breaks. */
+export function setFieldMultiline(profile: BiodataProfile, fieldId: string, multiline: boolean, now: Clock = systemClock) {
+  return updateField(
+    profile,
+    fieldId,
+    (field) => {
+      if (field.type !== "text" || (field.multiline ?? false) === multiline) return field;
+      return multiline ? { ...field, multiline: true } : without(field, "multiline");
+    },
+    now,
+  );
+}
+
+/** Removes a field and its value (the editor asks first and offers Undo, which is insertField). */
+export function removeField(profile: BiodataProfile, fieldId: string, now: Clock = systemClock) {
+  const at = locateField(profile, fieldId);
+  if (!at) return profile;
+  return updateFields(profile, at.section.id, (fields) => fields.filter((field) => field.id !== fieldId), now);
+}
+
+/**
+ * Puts a field back at an index of a section (Undo after Remove). Refused if its id is already in the profile;
+ * the index is clamped, so a section that has changed meanwhile still gets it back.
+ */
+export function insertField(profile: BiodataProfile, sectionId: string, index: number, field: Field, now: Clock = systemClock) {
+  if (locateField(profile, field.id)) return profile;
+  return updateFields(
+    profile,
+    sectionId,
+    (fields) => {
+      const next = [...fields];
+      next.splice(Math.max(0, Math.min(index, fields.length)), 0, field);
+      return next;
+    },
+    now,
+  );
+}
+
+/** One place up (-1) or down (+1) within its section; a no-op at either end. */
+export function moveField(profile: BiodataProfile, fieldId: string, step: -1 | 1, now: Clock = systemClock) {
+  const at = locateField(profile, fieldId);
+  if (!at) return profile;
+  const to = at.index + step;
+  if (to < 0 || to >= at.section.fields.length) return profile;
+  return updateFields(profile, at.section.id, (fields) => moved(fields, at.index, to), now);
+}
+
+/**
+ * Moves a field, value and all, to the end of another fields section (§6, D28: Education under Personal details).
+ * A no-op for its own section, an unknown section or a relation list.
+ */
+export function moveFieldToSection(profile: BiodataProfile, fieldId: string, sectionId: string, now: Clock = systemClock) {
+  const at = locateField(profile, fieldId);
+  const target = profile.sections.find((section) => section.id === sectionId);
+  if (!at || !target || target.kind !== "fields" || target.id === at.section.id) return profile;
+  const field = at.section.fields[at.index];
+  const sections = profile.sections.map((section) => {
+    if (section.id === at.section.id) return { ...at.section, fields: at.section.fields.filter((f) => f.id !== fieldId) };
+    if (section.id === target.id) return { ...target, fields: [...target.fields, field] };
+    return section;
+  });
+  return touch(profile, sections, now);
+}
+
+/** A section of the user's own (§6 "Add a custom section"): empty, shown, at the end. A blank title is refused. */
+export function addCustomSection(profile: BiodataProfile, title: string, newId: NewId = newUuid, now: Clock = systemClock) {
+  if (!title.trim()) return profile;
+  const section: FieldsSection = { id: newId(), kind: "fields", title, visible: true, fields: [] };
+  return touch(profile, [...profile.sections, section], now);
+}
+
+/**
+ * A ready-made section from "Add a section" (D44): a quick pick (References) or a default section the user removed,
+ * added at the end with its default fields. Fields already elsewhere in the profile (moved out before the section
+ * was removed) aren't duplicated. The section takes the first new id. A no-op if a section with this key is already there or the key is unknown.
+ */
+export function addPresetSection(profile: BiodataProfile, key: string, newId: NewId = newUuid, now: Clock = systemClock) {
+  const def = sectionDefOf({ key });
+  if (!def || profile.sections.some((section) => section.key === key)) return profile;
+  const present = new Set(allFields(profile).map((field) => field.key));
+  const trimmed: SectionDef = def.kind === "fields" ? { ...def, fields: def.fields.filter((k) => !present.has(k)) } : def;
+  const id = newId(); // first, so the caller can find (and scroll to) the new section
+  return touch(profile, [...profile.sections, { ...createSection(trimmed, newId), id }], now);
+}
+
+/** The ready-made sections not in the profile: removed default sections in their default order, then the quick picks. */
+export function availablePresetSections(profile: BiodataProfile): SectionDef[] {
+  const present = new Set(profile.sections.map((section) => section.key));
+  return [...DEFAULT_SECTIONS, ...QUICK_PICK_SECTIONS].filter((def) => !present.has(def.key));
+}
+
+/** Removes a section with everything in it (the editor asks first and offers Undo, which is insertSection). */
+export function removeSection(profile: BiodataProfile, sectionId: string, now: Clock = systemClock) {
+  const sections = profile.sections.filter((section) => section.id !== sectionId);
+  return sections.length === profile.sections.length ? profile : touch(profile, sections, now);
+}
+
+/** Puts a section back at an index (Undo after Remove); refused if its id is already there; the index is clamped. */
+export function insertSection(profile: BiodataProfile, index: number, section: Section, now: Clock = systemClock) {
+  if (profile.sections.some((s) => s.id === section.id)) return profile;
+  const sections = [...profile.sections];
+  sections.splice(Math.max(0, Math.min(index, sections.length)), 0, section);
+  return touch(profile, sections, now);
+}
+
+/** One place up (-1) or down (+1) in the biodata; a no-op at either end. */
+export function moveSection(profile: BiodataProfile, sectionId: string, step: -1 | 1, now: Clock = systemClock) {
+  const from = profile.sections.findIndex((section) => section.id === sectionId);
+  const to = from + step;
+  if (from < 0 || to < 0 || to >= profile.sections.length) return profile;
+  return touch(profile, moved(profile.sections, from, to), now);
+}
+
+/**
+ * What "Restore default fields" would bring back to a section: its default fields that are nowhere in the profile
+ * (a field moved to another section is still there, so it isn't duplicated), or for a relation list its default
+ * relations (Father, Mother) missing from it. Empty for a custom section.
+ */
+export function missingDefaults(profile: BiodataProfile, section: Section): string[] {
+  const def = sectionDefOf(section);
+  if (!def || def.kind !== section.kind) return [];
+  if (def.kind === "fields") {
+    const present = new Set(allFields(profile).map((field) => field.key));
+    return def.fields.filter((key) => !present.has(key));
+  }
+  const relations = new Set(section.kind === "family" ? section.members.map((m) => m.relationKey) : []);
+  return def.members.filter((key) => !relations.has(key));
+}
+
+/**
+ * Restore default fields (§6). Re-adds only what is missing (missingDefaults), each empty and shown, at its default
+ * place (defaultIndex: after the nearest earlier default still in the section). It never removes, reorders,
+ * renames, retypes, unhides or clears anything: custom fields, moved-in fields, renamed labels, hidden fields and
+ * every value stay exactly as they are. The section title is left alone too (Rename has its own reset).
+ */
+export function restoreSectionDefaults(profile: BiodataProfile, sectionId: string, newId: NewId = newUuid, now: Clock = systemClock) {
+  const section = profile.sections.find((s) => s.id === sectionId);
+  if (!section) return profile;
+  const missing = missingDefaults(profile, section);
+  const def = sectionDefOf(section);
+  if (!missing.length || !def) return profile;
+  const order: readonly string[] = def.kind === "fields" ? def.fields : def.members;
+  let next: Section;
+  if (section.kind === "fields") {
+    const fields = [...section.fields];
+    for (const key of missing) fields.splice(defaultIndex(fields.map((f) => f.key), order, key), 0, createField(key as FieldKey, newId));
+    next = { ...section, fields };
+  } else {
+    const members = [...section.members];
+    for (const relationKey of missing) {
+      members.splice(defaultIndex(members.map((m) => m.relationKey), order, relationKey), 0, { id: newId(), relationKey, relation: "", details: "", visible: true });
+    }
+    next = { ...section, members };
+  }
+  return touch(
+    profile,
+    profile.sections.map((s) => (s.id === sectionId ? next : s)),
+    now,
+  );
 }

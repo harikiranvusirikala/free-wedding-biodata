@@ -143,6 +143,27 @@ const PATHS = {
   paragraph: <path d="M4 6h16M4 10h16M4 14h16M4 18h10" />,
   list: <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />,
   plus: <path d="M12 5v14M5 12h14" />,
+  more: (
+    <>
+      <circle cx="5.5" cy="12" r="1.1" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.1" fill="currentColor" />
+      <circle cx="18.5" cy="12" r="1.1" fill="currentColor" />
+    </>
+  ),
+  arrowUp: <path d="M12 19V5M6 11l6-6 6 6" />,
+  arrowDown: <path d="M12 5v14M6 13l6 6 6-6" />,
+  chevronLeft: <path d="m15 6-6 6 6 6" />,
+  move: <path d="M12 3v18M3 12h18M9 6l3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3" />,
+  type: <path d="M5 7V5h14v2M12 5v14M9 19h6" />,
+  lines: <path d="M4 7h16M4 12h16M4 17h11" />,
+  mail: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3.5 6.5 8.5 6.5 8.5-6.5" />
+    </>
+  ),
+  ruler: <path d="M3 17 17 3l4 4L7 21zM7.5 12.5l2 2M10.5 9.5l2 2M13.5 6.5l2 2" />,
+  undo: <path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />,
   copy: (
     <>
       <rect x="9" y="9" width="12" height="12" rx="2" />

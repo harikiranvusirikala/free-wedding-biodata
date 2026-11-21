@@ -10,12 +10,13 @@ import { Icon } from "@/components/ui/icons";
 import { t, type AppKey } from "@/lib/i18n";
 import en from "@/i18n/app/en.json";
 import { ChoiceValue } from "./ChoiceInput";
+import { FieldMenu } from "./ManageMenus";
 import { DateValue, HeightValue, ParagraphValue, TextValue, TimeValue } from "./FieldInputs";
 import { choicesFor, fieldLabel, memberLabel } from "./labels";
 
-// One row of a section card (mockup: editor): the label, the value's input and the eye that hides the row from the
-// biodata (its value is kept, §6). From tablets up the label sits beside the input; on phones above it, with the
-// eye at the end of the label line (mockup: editor-phone). Paragraphs always take the full width under their label.
+// One row of a section card (mockup: editor): the label, the value's input, the eye that hides the row from the
+// biodata (its value is kept, §6) and the ⋯ menu (rename, type, move, remove: Step 2.2). From tablets up the label
+// sits beside the input; on phones above it, with the eye and ⋯ at the end of the label line (mockup: editor-phone). Paragraphs always take the full width under their label.
 // Rows are memoised on their field, so typing re-renders only the row being typed in.
 
 /** Applies a profile edit to the latest profile (the open draft's controller). Stable for the editor's lifetime. */
@@ -41,7 +42,7 @@ function hintFor(field: Field): string | undefined {
   return field.key === "phone" ? t("editor.hint.phone") : undefined;
 }
 
-/** The row's grid: [label | input | eye] from tablets up; label and eye over a full-width input on phones. */
+/** The row's grid: [label | input | eye ⋯] from tablets up; label, eye and ⋯ over a full-width input on phones. */
 const ROW = "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1.5 px-4 py-3 sm:grid-cols-[10.5rem_minmax(0,1fr)_auto] sm:gap-x-3 sm:px-5 sm:py-2.5";
 
 function RowShell({
@@ -54,6 +55,7 @@ function RowShell({
   hint,
   hintId,
   testId,
+  menu,
   children,
 }: {
   inputId: string;
@@ -66,6 +68,8 @@ function RowShell({
   hint?: string;
   hintId: string;
   testId?: string;
+  /** The row's ⋯ menu. */
+  menu?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -86,17 +90,20 @@ function RowShell({
           </p>
         )}
       </div>
-      <button
-        type="button"
-        aria-pressed={visible}
-        aria-label={t("editor.show", { label })}
-        title={t(visible ? "editor.shownTip" : "editor.hiddenTip")}
-        disabled={readOnly}
-        onClick={() => onVisible(!visible)}
-        className={`col-start-2 row-start-1 self-center sm:col-start-3 sm:self-start ${iconButton} ${visible ? "text-ink-3" : "text-brand-ink"}`}
-      >
-        <Icon name={visible ? "eye" : "eyeOff"} className="size-[18px]" />
-      </button>
+      <div className="col-start-2 row-start-1 flex items-center gap-0.5 self-center sm:col-start-3 sm:self-start">
+        <button
+          type="button"
+          aria-pressed={visible}
+          aria-label={t("editor.show", { label })}
+          title={t(visible ? "editor.shownTip" : "editor.hiddenTip")}
+          disabled={readOnly}
+          onClick={() => onVisible(!visible)}
+          className={`${iconButton} ${visible ? "text-ink-3" : "text-brand-ink"}`}
+        >
+          <Icon name={visible ? "eye" : "eyeOff"} className="size-[18px]" />
+        </button>
+        {menu}
+      </div>
     </div>
   );
 }
@@ -148,7 +155,7 @@ export const FieldRow = memo(function FieldRow({ field, edit, readOnly, dateForm
       input = choices ? (
         <ChoiceValue {...value} label={label} choices={choices} optionKey={field.optionKey} placeholder={placeholder} onPick={pick} />
       ) : (
-        // A custom select field has no list of its own yet (Step 2.2): it is typed like text.
+        // A select field without a list of its own (not one the catalogue knows) is typed like text.
         <TextValue {...value} kind="text" placeholder={placeholder} />
       );
       break;
@@ -171,11 +178,15 @@ export const FieldRow = memo(function FieldRow({ field, edit, readOnly, dateForm
       hint={hint}
       hintId={hintId}
       testId={`row-${field.key ?? field.id}`}
+      menu={<FieldMenu field={field} readOnly={readOnly} />}
     >
       {input}
     </RowShell>
   );
 });
+
+/** Keeps member rows' inputs in line with field rows until members get their own ⋯ menu (Step 2.3). */
+const MENU_SPACE = <span aria-hidden className="size-9 shrink-0 pointer-coarse:size-11" />;
 
 /** A family member (D28): the relation as the label, the details typed beside it. Relations are edited in 2.3. */
 export const MemberRow = memo(function MemberRow({ member, edit, readOnly }: { member: FamilyMember; edit: Edit; readOnly: boolean }) {
@@ -184,7 +195,7 @@ export const MemberRow = memo(function MemberRow({ member, edit, readOnly }: { m
   const commit = useCallback((details: string) => edit((p) => setMemberDetails(p, memberId, details)), [edit, memberId]);
   const onVisible = useCallback((visible: boolean) => edit((p) => setMemberVisible(p, memberId, visible)), [edit, memberId]);
   return (
-    <RowShell inputId={id} label={memberLabel(member)} visible={member.visible} readOnly={readOnly} onVisible={onVisible} hintId={`${id}-hint`} testId={`member-${member.relationKey ?? member.id}`}>
+    <RowShell inputId={id} label={memberLabel(member)} visible={member.visible} readOnly={readOnly} onVisible={onVisible} hintId={`${id}-hint`} testId={`member-${member.relationKey ?? member.id}`} menu={MENU_SPACE}>
       <TextValue id={id} kind="text" wrap value={member.details} readOnly={readOnly} dim={!member.visible} onCommit={commit} placeholder={t("editor.member.placeholder")} />
     </RowShell>
   );

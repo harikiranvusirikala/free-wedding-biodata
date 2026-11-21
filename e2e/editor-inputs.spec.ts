@@ -196,17 +196,17 @@ test("the form can be filled from the keyboard alone", async ({ page, isMobile }
   // From the top of the page through the rail to the first field of Personal Details.
   await tabTo(label(page, "Name"));
   await page.keyboard.type("Asha Rani");
-  // Each row is its input, then its eye button.
+  // Each row is its input, then its eye button and its ⋯ menu (Step 2.2).
   const gender = page.getByRole("combobox", { name: "Gender" });
-  expect(await tabTo(gender)).toBe(2);
+  expect(await tabTo(gender)).toBe(3);
   await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("listbox", { name: "Gender" })).toBeVisible();
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(gender).toHaveValue("Female");
   await expect(page.getByRole("listbox", { name: "Gender" })).toBeHidden();
-  // Date of birth, typed; its calendar button and eye follow it.
-  expect(await tabTo(label(page, "Date of Birth"))).toBe(2);
+  // Date of birth, typed; its calendar button, eye and ⋯ follow it.
+  expect(await tabTo(label(page, "Date of Birth"))).toBe(3);
   await page.keyboard.type("01-02-1999");
   await page.keyboard.press("Tab");
   await expect(page.getByRole("button", { name: "Pick “Date of Birth” from a calendar" })).toBeFocused();

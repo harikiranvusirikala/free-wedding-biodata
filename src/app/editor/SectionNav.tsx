@@ -4,30 +4,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { completionState, sectionCompletion } from "@/biodata/completion";
 import type { Section } from "@/biodata/types";
 import { focusRing } from "@/components/ui/button";
-import { Icon, type IconName } from "@/components/ui/icons";
+import { Icon } from "@/components/ui/icons";
 import { t, type AppKey } from "@/lib/i18n";
 import en from "@/i18n/app/en.json";
-import { sectionTitle } from "./labels";
+import { SECTION_ICONS, sectionTitle } from "./labels";
+import { useManage } from "./ManageProvider";
 import { sectionAnchor } from "./SectionCard";
 
 // Moving around the form (BUILD_PLAN A7 Editor rule, mockups: editor, editor-phone). Desktop: the section rail,
 // each section with its completion dot and count, the one being read highlighted as you scroll; a click scrolls
 // to its card. 1024–1279 px: the same rail as icons. Tablets and phones: a sticky row of chips under the header.
 // The form itself is one continuous scroll of cards.
-
-const SECTION_ICONS: Record<string, IconName> = {
-  aboutMe: "paragraph",
-  personal: "user",
-  religion: "sparkle",
-  horoscope: "star",
-  education: "graduation",
-  career: "briefcase",
-  family: "users",
-  familyBackground: "home",
-  contact: "phone",
-  partnerPreferences: "heart",
-  references: "users",
-};
 
 const hasKey = (key: string): key is AppKey => Object.hasOwn(en, key);
 
@@ -101,6 +88,23 @@ interface NavProps {
   onJump: (id: string) => void;
 }
 
+/** "Add a section" at the end of the rail (mockup: editor), the same dialog as the button after the last card. */
+function RailAdd({ disabled }: { disabled: boolean }) {
+  const manage = useManage();
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      title={t("manage.addSection")}
+      onClick={() => manage.open({ kind: "addSection" })}
+      className={`mt-1 flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm font-semibold text-brand-ink transition-colors hover:bg-brand-soft disabled:opacity-55 max-xl:justify-center ${focusRing}`}
+    >
+      <Icon name="plus" className="size-[18px] xl:-mx-px" />
+      <span className="max-xl:sr-only">{t("manage.addSection")}</span>
+    </button>
+  );
+}
+
 function onLink(event: React.MouseEvent, id: string, onJump: (id: string) => void) {
   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
   event.preventDefault();
@@ -126,7 +130,7 @@ function CompletionDot({ section, className = "" }: { section: Section; classNam
 }
 
 /** The rail beside the form: names with dots and counts at 1280 px and up, icons with dots at 1024–1279. */
-export function SectionRail({ sections, current, onJump }: NavProps) {
+export function SectionRail({ sections, current, onJump, canAdd = true }: NavProps & { canAdd?: boolean }) {
   return (
     <nav aria-label={t("editor.sections")} className="sticky top-14 max-h-[calc(100dvh-3.5rem)] overflow-y-auto px-2 py-4 xl:px-3" data-testid="section-rail">
       <h2 className="px-2.5 pb-2 text-[11.5px] font-bold tracking-[0.08em] text-ink-3 uppercase max-xl:sr-only">{t("editor.sections")}</h2>
@@ -150,7 +154,13 @@ export function SectionRail({ sections, current, onJump }: NavProps) {
                   <Icon name={(section.key && SECTION_ICONS[section.key]) || "list"} className="size-5" />
                   <CompletionDot section={section} className="absolute -right-2 -bottom-1.5 scale-75 ring-2 ring-surface" />
                 </span>
-                <span className="line-clamp-2 min-w-0 flex-1 break-words max-xl:sr-only">{title}</span>
+                <span className={`line-clamp-2 min-w-0 flex-1 break-words max-xl:sr-only ${section.visible ? "" : "opacity-60"}`}>{title}</span>
+                {!section.visible && (
+                  <>
+                    <Icon name="eyeOff" className="size-4 shrink-0 text-ink-3 max-xl:hidden" />
+                    <span className="sr-only">, {t("editor.hidden")}</span>
+                  </>
+                )}
                 {total > 0 && (
                   <span className={`shrink-0 text-xs font-medium tabular-nums max-xl:hidden ${on ? "text-brand-ink/80" : "text-ink-3"}`}>
                     <span aria-hidden>{t("editor.completionShort", { filled, total })}</span>
@@ -162,6 +172,7 @@ export function SectionRail({ sections, current, onJump }: NavProps) {
           );
         })}
       </ul>
+      <RailAdd disabled={!canAdd} />
     </nav>
   );
 }

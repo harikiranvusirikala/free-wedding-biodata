@@ -28,6 +28,8 @@ export function MenuSeparator() {
 }
 
 export function Menu(props: {
+  /** A fixed id for the menu (its button is `<id>-button`), so the focus can be put back on it after a move. */
+  id?: string;
   /** The menu's name, for screen readers. */
   label: string;
   /** What the button shows; give it `buttonLabel` when that isn't text. */
@@ -40,14 +42,21 @@ export function Menu(props: {
   menuClassName?: string;
   /** Called as the menu opens (the drafts menu refreshes its list). */
   onOpen?: () => void;
+  /**
+   * Menus in the page rather than the header (the editor's ⋯ menus): open upwards when there's more room above,
+   * and scroll inside when neither way has room. `reserve` is the height covered by sticky bars at the top.
+   */
+  autoPlace?: { reserve: number };
   /** The items; `close` closes the menu and returns the focus to its button. */
   children: (close: () => void) => ReactNode;
 }) {
-  const { label, button, buttonLabel, buttonClassName, buttonTitle, disabled, align = "end", menuClassName = "w-56", onOpen, children } = props;
+  const { label, button, buttonLabel, buttonClassName, buttonTitle, disabled, align = "end", menuClassName = "w-56", onOpen, autoPlace, children } = props;
   const [open, setOpen] = useState(false);
+  const [place, setPlace] = useState<{ up: boolean; maxHeight?: number }>({ up: false });
   const root = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
-  const id = useId();
+  const generatedId = useId();
+  const id = props.id ?? generatedId;
 
   useLayoutEffect(() => () => setOpen(false), []); // its page hidden (React's Activity): closed when it's back
 
@@ -57,10 +66,32 @@ export function Menu(props: {
     document.getElementById(`${id}-button`)?.focus();
   };
 
+  // Measured from the button, not the panel, so a panel that changes height (a sub-list) never flips back and forth.
+  const reserve = autoPlace?.reserve;
+  useLayoutEffect(() => {
+    const element = panel.current;
+    const trigger = document.getElementById(`${id}-button`);
+    if (!open || reserve === undefined || !element || !trigger) return;
+    const measure = () => {
+      const box = trigger.getBoundingClientRect();
+      const below = window.innerHeight - box.bottom - 16;
+      const above = box.top - reserve - 16;
+      const height = element.scrollHeight;
+      const up = height > below && above > below;
+      const room = up ? above : below;
+      setPlace({ up, maxHeight: height > room ? Math.max(room, 160) : undefined });
+    };
+    measure();
+    // A sub-list replacing the items (the ⋯ menus' "Move to section") is measured again.
+    const observer = new MutationObserver(measure);
+    observer.observe(element, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [open, reserve, id]);
+
   useEffect(() => {
     if (!open) return;
     const items = [...(panel.current?.querySelectorAll<HTMLElement>(ITEMS) ?? [])];
-    (items.find((item) => item.getAttribute("aria-checked") === "true") ?? items[0])?.focus();
+    (items.find((item) => item.getAttribute("role") === "menuitemradio" && item.getAttribute("aria-checked") === "true") ?? items[0])?.focus();
     const outside = (event: PointerEvent) => {
       if (!root.current?.contains(event.target as Node)) setOpen(false);
     };
@@ -120,7 +151,8 @@ export function Menu(props: {
           role="menu"
           aria-label={label}
           onKeyDown={onKeyDown}
-          className={`absolute top-full z-50 mt-2 max-w-[calc(100vw-1.5rem)] animate-menu-in motion-reduce:animate-none ${menuPanel} ${align === "end" ? "right-0 origin-top-right" : "left-0 origin-top-left"} ${menuClassName}`}
+          style={place.maxHeight ? { maxHeight: place.maxHeight, overflowY: "auto", overscrollBehavior: "contain" } : undefined}
+          className={`absolute z-50 max-w-[calc(100vw-1.5rem)] animate-menu-in motion-reduce:animate-none ${menuPanel} ${place.up ? "bottom-full mb-2" : "top-full mt-2"} ${align === "end" ? `right-0 ${place.up ? "origin-bottom-right" : "origin-top-right"}` : `left-0 ${place.up ? "origin-bottom-left" : "origin-top-left"}`} ${menuClassName}`}
         >
           {children(close)}
         </div>

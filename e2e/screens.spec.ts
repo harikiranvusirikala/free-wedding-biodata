@@ -147,6 +147,99 @@ test("editor rail as icons, and an open list, Day and Night", async ({ page, isM
   }
 });
 
+// Managing fields and sections (Step 2.2), shot as they are at phone and desktop size, Day and Night: a field's ⋯
+// menu and its Move to section list, a section's ⋯ menu, the Add a field and Add a section dialogs, and the toast
+// with Undo after a removal.
+test("field and section menus, add dialogs and the Undo toast, Day and Night", async ({ page, isMobile }) => {
+  test.skip(isMobile, "sizes are set here, so one project is enough");
+  test.setTimeout(120_000);
+  await openSample(page);
+  const shoot = async (name: string, size: string) => {
+    for (const theme of THEMES) {
+      await page.emulateMedia({ colorScheme: theme });
+      await expect(page.locator("html")).toHaveClass(theme === "dark" ? /dark/ : /^(?!.*dark)/);
+      await page.screenshot({ path: `test-results/screenshots/${name}-${size}-${theme === "light" ? "day" : "night"}.png`, animations: "disabled" });
+    }
+  };
+  const center = (locator: ReturnType<Page["locator"]>) => locator.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  for (const size of SIZES.filter((s) => s.name !== "tablet")) {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await page.emulateMedia({ colorScheme: "light" });
+
+    const dob = page.getByRole("button", { name: "Options for “Date of Birth”" });
+    await center(dob);
+    await dob.click();
+    await expect(page.getByRole("menu")).toBeVisible();
+    await shoot("editor-field-menu", size.name);
+    await page.getByRole("menuitem", { name: "Move to section" }).click();
+    await shoot("editor-field-move", size.name);
+    await page.keyboard.press("Escape");
+
+    const horoscope = page.getByRole("button", { name: "Options for the “Horoscope Details” section" });
+    await center(horoscope);
+    await horoscope.click();
+    await shoot("editor-section-menu", size.name);
+    await page.keyboard.press("Escape");
+
+    await page.locator('[data-section="horoscope"]').getByRole("button", { name: "Add a field" }).click();
+    await page.getByRole("dialog").getByLabel("Label", { exact: true }).fill("Lagna");
+    await shoot("editor-add-field", size.name);
+    await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+
+    await page.locator("#add-section").click();
+    await expect(page.getByRole("dialog", { name: "Add a section" })).toBeVisible();
+    await shoot("editor-add-section", size.name);
+    await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+
+    const gotra = page.getByRole("button", { name: "Options for “Gotra”" });
+    await center(gotra);
+    await gotra.click();
+    await page.getByRole("menuitem", { name: "Remove…" }).click();
+    await shoot("editor-remove-dialog", size.name);
+    await page.getByRole("dialog").getByRole("button", { name: "Remove" }).click();
+    await expect(page.getByTestId("manage-toast")).toBeVisible();
+    await shoot("editor-undo-toast", size.name);
+    await page.getByTestId("manage-toast").getByRole("button", { name: "Undo" }).click();
+    await expect(page.getByLabel("Gotra", { exact: true })).toBeVisible();
+    await page.getByTestId("manage-toast").getByRole("button", { name: "Dismiss" }).click();
+  }
+});
+
+// A new draft after some management: a hidden section, an empty section of the user's own, and Add a section offering
+// a removed default section back with References (Step 2.2).
+test("hidden and empty sections, and Add a section with ready-made picks, Day and Night", async ({ page, isMobile }) => {
+  test.skip(isMobile, "sizes are set here, so one project is enough");
+  await page.goto("/editor?new=1");
+  await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Options for the “Family Background” section" }).click();
+  await page.getByRole("menuitem", { name: "Remove section…" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Remove" }).click();
+  await page.getByTestId("manage-toast").getByRole("button", { name: "Dismiss" }).click();
+  await page.getByRole("button", { name: "Options for the “Partner Preferences” section" }).click();
+  await page.getByRole("menuitem", { name: "Hide section" }).click();
+  await page.locator("#add-section").click();
+  await page.getByRole("dialog").getByLabel("Section title").fill("Hobbies and interests");
+  await page.getByRole("dialog").getByRole("button", { name: "Add section" }).click();
+  await expect(page.getByTestId("save-status")).toHaveText(/Saved on this device · \d/);
+  for (const size of SIZES.filter((s) => s.name !== "tablet")) {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await page.locator('[data-section="partnerPreferences"]').evaluate((el) => el.scrollIntoView({ block: "start" }));
+    for (const theme of THEMES) {
+      await page.emulateMedia({ colorScheme: theme });
+      await expect(page.locator("html")).toHaveClass(theme === "dark" ? /dark/ : /^(?!.*dark)/);
+      await page.screenshot({ path: `test-results/screenshots/editor-sections-end-${size.name}-${theme === "light" ? "day" : "night"}.png`, animations: "disabled" });
+    }
+    await page.locator("#add-section").click();
+    await expect(page.getByRole("dialog", { name: "Add a section" })).toBeVisible();
+    for (const theme of THEMES) {
+      await page.emulateMedia({ colorScheme: theme });
+      await expect(page.locator("html")).toHaveClass(theme === "dark" ? /dark/ : /^(?!.*dark)/);
+      await page.screenshot({ path: `test-results/screenshots/editor-add-section-picks-${size.name}-${theme === "light" ? "day" : "night"}.png`, animations: "disabled" });
+    }
+    await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+  }
+});
+
 /** Screenshots a page as it is (no reload) at every size, Day and Night; colour transitions are finished first. */
 async function shootAll(page: Page, name: string) {
   for (const size of SIZES) {

@@ -329,6 +329,16 @@ Every screen is built **production-quality the first time**, to the standard of 
 - Labels and options in the editor come from the English document dictionary; edits go through one stable `edit()` with memoised cards and rows (typing stays instant on a 50-field profile).
 - **Deviations:** built before 2.0 (2.0's top card sits inside this structure); no ⋯ field menus (2.2); About Me repeats its title as the field label. Built by a subagent in parallel with 3.1 and the 4.2 labels.
 
+### Step 2.2: Field and section management (built 2026-11-21)
+
+- **Built:** pure edits (`addCustomField`, `addCatalogField`, `changeFieldType`, `setFieldMultiline`, `removeField`/`insertField`, `moveField`, `moveFieldToSection`, `addCustomSection`, `addPresetSection`, `removeSection`/`insertSection`, `moveSection`, `restoreSectionDefaults`, `missingDefaults`); ⋯ menus on rows and cards (Rename, Change type ▸, Multiple lines, Move up/down, Move to section ▸, Hide/Show, Remove); "Add a field" at each card's foot; "Add a section" after the last card and in the rail. `Menu` gained opt-in `autoPlace` (opens upwards when there's more room).
+- **Restore defaults:** re-adds only the section's default fields that are nowhere in the draft (a moved field counts as present), empty and shown, each after the nearest earlier default still in the section (else before the next, else at the end); never removes, reorders, renames, retypes, unhides or clears anything; the title is untouched. Family re-adds missing Father/Mother.
+- **Type change:** date/time/height become the text the editor showed; text that reads as the new type is stored in its format; else kept as typed. `optionKey` is dropped unless it stays a list; a paragraph with line breaks becomes a multi-line row. Custom fields: text, paragraph, date, time, phone, email; catalogue fields may go back to their own type.
+- **Undo:** keeps the removed field/section and its index in memory and puts it back into the current profile (edits made meanwhile survive), 6 s, paused on hover/focus; forgotten on reload.
+- **Add a field:** this section's missing usual fields (incl. its tradition fields), then other sections' missing defaults; or a custom label + type. **Add a section:** References, any removed default section (minus fields moved elsewhere), or a custom title; appended at the end.
+- **Rename:** saving the usual name or a blank restores the dictionary label, so it keeps printing in the document language.
+- **Deviations:** no "Move a field here" button (mockup); an empty relation list (References) shows a note until 2.3 adds members; family rows get their ⋯ in 2.3. Built by a subagent in parallel with the 4.1 engine.
+
 ## Phase 3 — Photo and live preview
 
 - **3.1** Photo: pick, validate, downscale (≤ 3000 px long edge), own cropper (drag, pinch, zoom slider, rotate) with a 3:4 or tall 2:3 frame, replace, remove, optional second photo, empty-state tips, and a low-resolution warning below ~200 dpi at the chosen frame size (VISION D12, D40, D47).
@@ -396,7 +406,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 | 1.4 | Drafts and storage status | Done 2026-11-21. Unit 304 at the time (55 new), e2e 92 passed (+36 skips by design); drafts menu, delete/rename/delete-all dialogs, editor, landing with Continue and privacy reviewed at 3 sizes × Day/Night (fixed: tablet aside cards two across). See the Step 1.4 section. **Phase 1 complete** |
 | 2.0 | Editor opening: top element card, language notice, tradition chips | Not started |
 | 2.1 | Editor inputs | Done 2026-11-21. Unit 419 at the time (25 new), e2e 118 passed (6 new in `editor-inputs.spec.ts`); editor screens (sample and empty draft, desktop, 1180 px, tablet, phone, Day/Night, open combobox, conflict) reviewed (fixed: sticky chips, wrapping family details, cut rail names, duplicate phone hint, faint Night dots). See the Step 2.1 section |
-| 2.2 | Field and section management | Not started |
+| 2.2 | Field and section management | Done 2026-11-21. Unit 470 at the time (30 new), e2e 137 passed (45 skips by design); field/section menus, Move to section, Add a field/section, remove dialog, Undo toast, hidden and empty sections reviewed on phone and desktop, Day/Night (fixed: type cards wrapping, toast covering shots, phone keyboard opening on Add a section). See the Step 2.2 section |
 | 2.3 | Family members and sample profile | Not started |
 | 3.1 | Photo | Component done 2026-11-21 (unit 419 at the time, 37 new; e2e 118 passed, 7 new on `/dev/photo`; photo screens reviewed at 3 sizes × Day/Night, fixed: Done off-screen on phones, 360 px overflow, Remove contrast in Night, slider focus ring). Editor integration next |
 | 3.2 | Document engine and first two templates | Done 2026-11-21 (ahead of Phase 2, since it depends only on 1.2). Unit 304 at the time (58 new), e2e 68 passed (+32 skips by design); document screenshots for both templates × en/te × short/sample/long/split reviewed (fixed: Minimal's header band, a third page on long variants, a lone row opening page 2, and a paragraph-split bug with blank lines that overflowed 167 px). See the Step 3.2 section |
