@@ -2,7 +2,8 @@ import { mkdir } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
 // The document engine (BUILD_PLAN Step 3.2) on /dev/document: every fixture variant (Classic Gold and Minimal
-// Ivory, English and Telugu, short / sample / long, the other colour variants) laid out as A4 pages. Screenshots
+// Ivory, English and Telugu, short / sample / long, the other colour variants, and the short Classic Gold biodata in
+// Hindi, Tamil, Kannada, Malayalam, Marathi, Gujarati, Bengali and Punjabi, Step 4.2) laid out as A4 pages. Screenshots
 // of each page go to test-results/screenshots/document-<variant>-p<n>.png to be looked at (A7); the checks are the
 // page counts under Auto text size (D31), that no block runs past its page's content box, that the display list
 // (the Download engine's input, D49) carries every printed string, and that nothing is requested off this site.
@@ -28,7 +29,9 @@ test("document pages: page counts, no overflow, display list text, screenshots, 
   await expect(page.locator("body")).toHaveAttribute("data-doc-ready", "1", { timeout: 60_000 });
 
   const variants = await page.evaluate(() => window.__doc!.variants);
-  expect(variants.length).toBeGreaterThanOrEqual(19);
+  expect(variants.length).toBeGreaterThanOrEqual(27);
+  const ids = variants.map((v) => v.id);
+  for (const lang of ["hi", "ta", "kn", "ml", "mr", "gu", "bn", "pa"]) expect(ids).toContain(`classic-gold-${lang}-short`);
 
   // Soft checks: every variant is checked and screenshotted even when one fails.
   for (const v of variants) {

@@ -8,11 +8,13 @@ import { getTemplate } from "@/document/templates";
 import { DocumentView, type DocumentLayoutInfo } from "@/document/DocumentView";
 import { getDocDictionary } from "@/i18n/doc";
 import { readDisplayList, type DisplayList } from "@/pdf-spike/display-list";
-import { documentVariants, FIXTURE_TODAY } from "../../../../test/fixtures/documents";
+import type { LangCode } from "@/biodata/types";
+import { documentVariants, FIXTURE_TODAY, type DocVariant } from "../../../../test/fixtures/documents";
 
-// The document engine's dev page (BUILD_PLAN Step 3.2): every fixture variant laid out at true size. When all are
-// laid out, <body data-doc-ready> is set and window.__doc lets the e2e spec read each variant's page count, the
-// text it should print and the display list of its pages (the Download engine's input, D49).
+// The document engine's dev page (BUILD_PLAN Step 3.2): every fixture variant laid out at true size, plus the short
+// Classic Gold biodata in each of the other eight document languages (Step 4.2) to check glyphs and label widths.
+// When all are laid out, <body data-doc-ready> is set and window.__doc lets the e2e spec read each variant's page
+// count, the text it should print and the display list of its pages (the Download engine's input, D49).
 
 declare global {
   interface Window {
@@ -42,10 +44,24 @@ async function placeholderJpeg(): Promise<string> {
   return canvas.toDataURL("image/jpeg", 0.9);
 }
 
+/** The languages beyond English and Telugu, each shown once (Classic Gold, short). */
+const MORE_LANGUAGES: LangCode[] = ["hi", "ta", "kn", "ml", "mr", "gu", "bn", "pa"];
+
+function galleryVariants(): DocVariant[] {
+  const all = documentVariants();
+  const base = all.find((v) => v.id === "classic-gold-en-short")!;
+  const more = MORE_LANGUAGES.map((lang) => {
+    const profile = structuredClone(base.profile);
+    profile.docLanguage = lang;
+    return { ...base, id: `classic-gold-${lang}-short`, lang, profile };
+  });
+  return [...all, ...more];
+}
+
 export function DocumentGallery() {
   const variants = useMemo(
     () =>
-      documentVariants().map((v) => ({
+      galleryVariants().map((v) => ({
         ...v,
         doc: toDocument(v.profile, getDocDictionary(v.profile.docLanguage), FIXTURE_TODAY) as DocModel,
       })),

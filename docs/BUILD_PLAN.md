@@ -341,6 +341,13 @@ Every screen is built **production-quality the first time**, to the standard of 
 - **4.3** Designs 3–10 and their frame families (adds the Modern and Minimal skeletons, D34, D46).
 - **4.4** Designs 11–20, the motif library with glyph motifs converted to paths (D21, D45, D47), and three colour variants for every design.
 
+### Step 4.2, part 1: document labels in ten languages (built 2026-11-21, ahead of 4.1)
+
+- `hi`, `ta`, `kn`, `ml`, `mr`, `gu`, `bn`, `pa` dictionaries in `src/i18n/doc/` (every `en` key, the wording families use on biodatas, Gregorian months, AM/PM kept), all `reviewed: false` with 23–28 `reviewNotes` each for the D47 native review; `index.ts` registers them (plus `withEnglishFallback` for testing the fallback).
+- `doc.test.ts`: exact key set per language, no empty values, no leftover English beyond an allowlist, script-block check, same `{placeholders}`, review status.
+- `/dev/document` gains a short Classic Gold page per language (27 variants); screenshots checked: no missing glyphs or clipping; two Malayalam labels shortened to fit the label column ("വിവാഹ നില", "യോഗ്യത").
+- Open: native review of nine dictionaries; Devak/Gan have no default field (custom fields); part 2 (script fixture PDFs regenerated and reviewed) follows 4.1. On Kannada pages, English labels typed by the user look lighter than bold: the 4.1 PDF writer's per-glyph fallback to Noto Sans must keep the weight.
+
 ## Phase 5 — Backup and offline
 
 - **5.1** Backup export/import (D8): preview, add-as-new or replace, validation, older-version migration; "download a backup first" offered before destructive actions.
@@ -374,7 +381,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 | 3.3 | Live preview | Not started |
 | 4.1 | Download, Share, image export, Print | Not started |
 | M1 | Owner's own biodata made with the app (VISION D29) | Not started |
-| 4.2 | Ten languages in the document | Not started |
+| 4.2 | Ten languages in the document | Part 1 done 2026-11-21 (labels for all ten languages, built by a subagent; unit 357 at the time, e2e 92 passed). Part 2 (fixture PDFs) after 4.1 |
 | 4.2b | Photo pages and attached horoscope page | Not started |
 | 4.3 | Designs 3–10 and frame families | Not started |
 | 4.4 | Designs 11–20, motif library, colour variants | Not started |
