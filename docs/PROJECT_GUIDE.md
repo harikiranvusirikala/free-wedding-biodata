@@ -21,12 +21,15 @@ flowchart LR
 | `src/app/` | The pages. Each folder with a `page.tsx` is an address on the site. |
 | `src/app/(public)/` | Pages for everyone and for search engines: `/` (home) and `/privacy`. The brackets mean the folder name is not part of the address; its `layout.tsx` is the shared header and footer (and, from Step 6.1, the only place analytics loads). |
 | `src/app/editor/` | `/editor`, where a biodata is made. It reads which draft to open from the address (`/editor?d=<id>`). For now it only shows that id. |
-| `src/app/not-found.tsx` | The "page not found" screen. |
+| `src/app/not-found.tsx`, `error.tsx` | The "page not found" and "Something went wrong" screens. |
 | `src/app/robots.ts` | Writes `robots.txt`: search engines may read the public pages on the live site only. |
 | `src/app/icon.svg` | The app icon (a copy of `docs/brand/app-icon.svg`), used for the browser tab. `favicon.ico`, `apple-icon.png` and `opengraph-image.png` (the link preview) beside it are made from it by `npm run images`. |
 | `src/app/dev/` | Development-only pages, a "page not found" on the live site unless built with `ENABLE_DEV_PAGES=1` (the e2e tests do). `/dev/pdf-spike` shows the PDF spike's reference pages. |
 | `src/biodata/` | The biodata itself, as pure TypeScript: profile types and zod schema, a new draft's default sections and fields, the fictional sample, format migrations, and every edit as a small pure function (unit-tested, no browser code). |
-| `src/components/` | Pieces of screen shared by several pages (`Logo.tsx`). |
+| `src/components/` | Shared screen parts: `Logo`, `SiteHeader`/`SiteFooter` (public pages), `AppHeader` (editor), `ThemeMenu`, `ContentPage` and `SectionNav` (help and privacy), `MessageScreen` (not found, error), `Rich`, `ExternalLink`, `SkipLink`. |
+| `src/components/ui/` | The design kit (BUILD_PLAN A7): class-string recipes (button, card, field, badge, page) and `Menu`, `Dialog`, `Toast`, `Switch`, `SegmentedControl`, `Skeleton`, `EmptyState`, `PageHeader`, icons. |
+| `src/i18n/app/en.json` | Every word the app shows, read with `t()` from `src/lib/i18n.ts`. |
+| `src/lib/theme-script.ts`, `settings-store.ts` | Day / Night / Follow device: set before the first paint, saved in this browser. |
 | `src/lib/site.ts` | The product's name, address, title and descriptions in one place. |
 | `src/lib/empty-module.ts` | An empty stand-in the bundler uses for Node's `module` in the browser (needed by the PDF text shaper). |
 | `src/pdf-spike/` | The PDF spike (Step 0.2), which picked how PDFs are made: `display-list.ts` reads every line, box and picture from the laid-out pages; `vector/` writes them as a PDF, shaping Indian scripts with HarfBuzz; `raster/` draws them on a canvas for page images; `reference/` is the Classic Gold test page. Moves into `src/pdf/` and `src/document/` in Steps 3.2 and 4.1. |
@@ -51,7 +54,10 @@ flowchart LR
 
 | Address | File | What it shows |
 |---|---|---|
-| `/` | `src/app/(public)/page.tsx` | What the app is and the privacy promise. The full landing page comes in Step 6.1. |
+| `/` | `src/app/(public)/page.tsx` | What the app is, how it works and the privacy promise. The full landing page comes in Step 6.1. |
+| `/help` | `src/app/(public)/help/page.tsx` | How it works, saving, languages, printing, questions, support. |
 | `/privacy` | `src/app/(public)/privacy/page.tsx` | Where a biodata is kept and how to remove it. |
 | `/editor` | `src/app/editor/page.tsx` | A placeholder that proves `?d=<id>` works on a static site. |
+| `/dev/ui` | `src/app/dev/ui/page.tsx` | Development only: every kit component in every state. |
+| `/dev/error` | `src/app/dev/error/page.tsx` | Development only: shows the error screen. |
 | `/dev/pdf-spike` | `src/app/dev/pdf-spike/page.tsx` | Development only: the PDF spike's eleven reference pages. |

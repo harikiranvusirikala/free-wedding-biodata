@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { META_DESCRIPTION, SITE_NAME, TITLE, siteUrl } from "@/lib/site";
+import { THEME_SCRIPT } from "@/lib/theme-script";
 
 export const metadata: Metadata = {
   // Makes canonical links and link-preview images full addresses (src/lib/site.ts).
@@ -20,14 +21,12 @@ export const viewport: Viewport = {
   ],
 };
 
-/** Until the theme menu (Step 1.1), Night follows the device, set before first paint so nothing flashes. */
-const THEME_SCRIPT = `try{if(matchMedia("(prefers-color-scheme: dark)").matches)document.documentElement.classList.add("dark")}catch(e){}`;
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     // suppressHydrationWarning: the theme script changes <html>'s class before React starts.
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Day, Night or Follow device, on <html> before the first paint so nothing flashes (theme-script.ts). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body className="min-h-dvh bg-page font-sans text-ink antialiased">{children}</body>

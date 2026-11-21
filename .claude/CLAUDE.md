@@ -16,7 +16,7 @@ Free Wedding Biodata (https://free-wedding-biodata.vercel.app, VISION D37): a fr
 
 Read only the sections a task needs (`grep -n '^#' <file>`, then `Read` with `offset`/`limit`).
 
-**Current state:** Phase 0 is done: the skeleton (0.1) and the PDF spike (0.2), which chose HarfBuzz + pdf-lib fed by the laid-out pages (VISION D49, `docs/spikes/PDF_SPIKE.md`); its working code is in `src/pdf-spike/`. Next is Phase 1 (1.1 app shell ∥ 1.2 profile model, see the dependency map in BUILD_PLAN Part B). Check the Progress table for what's actually built before assuming any file below exists. `docs/PROJECT_GUIDE.md` lists every folder and page.
+**Current state:** Phase 0 is done: the skeleton (0.1) and the PDF spike (0.2), which chose HarfBuzz + pdf-lib fed by the laid-out pages (VISION D49, `docs/spikes/PDF_SPIKE.md`); its working code is in `src/pdf-spike/`. Phase 1: 1.1 (app shell) and 1.2 (profile model) are built; 1.3's storage layer is in `src/lib/`. Check the Progress table for the latest. Check the Progress table for what's actually built before assuming any file below exists. `docs/PROJECT_GUIDE.md` lists every folder and page.
 
 ## Commands
 
@@ -68,6 +68,10 @@ A single e2e file (`npx playwright test e2e/<file>.spec.ts`) isn't allowlisted: 
 - **npm mirror:** `.npmrc` keeps `package-lock.json` free of `resolved` URLs; after any install `grep -c '"resolved"' package-lock.json` must print `0`. Installs are slow; use long timeouts. Fix peer conflicts with versions, not `--legacy-peer-deps`. An `E401` means the owner's mirror token expired.
 - **Sandbox blocks local ports:** `npm run build`, `npm run dev`, `npm run test:e2e`, `npm run images` work only typed exactly like that, alone (no `cd … &&`, pipes like `| tail`, `timeout` or env prefixes): Turbopack's CSS step binds a port and headless Chrome binds a socket, both refused in the sandbox. Now and then even the exact command runs sandboxed ("binding to a port: Operation not permitted"); retry, or ask the owner to run it.
 - **harfbuzzjs in the browser** needs `turbopack.resolveAlias` for `module` (in `next.config.ts`); its WebAssembly is found via `new URL(…, import.meta.url)`, which Turbopack emits.
+- **Tailwind v4:** adding `hidden sm:inline-flex` to a recipe that already has `inline-flex` doesn't hide it (the recipe's display class wins); use `max-sm:hidden`.
+- **Playwright:** in an init script `document.documentElement` can still be null (observe `document`); the phone project counts as a touch screen, so `pointer-coarse:` classes apply in e2e.
+- **Next 16 `error.tsx`** gets `retry` (use it; `reset` still exists).
+- **Parallel agents** may share the working tree: check `git status` and stage only a step's own files when committing.
 - **`next build` type-checks every `.ts`/`.mts` file**, including `scripts/` and `e2e/`: import local modules without the `.ts` extension, and run `npx tsc --noEmit` before a build.
 - **Next.js 16 differs from older versions:** read `node_modules/next/dist/docs/` before writing Next.js code.
 - **No Google Fonts CDN** (blocked, and against the privacy rule): fonts are self-hosted TTFs in `public/fonts/`.

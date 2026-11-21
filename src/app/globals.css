@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Night theme: `dark:` follows the "dark" class on <html> (set before first paint in Step 1.1). */
+/* Night theme: `dark:` follows the "dark" class on <html>, set before first paint by src/lib/theme-script.ts. */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
@@ -29,8 +29,15 @@
   --good: #15803d;
   --good-soft: #ecfdf3;
   --danger: #b42318;
+  --on-danger: #ffffff;
+  --danger-soft: #fef3f2;
+  --danger-line: #fecdca;
+  --warn: #b54708;
+  --warn-soft: #fffaeb;
   --ring: rgb(138 28 43 / 0.28);
   --card-shadow: 0 1px 2px rgb(28 25 23 / 0.04);
+  --brand-shadow: 0 1px 2px rgb(0 0 0 / 0.08), 0 4px 12px rgb(138 28 43 / 0.22);
+  --pop-shadow: 0 12px 32px -8px rgb(28 25 23 / 0.18), 0 2px 6px rgb(28 25 23 / 0.06);
 }
 
 .dark {
@@ -53,8 +60,15 @@
   --good: #4ade80;
   --good-soft: #10261a;
   --danger: #f97066;
+  --on-danger: #1f0b09;
+  --danger-soft: #2a1211;
+  --danger-line: #5c1d18;
+  --warn: #fdb022;
+  --warn-soft: #2a1d0a;
   --ring: rgb(224 166 74 / 0.35);
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+  --brand-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 12px rgb(224 166 74 / 0.14);
+  --pop-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.3);
 }
 
 @theme inline {
@@ -76,5 +90,42 @@
   --color-good: var(--good);
   --color-good-soft: var(--good-soft);
   --color-danger: var(--danger);
+  --color-on-danger: var(--on-danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-line);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-ring: var(--ring);
   --shadow-card: var(--card-shadow);
+  --shadow-brand: var(--brand-shadow);
+  --shadow-pop: var(--pop-shadow);
+}
+
+/* Menus and toasts open with a short fade and drop, dialogs with a small rise (as in the sibling apps); none
+   with "reduce motion" (motion-reduce:animate-none where they're used). */
+@theme {
+  --animate-menu-in: menu-in 140ms cubic-bezier(0.16, 1, 0.3, 1);
+  @keyframes menu-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.98);
+    }
+  }
+  --animate-dialog-in: dialog-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.97);
+    }
+  }
+}
+
+/* Touch screens. Outside any layer, so this wins over Tailwind's text-sm on a field: iPhones zoom into a
+   text field whose text is smaller than 16 px when it's tapped (BUILD_PLAN A7, field.ts). */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }

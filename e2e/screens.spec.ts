@@ -5,9 +5,12 @@ import { expect, test } from "@playwright/test";
 
 const SCREENS = [
   { name: "home", path: "/" },
+  { name: "help", path: "/help" },
   { name: "privacy", path: "/privacy" },
   { name: "editor", path: "/editor?d=abc" },
   { name: "not-found", path: "/no-such-page" },
+  { name: "error", path: "/dev/error" },
+  { name: "ui-kit", path: "/dev/ui" },
 ];
 const SIZES = [
   { name: "phone", width: 390, height: 844 },
@@ -40,3 +43,22 @@ test.describe("screens", () => {
     });
   }
 });
+
+// Touch targets (BUILD_PLAN A7, VISION D16): on a phone every link, button and question is at least 44 px tall.
+test.describe("touch targets", () => {
+  test.skip(({ isMobile }) => !isMobile, "the phone project has a touch screen");
+
+  for (const screen of SCREENS.filter((s) => !s.path.startsWith("/dev/"))) {
+    test(`${screen.name}: every control is at least 44 px tall on a phone`, async ({ page }) => {
+      await page.goto(screen.path);
+      const small = await page.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>("a, button, summary, input, select, textarea")]
+          .filter((el) => el.offsetParent !== null && !el.classList.contains("sr-only"))
+          .map((el) => ({ text: (el.textContent || el.getAttribute("aria-label") || el.tagName).trim().slice(0, 40), height: Math.round(el.getBoundingClientRect().height) }))
+          .filter((target) => target.height < 44),
+      );
+      expect(small).toEqual([]);
+    });
+  }
+});
+

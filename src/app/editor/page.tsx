@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Logo } from "@/components/Logo";
+import { AppHeader } from "@/components/AppHeader";
+import { SkipLink } from "@/components/SkipLink";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { t } from "@/lib/i18n";
 import { DraftParam } from "./DraftParam";
 
 export const metadata: Metadata = {
-  title: "Editor",
+  title: t("editor.metaTitle"),
   robots: { index: false, follow: false },
 };
 
@@ -13,13 +17,11 @@ export const metadata: Metadata = {
 export default function EditorPage() {
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="flex h-14 items-center border-b border-line bg-surface px-4 sm:px-6">
-        <Logo />
-      </header>
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-12 sm:px-6">
-        <h1 className="text-2xl font-bold tracking-tight">Editor</h1>
-        <p className="mt-2 text-ink-2">The biodata editor is being built. Nothing you open here leaves this browser.</p>
-        <Suspense fallback={<p className="mt-6 text-sm text-ink-3">Loading…</p>}>
+      <SkipLink />
+      <AppHeader />
+      <main id="main" className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6 sm:py-14">
+        <PageHeader title={t("editor.title")} description={t("editor.lead")} />
+        <Suspense fallback={<Skeleton className="mt-6 h-[62px] rounded-2xl" />}>
           <DraftParam />
         </Suspense>
       </main>
