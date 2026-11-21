@@ -50,8 +50,7 @@ src/document/                the shared render contract (A4)
   templates/<id>/            one folder per design (20, D46) on three skeletons (classic, modern, minimal, D34)
   frames/                    original SVG frame families (corner/border art, D46)
   motifs/                    original SVG motif artwork (D21)
-src/pdf/                     the Download engine chosen in Step 0.2 (D49): display list → HarfBuzz + pdf-lib PDF, canvas page images (lazy-loaded)
-src/pdf-spike/               Step 0.2's spike: display-list reader, vector writer (C), canvas drawing (D), reference page; moved into src/pdf/ and src/document/ in Steps 3.2 and 4.1
+src/pdf/                     the Download engine (D49, Step 4.1): display list read from the laid-out pages → HarfBuzz + pdf-lib PDF, or canvas page images (lazy-loaded)
 src/lib/                     browser services (thin, mockable)
   site.ts                    product name ("Free Wedding Biodata"), URL (https://free-wedding-biodata.vercel.app), TITLE/DESCRIPTION source (D37), SUPPORT_URL, robotsFor/sitemapFor (Production-only indexing) (D17, D25, D26)
   tag-manager.ts             PURE gtmId(env): GTM_ID if it looks like GTM-…, else nothing (D22)
@@ -373,6 +372,16 @@ Every screen is built **production-quality the first time**, to the standard of 
 - **4.3** Designs 3–10 and their frame families (adds the Modern and Minimal skeletons, D34, D46).
 - **4.4** Designs 11–20, the motif library with glyph motifs converted to paths (D21, D45, D47), and three colour variants for every design.
 
+### Step 4.1, part 1: the Download engine (built 2026-11-21)
+
+- `src/pdf/` (lazy-loaded): the display list read from the laid-out pages → a HarfBuzz + pdf-lib PDF; the same list → canvas page images. API: `createPdf(root, { title?, onProgress? }) → Blob`, `createPageImages(root, { format, width = 1240, quality?, onProgress? }) → Blob[]`; filenames `pdfFileName`/`pageImageFileName` in `src/biodata/filename.ts` (sanitised).
+- The spike's gaps are closed: the display list records alignment and justified lines, baselines measured per font (within 0.02 px), the whole font stack, spaces between runs (copy/paste keeps "పేరు : …"), italic and object-fit; gradient ids with colons resolve; non-JPEG/PNG pictures are converted.
+- **Font fallback:** each Indic `@font-face` carries a `unicode-range` (the same list in `document.css` and `FONT_UNICODE_RANGE`, a test keeps them equal), so Latin, digits and ₹ come from Noto Sans at the same weight on screen, in the PDF and in the images (fixes light English labels on Kannada pages).
+- **Checked:** `/dev/pdf` (every feature the writer must draw), `window.__doc.pdf(id)` on `/dev/document`, `e2e/pdf.spec.ts` (16 variants, files in `test-results/pdf/`); PDFKit renders side by side with Chrome: no differences in ten languages, both templates, short and long; copy/paste exact via ActualText (PDFKit's own extraction still shows pre-base vowels in visual order, as in the spike).
+- **Sizes and timings:** one page 23–44 KB; JPEG page images 156–327 KB; first PDF 122 ms, warm 16–59 ms; CPU ÷4 under 190 ms; no other origin. Not in the first load of `/` (204 KB gzip) or `/editor` (327 KB gzip); loaded on demand ≈ 635 KB gzip.
+- Spike code deleted (`src/pdf-spike/`, `/dev/pdf-spike`, `e2e/spike/`, `scripts/spike-vector.mts`); `docs/spikes/` stays as the record. Built by a subagent in parallel with 2.1 and 2.2.
+- **Next (part 2):** Download / Share / Save image / Print in the editor after 3.3, then milestone M1.
+
 ### Step 4.2, part 1: document labels in ten languages (built 2026-11-21, ahead of 4.1)
 
 - `hi`, `ta`, `kn`, `ml`, `mr`, `gu`, `bn`, `pa` dictionaries in `src/i18n/doc/` (every `en` key, the wording families use on biodatas, Gregorian months, AM/PM kept), all `reviewed: false` with 23–28 `reviewNotes` each for the D47 native review; `index.ts` registers them (plus `withEnglishFallback` for testing the fallback).
@@ -411,7 +420,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 | 3.1 | Photo | Component done 2026-11-21 (unit 419 at the time, 37 new; e2e 118 passed, 7 new on `/dev/photo`; photo screens reviewed at 3 sizes × Day/Night, fixed: Done off-screen on phones, 360 px overflow, Remove contrast in Night, slider focus ring). Editor integration next |
 | 3.2 | Document engine and first two templates | Done 2026-11-21 (ahead of Phase 2, since it depends only on 1.2). Unit 304 at the time (58 new), e2e 68 passed (+32 skips by design); document screenshots for both templates × en/te × short/sample/long/split reviewed (fixed: Minimal's header band, a third page on long variants, a lone row opening page 2, and a paragraph-split bug with blank lines that overflowed 167 px). See the Step 3.2 section |
 | 3.3 | Live preview | Not started |
-| 4.1 | Download, Share, image export, Print | Not started |
+| 4.1 | Download, Share, image export, Print | Part 1 (the engine, `src/pdf/`) done 2026-11-21: unit 470 at the time (50 PDF/filename tests), e2e 137 passed; PDFs match Chrome in ten languages. Part 2 (editor buttons) after 3.3 |
 | M1 | Owner's own biodata made with the app (VISION D29) | Not started |
 | 4.2 | Ten languages in the document | Part 1 done 2026-11-21 (labels for all ten languages, built by a subagent; unit 357 at the time, e2e 92 passed). Part 2 (fixture PDFs) after 4.1 |
 | 4.2b | Photo pages and attached horoscope page | Not started |

@@ -2,6 +2,8 @@
 
 **Date:** 2026-11-21 · **Decision:** candidate **C**, a vector PDF writer driven by the browser's own layout (HarfBuzz shaping + pdf-lib), with candidate D's canvas drawing for page images. Recorded as VISION D49.
 
+> **Update (Step 4.1, 2026-11-21):** the spike code (`src/pdf-spike/`, `/dev/pdf-spike`, `e2e/spike/`, `scripts/spike-vector.mts`) was replaced by the production engine in `src/pdf/`, checked by `/dev/pdf` and `e2e/pdf.spec.ts` against the real templates. The paths below describe the spike as it was.
+
 ## Question
 
 Which engine turns the biodata into an A4 PDF that matches the preview glyph for glyph in all ten document languages (English, Telugu, Hindi, Tamil, Kannada, Malayalam, Marathi, Gujarati, Bengali, Punjabi), downloads in one click on phones, keeps one layout (D1), has selectable text, and adds the least code?

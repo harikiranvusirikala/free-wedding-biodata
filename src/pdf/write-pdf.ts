@@ -1,17 +1,21 @@
-// Candidate C (BUILD_PLAN Step 0.2): a vector PDF writer driven by the browser's own layout. The display list gives
-// every line of text with its position (lines, wrapping and positions are Chrome's); this writer shapes each line
-// with HarfBuzz using the same TTF, draws the glyph IDs with pdf-lib's low-level objects (Type0 / CIDFontType2,
+// The vector PDF writer (VISION D49, chosen in Step 0.2): driven by the browser's own layout. The display list gives
+// every line of text with its position, alignment and font stack (lines, wrapping and positions are the browser's);
+// this writer shapes each line with HarfBuzz using the same TTFs (falling back per glyph through the stack with the
+// same unicode-ranges as the CSS), draws the glyph IDs with pdf-lib's low-level objects (Type0 / CIDFontType2,
 // Identity-H, fonts subset with glyph IDs kept), wraps each line in an /ActualText span for copy and paste, and
 // converts rects, images and SVG to PDF operators. Runs the same in the browser and in Node.
 
 import { PDFDocument, PDFName, PDFString, type PDFRef, type PDFDict, type PDFContext } from "pdf-lib";
-import type { DisplayList, DisplayPage, ImageItem, RectItem, TextItem } from "../display-list";
+import { FONT_UNICODE_RANGE } from "@/document/tokens";
+import type { DisplayList, DisplayPage, ImageItem, RectItem, TextItem } from "./display-list";
 import { num, parseColor, rgbOps, type Rgba } from "./color";
 import { IDENTITY, type Matrix } from "./matrix";
 import { rectPath, type Segment } from "./svg-path";
 import { svgToPdf, type LinearGradient } from "./svg-to-pdf";
 import { loadShapingFont, shapeRun, type HarfBuzzModule, type ShapingFont } from "./shape";
 import { createSubsetter, type Subsetter } from "./subset";
+import { unicodeRangeTest } from "./unicode-range";
+import { imagePlacement } from "./image-placement";
 
 export const A4_WIDTH_PT = 595.28;
 export const A4_HEIGHT_PT = 841.89;
@@ -32,7 +36,7 @@ export interface RunMeasure {
   glyphs: number;
   codePoints: number;
   fallback: boolean;
-  /** The line was treated as justified (spaces widened to Chrome's width). */
+  /** The line was justified (its spaces widened to the browser's width). */
   justified?: boolean;
 }
 
@@ -41,8 +45,12 @@ export interface WritePdfOptions {
   subsetWasm?: ArrayBuffer | Uint8Array | (() => Promise<ArrayBuffer | Uint8Array>);
   /** The harfbuzzjs module, if already loaded; otherwise it is imported lazily. */
   harfbuzz?: HarfBuzzModule;
-  /** Families tried after the run's own family for characters it lacks (CSS fallback). */
+  /** Families tried after the run's own CSS stack for characters it lacks (default Noto Sans). */
   fallbackFamilies?: string[];
+  /** unicode-range per family, as in the @font-face rules (default: the document's, FONT_UNICODE_RANGE). */
+  unicodeRanges?: Readonly<Record<string, string>>;
+  /** Called after each page is written (progress; may return a promise, e.g. to yield to the main thread). */
+  onPage?: (done: number, total: number) => void | Promise<void>;
   /** Relative width difference above which a run is reported to onMismatch (default 0.015). */
   widthTolerance?: number;
   onRun?: (m: RunMeasure) => void;
@@ -51,7 +59,11 @@ export interface WritePdfOptions {
   title?: string;
 }
 
-export type FontLoader = (family: string, weight: number) => Promise<ArrayBuffer | Uint8Array>;
+/** Bytes of a family's TTF at 400 or 700, or null when the family isn't available (it is skipped). */
+export type FontLoader = (family: string, weight: number) => Promise<ArrayBuffer | Uint8Array | null>;
+
+/** Synthetic italic (the fonts have no italic): the same 1/4 skew Chrome (Skia) applies. */
+const ITALIC_SKEW = 0.25;
 
 /** Page px (y down) → PDF default space (pt, y up). */
 const PAGE_MATRIX: Matrix = [PX_TO_PT, 0, 0, -PX_TO_PT, 0, A4_HEIGHT_PT];
@@ -269,6 +281,7 @@ export async function writePdf(list: DisplayList, fonts: FontLoader, options: Wr
   const warn = options.onWarning ?? (() => {});
   const tolerance = options.widthTolerance ?? 0.015;
   const fallbackFamilies = options.fallbackFamilies ?? ["Noto Sans"];
+  const ranges = options.unicodeRanges ?? FONT_UNICODE_RANGE;
   let subsetter: Subsetter | null = null;
   if (options.subsetWasm) {
     const wasm = typeof options.subsetWasm === "function" ? await options.subsetWasm() : options.subsetWasm;
@@ -276,20 +289,35 @@ export async function writePdf(list: DisplayList, fonts: FontLoader, options: Wr
   }
 
   const doc = await PDFDocument.create();
-  doc.setProducer("Free Wedding Biodata (vector spike)");
+  doc.setProducer("Free Wedding Biodata");
   doc.setCreator("Free Wedding Biodata");
   if (options.title) doc.setTitle(options.title);
+  const docLang = list.pages[0]?.lang;
+  if (docLang) doc.catalog.set(PDFName.of("Lang"), PDFString.of(docLang));
   const context = doc.context;
 
   // Fonts: loaded once per family + weight, shaped with HarfBuzz, embedded after all pages are drawn.
-  const loaded = new Map<string, Promise<ShapingFont>>();
+  // CSS weight matching with 400 and 700 faces: 500 and below take 400, 600 and above take 700.
+  const loaded = new Map<string, Promise<ShapingFont | null>>();
   const fontFor = (family: string, weight: number) => {
     const w = weight >= 600 ? 700 : 400;
     const key = `${family}|${w}`;
     let p = loaded.get(key);
     if (!p) {
-      p = fonts(family, w).then((data) => loadShapingFont(hb, family, w, data));
+      const range = ranges[family];
+      p = fonts(family, w).then((data) => (data ? loadShapingFont(hb, family, w, data, range ? unicodeRangeTest(range) : undefined) : null));
       loaded.set(key, p);
+    }
+    return p;
+  };
+  const stacks = new Map<string, Promise<ShapingFont[]>>();
+  const stackFor = (families: string[], weight: number) => {
+    const names = [...new Set([...families, ...fallbackFamilies])];
+    const key = `${names.join(",")}|${weight >= 600 ? 700 : 400}`;
+    let p = stacks.get(key);
+    if (!p) {
+      p = Promise.all(names.map((f) => fontFor(f, weight))).then((all) => all.filter((f): f is ShapingFont => !!f));
+      stacks.set(key, p);
     }
     return p;
   };
@@ -326,9 +354,6 @@ export async function writePdf(list: DisplayList, fonts: FontLoader, options: Wr
       ops.push(rgbOps(c, stroke));
       if (c.a < 1) ops.push(`/${alphaName(stroke ? 1 : c.a, stroke ? c.a : 1)} gs`);
     };
-
-    const widestAt = new Map<number, number>();
-    for (const it of page.items) if (it.kind === "text") widestAt.set(it.x, Math.max(widestAt.get(it.x) ?? 0, it.width));
 
     const bg = parseColor(page.background);
     if (bg) ops.push(rgbOps(bg, false), `0 0 ${num(page.width)} ${num(page.height)} re f`);
@@ -404,6 +429,7 @@ export async function writePdf(list: DisplayList, fonts: FontLoader, options: Wr
     // Fonts are embedded at the end (subset to every glyph used on any page), so resources are attached then.
     pageResources.push(resources);
     pdfPage.node.set(PDFName.of("Contents"), context.register(context.flateStream(ops.join("\n"))));
+    await options.onPage?.(pageIndex + 1, list.pages.length);
 
     function drawRect(r: RectItem) {
       const fill = parseColor(r.fill);
@@ -436,22 +462,27 @@ export async function writePdf(list: DisplayList, fonts: FontLoader, options: Wr
       }
       const name = `Im${[...images.keys()].indexOf(img.src) + 1}`;
       xObjects[name] = await ref;
+      const at = imagePlacement(img);
       ops.push("q");
-      if (img.radius) ops.push(pathOps(rectPath(img.x, img.y, img.width, img.height, img.radius)), "W n");
-      ops.push(`${num(img.width)} 0 0 ${num(-img.height)} ${num(img.x)} ${num(img.y + img.height)} cm`, `/${name} Do`, "Q");
+      // The frame (rounded corners, and object-fit: cover's crop) clips the picture.
+      if (img.radius || img.fit === "cover") ops.push(pathOps(rectPath(img.x, img.y, img.width, img.height, img.radius ?? 0)), "W n");
+      ops.push(`${num(at.width)} 0 0 ${num(-at.height)} ${num(at.x)} ${num(at.y + at.height)} cm`, `/${name} Do`, "Q");
     }
 
     async function drawText(t: TextItem) {
       const text = collapse(t.text);
       if (!text) return;
-      const primary = await fontFor(t.fontFamily, t.fontWeight);
-      const stack = [primary];
-      for (const f of fallbackFamilies) if (f !== t.fontFamily) stack.push(await fontFor(f, t.fontWeight));
+      const stack = await stackFor(t.fontFamilies, t.fontWeight);
+      if (!stack.length) {
+        warn(`No font for "${t.fontFamilies.join(", ")}"; text skipped on page ${pageIndex + 1}`);
+        return;
+      }
+      const primary = stack[0];
       const shaped = shapeRun(hb, text, stack, t.fontSize, t.letterSpacing, page.lang || "en");
       const measure: RunMeasure = {
         page: pageIndex + 1,
         text,
-        fontFamily: t.fontFamily,
+        fontFamily: primary.family,
         fontWeight: t.fontWeight,
         fontSize: t.fontSize,
         browserWidth: t.width,
@@ -461,13 +492,13 @@ export async function writePdf(list: DisplayList, fonts: FontLoader, options: Wr
         codePoints: shaped.codePoints,
         fallback: shaped.glyphs.some((g) => g.font !== primary),
       };
-      // Justified lines: Chrome widened the spaces. The display list doesn't carry text-align, so a line with
-      // spaces that is exactly as wide as the widest line starting at the same x on the page (a full justified
-      // line) and that HarfBuzz finds narrower gets the difference spread over its spaces.
-      const spaces = shaped.glyphs.filter((g) => text[g.cluster] === " ");
+      // Where the run starts: the browser's left edge, re-anchored for centred and right-aligned text so a tiny
+      // width difference is split (or put) where the browser put it; a justified line spreads the difference over
+      // its spaces, as the browser widened them.
+      let x = t.x;
       const gap = t.width - shaped.width;
-      const fullLine = t.width >= page.width * 0.4 && Math.abs(t.width - (widestAt.get(t.x) ?? 0)) < 0.01;
-      if (spaces.length && fullLine && gap > 0.25) {
+      const spaces = t.justified ? shaped.glyphs.filter((g) => text[g.cluster] === " ") : [];
+      if (spaces.length) {
         measure.justified = true;
         const extra = gap / spaces.length;
         let shift = 0;
@@ -475,14 +506,17 @@ export async function writePdf(list: DisplayList, fonts: FontLoader, options: Wr
           g.x += shift;
           if (text[g.cluster] === " ") shift += extra;
         }
-      }
+      } else if (t.align === "center") x += gap / 2;
+      else if (t.align === "right") x += gap;
       options.onRun?.(measure);
       if (!measure.justified && Math.abs(measure.ratio) > tolerance) options.onMismatch?.(measure);
 
       const color = parseColor(t.color) ?? { r: 0, g: 0, b: 0, a: 1 };
-      ops.push(`/Span << /ActualText <${utf16Hex(text, true)}> >> BDC`, "q");
+      // ActualText is what copy and paste gives (exact Unicode in logical order); a run followed by another on
+      // the same line gets its space back.
+      ops.push(`/Span << /ActualText <${utf16Hex(t.spaceAfter ? `${text} ` : text, true)}> >> BDC`, "q");
       setColor(color, false);
-      ops.push("BT", `1 0 0 -1 ${num(t.x)} ${num(t.y)} Tm`);
+      ops.push("BT", `1 0 ${t.fontStyle === "italic" ? ITALIC_SKEW : 0} -1 ${num(x)} ${num(t.y)} Tm`);
       let current: ShapingFont | null = null;
       let rise = 0;
       let pen = 0;
@@ -526,7 +560,7 @@ export async function writePdf(list: DisplayList, fonts: FontLoader, options: Wr
   const fontRefs = new Map<string, PDFRef>();
   for (const p of loaded.values()) {
     const f = await p;
-    if (!fontNames.has(f.key) || !f.used.size) continue;
+    if (!f || !fontNames.has(f.key) || !f.used.size) continue;
     fontRefs.set(f.key, embedFont(context, f, subsetter, warn));
   }
   doc.getPages().forEach((pdfPage, i) => {

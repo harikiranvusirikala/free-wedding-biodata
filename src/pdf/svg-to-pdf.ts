@@ -111,6 +111,18 @@ interface GradientDef {
   el: XmlElement;
 }
 
+/**
+ * A paint `url(#id) fallback`. Ids may be quoted or CSS-escaped, and may hold characters such as the colons and «»
+ * of React's useId ("url(#:r1:)", "url(#\:r1\:)", "url('#«r1»')").
+ */
+export function paintUrl(value: string): { id: string; fallback: string } | null {
+  const m = /^url\(\s*(?:"#((?:\\.|[^"\\])*)"|'#((?:\\.|[^'\\])*)'|#((?:\\.|[^)\\\s])*))\s*\)\s*(.*)$/.exec(value.trim());
+  if (!m) return null;
+  const raw = m[1] ?? m[2] ?? m[3];
+  const id = raw.replace(/\\([0-9a-fA-F]{1,6})\s?|\\(.)/g, (_, hex: string | undefined, ch: string | undefined) => (hex ? String.fromCodePoint(parseInt(hex, 16)) : ch!));
+  return { id, fallback: m[4].trim() };
+}
+
 /** Shape geometry for a drawable element, or null for non-shapes. */
 function geometry(el: XmlElement): Segment[] | null {
   const a = el.attrs;
@@ -220,10 +232,10 @@ export function svgToPdf(markup: string, box: Box, pageToDefault: Matrix, res: S
   /** Sets fill or stroke colour; returns false when there is nothing to paint. */
   const setPaint = (value: string, paint: Paint, stroke: boolean, bbox: Box | null, ctm: Matrix): boolean => {
     const v = value.trim();
-    const url = /^url\(\s*['"]?#([^'")\s]+)['"]?\s*\)\s*(.*)$/.exec(v);
+    const url = paintUrl(v);
     if (url) {
-      const g = resolveGradient(url[1]);
-      const fallback = url[2];
+      const g = resolveGradient(url.id);
+      const fallback = url.fallback;
       if (!g || !g.stops.length) return fallback ? setPaint(fallback, paint, stroke, bbox, ctm) : false;
       const userSpace = g.attrs.gradientUnits === "userSpaceOnUse";
       if (!userSpace && (!bbox || bbox.width === 0 || bbox.height === 0)) {
@@ -246,7 +258,7 @@ export function svgToPdf(markup: string, box: Box, pageToDefault: Matrix, res: S
         stops: g.stops,
         matrix: toUser,
       };
-      if (g.attrs.spreadMethod && g.attrs.spreadMethod !== "pad") warnOnce(`gradient #${url[1]}: spreadMethod ${g.attrs.spreadMethod} drawn as pad`);
+      if (g.attrs.spreadMethod && g.attrs.spreadMethod !== "pad") warnOnce(`gradient #${url.id}: spreadMethod ${g.attrs.spreadMethod} drawn as pad`);
       const name = res.pattern(gradient, multiply(toUser, ctm));
       out.push(stroke ? `/Pattern CS /${name} SCN` : `/Pattern cs /${name} scn`);
       return true;

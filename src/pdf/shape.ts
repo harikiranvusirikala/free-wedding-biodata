@@ -1,7 +1,8 @@
 // Text shaping with HarfBuzz (harfbuzzjs) using the same TTFs the browser used. A run is split like Chrome splits
-// it: by font (first family in the fallback list that has every code point of a grapheme) and by script (Common and
-// Inherited characters join their neighbours), then each piece is shaped with the run's language, keeping the whole
-// run as context.
+// it: by font (the first family in the CSS stack that draws every code point of a grapheme: in its cmap and in its
+// @font-face unicode-range, which is how Chrome's glyph lookup treats a range) and by script (Common and Inherited
+// characters join their neighbours), then each piece is shaped with the run's language, keeping the whole run as
+// context.
 
 import type * as HarfBuzz from "harfbuzzjs";
 
@@ -16,6 +17,8 @@ export interface ShapingFont {
   font: HarfBuzz.Font;
   face: HarfBuzz.Face;
   unicodes: Set<number>;
+  /** The font draws this code point: in its cmap and in its unicode-range. */
+  covers(cp: number): boolean;
   /** Glyph IDs drawn, with the text each stands for (best effort, for the ToUnicode map). */
   used: Map<number, string | null>;
   /** How sure each `used` mapping is (3 nominal glyph, 2 whole cluster, 1 leftover, 0 none); better ones win. */
@@ -24,11 +27,18 @@ export interface ShapingFont {
   advance(gid: number): number;
 }
 
-export function loadShapingFont(hb: HarfBuzzModule, family: string, weight: number, data: ArrayBuffer | Uint8Array): ShapingFont {
+export function loadShapingFont(
+  hb: HarfBuzzModule,
+  family: string,
+  weight: number,
+  data: ArrayBuffer | Uint8Array,
+  inRange: (cp: number) => boolean = () => true,
+): ShapingFont {
   const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
   const face = new hb.Face(new hb.Blob(bytes));
   const font = new hb.Font(face);
   const advances = new Map<number, number>();
+  const unicodes = new Set(face.collectUnicodes());
   return {
     key: `${family}|${weight}`,
     family,
@@ -37,7 +47,8 @@ export function loadShapingFont(hb: HarfBuzzModule, family: string, weight: numb
     upem: face.upem,
     face,
     font,
-    unicodes: new Set(face.collectUnicodes()),
+    unicodes,
+    covers: (cp) => unicodes.has(cp) && inRange(cp),
     used: new Map(),
     usedRank: new Map(),
     advance(gid) {
@@ -109,7 +120,7 @@ export function shapeRun(hb: HarfBuzzModule, text: string, fonts: ShapingFont[],
   for (const { segment, index } of segmenter.segment(text)) {
     const cps = [...segment];
     const font =
-      fonts.find((f) => cps.every((c) => IGNORABLE.test(c) || f.unicodes.has(c.codePointAt(0)!))) ?? fonts[0];
+      fonts.find((f) => cps.every((c) => IGNORABLE.test(c) || f.covers(c.codePointAt(0)!))) ?? fonts[0];
     let offset = index;
     for (const c of cps) {
       const script = scriptOf(c);

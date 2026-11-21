@@ -16,7 +16,7 @@ Free Wedding Biodata (https://free-wedding-biodata.vercel.app, VISION D37): a fr
 
 Read only the sections a task needs (`grep -n '^#' <file>`, then `Read` with `offset`/`limit`).
 
-**Current state:** Phase 0 is done: the skeleton (0.1) and the PDF spike (0.2), which chose HarfBuzz + pdf-lib fed by the laid-out pages (VISION D49, `docs/spikes/PDF_SPIKE.md`); its working code is in `src/pdf-spike/`. Phase 1: 1.1 (app shell) and 1.2 (profile model) are built; Phase 1 is complete (shell, profile model, autosave in IndexedDB, drafts menu); 3.2 (document engine, Classic Gold and Minimal Ivory) is built ahead of Phase 2. Check the Progress table for the latest. Check the Progress table for what's actually built before assuming any file below exists. `docs/PROJECT_GUIDE.md` lists every folder and page.
+**Current state:** Phase 0 is done: the skeleton (0.1) and the PDF spike (0.2), which chose HarfBuzz + pdf-lib fed by the laid-out pages (VISION D49, `docs/spikes/PDF_SPIKE.md`); the production engine is `src/pdf/` (Step 4.1 part 1). Phase 1: 1.1 (app shell) and 1.2 (profile model) are built; Phase 1 is complete (shell, profile model, autosave in IndexedDB, drafts menu); 3.2 (document engine, Classic Gold and Minimal Ivory) is built ahead of Phase 2. Check the Progress table for the latest. Check the Progress table for what's actually built before assuming any file below exists. `docs/PROJECT_GUIDE.md` lists every folder and page.
 
 ## Commands
 
@@ -37,7 +37,7 @@ A single e2e file (`npx playwright test e2e/<file>.spec.ts`) isn't allowlisted: 
 
 ## Architecture in brief (details: BUILD_PLAN Part A)
 
-- **One document, laid out once** (A4, VISION D1): `src/biodata/document.ts` turns a profile + document-language dictionary into a `DocModel` (hidden/empty fields dropped, labels, formatted values) → a template in `src/document/templates/<id>/` renders it as blocks → blocks are measured off-screen and `src/document/paginate.ts` assigns them to A4 pages → those same pages are the live preview and the print output (`@page` A4); a display list read from them (every text line, box, photo, SVG) feeds the Download engine in `src/pdf/` (lazy-loaded; HarfBuzz shaping + pdf-lib, D49) and the canvas page images (D38). Never build a second layout for export. Prototype: `src/pdf-spike/`.
+- **One document, laid out once** (A4, VISION D1): `src/biodata/document.ts` turns a profile + document-language dictionary into a `DocModel` (hidden/empty fields dropped, labels, formatted values) → a template in `src/document/templates/<id>/` renders it as blocks → blocks are measured off-screen and `src/document/paginate.ts` assigns them to A4 pages → those same pages are the live preview and the print output (`@page` A4); a display list read from them (every text line, box, photo, SVG) feeds the Download engine in `src/pdf/` (lazy-loaded; HarfBuzz shaping + pdf-lib, D49) and the canvas page images (D38). Never build a second layout for export. Engine: `src/pdf/` (import it only with `await import("@/pdf")`).
 - **Pure vs browser code:** `src/biodata/` and `src/document/` are pure and unit-tested (edits are reducer functions, D6; migrations shared by the database and backups). Browser services live in `src/lib/` (Dexie DB, `profile-repo.ts` as the only writer, autosave, photos, storage status).
 - **Persistence:** one Dexie transaction writes profile + photo; each profile has a `revision`, and a tab that finds a newer one stops autosaving and asks to reload (D9). Reads go through zod + `migrate()`; bad records are kept and reported, never deleted.
 - **Templates:** twenty designs (D46) on three skeletons (classic, modern, minimal; D34), each a combination of top element, frame family, paper tint, heading-bar style and three colour variants (D39); motifs take the template's colours (D45).
@@ -77,6 +77,7 @@ A single e2e file (`npx playwright test e2e/<file>.spec.ts`) isn't allowlisted: 
 - **Waiting for another agent's run:** `pgrep -f "playwright test"` also matches your own wait loop; use `pgrep -f "bin/(playwright|next) "`. Any Playwright run wipes `test-results/`, so copy screenshots out before reviewing them.
 - **Sticky bars:** `sticky` on an element inside a wrapper only as tall as itself never sticks; put it on the wrapper. `getByLabel` also matches `aria-label`s and labelled regions: use `{ exact: true }` or `getByRole`.
 - **Same label in two sections** ("Occupation" in Career and Partner preferences): scope e2e locators to the section, `[data-section="career"]`.
+- **A new script font** needs the same `unicode-range` in `src/document/document.css` and `FONT_UNICODE_RANGE` (`tokens.ts`); a test checks they match.
 - **Parallel agents** may share the working tree: check `git status` and stage only a step's own files when committing.
 - **`next build` type-checks every `.ts`/`.mts` file**, including `scripts/` and `e2e/`: import local modules without the `.ts` extension, and run `npx tsc --noEmit` before a build.
 - **Next.js 16 differs from older versions:** read `node_modules/next/dist/docs/` before writing Next.js code.

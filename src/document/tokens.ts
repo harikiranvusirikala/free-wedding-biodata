@@ -3,7 +3,7 @@ import type { LangCode } from "@/biodata/types";
 // The document's design tokens (BUILD_PLAN A2/A4, VISION §7): page size, margins, the text-size steps, spacing,
 // fonts and every template's colour variants. Components read sizes from here; spacing inside a page is in em
 // of the body size, so a whole page scales with the text-size step while the page, frame and photo stay put.
-// Coordinates are CSS px on an A4 page at 96 px per inch, the same space as the display list (src/pdf-spike).
+// Coordinates are CSS px on an A4 page at 96 px per inch, the same space as the display list (src/pdf).
 
 /** A4 portrait at 96 px per inch (210 × 297 mm). */
 export const PAGE = { width: 794, height: 1123 } as const;
@@ -63,7 +63,27 @@ export const FONT_FAMILY: Record<LangCode, string> = {
   pa: "Noto Sans Gurmukhi",
 };
 
-/** The CSS font stack for a document language: its script font first (it carries Latin too), then Noto Sans. */
+/**
+ * What each script font draws (its CSS `unicode-range`, the same strings as in document.css; a test keeps them
+ * equal): its own script block, the dandas, the joiners, the dotted circle and the space. Everything else on an
+ * Indic page (Latin letters, digits, punctuation, ₹) falls through to Noto Sans at the same weight: the script
+ * fonts carry Latin glyphs too, but Noto Sans Kannada Bold's are Regular weight (Step 4.2 found English labels
+ * printed lighter than bold). The space stays in the script font, so it remains the "first available font" whose
+ * metrics set line boxes and baselines. The PDF writer falls back per glyph with the same ranges (src/pdf, D49).
+ */
+const INDIC_COMMON = "U+0020, U+00A0, U+0964-0965, U+200B-200D, U+25CC";
+export const FONT_UNICODE_RANGE: Readonly<Record<string, string>> = {
+  "Noto Sans Telugu": `U+0C00-0C7F, ${INDIC_COMMON}`,
+  "Noto Sans Devanagari": `U+0900-097F, U+1CD0-1CFF, U+A8E0-A8FF, ${INDIC_COMMON}`,
+  "Noto Sans Tamil": `U+0B80-0BFF, ${INDIC_COMMON}`,
+  "Noto Sans Kannada": `U+0C80-0CFF, ${INDIC_COMMON}`,
+  "Noto Sans Malayalam": `U+0D00-0D7F, ${INDIC_COMMON}`,
+  "Noto Sans Gujarati": `U+0A80-0AFF, ${INDIC_COMMON}`,
+  "Noto Sans Bengali": `U+0980-09FF, ${INDIC_COMMON}`,
+  "Noto Sans Gurmukhi": `U+0A00-0A7F, ${INDIC_COMMON}`,
+};
+
+/** The CSS font stack for a document language: its script font first (limited to its script), then Noto Sans. */
 export function fontStack(lang: LangCode): string {
   const family = FONT_FAMILY[lang];
   return family === "Noto Sans" ? `"Noto Sans", sans-serif` : `"${family}", "Noto Sans", sans-serif`;

@@ -4,7 +4,7 @@ import { fontStack, LINE_HEIGHT, PAGE, type Box, type Palette } from "./tokens";
 
 // One A4 page (BUILD_PLAN A4): a fixed 794 × 1123 px box on the template's paper, the frame artwork behind, and
 // the content box at the template's margins. Marked data-page and lang, so the display-list reader
-// (src/pdf-spike/display-list.ts, the Download engine's input, D49) reads it unchanged; print prints one per sheet.
+// (src/pdf/display-list.ts, the Download engine's input, D49) reads it unchanged; print prints one per sheet.
 
 export function Page({
   lang,

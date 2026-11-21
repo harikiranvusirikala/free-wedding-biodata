@@ -7,20 +7,25 @@ import type { PhotoInput } from "@/document/blocks/types";
 import { getTemplate } from "@/document/templates";
 import { DocumentView, type DocumentLayoutInfo } from "@/document/DocumentView";
 import { getDocDictionary } from "@/i18n/doc";
-import { readDisplayList, type DisplayList } from "@/pdf-spike/display-list";
+import { readDisplayList, type DisplayList } from "@/pdf/display-list";
+import { pageImageFileName, pdfFileName } from "@/biodata/filename";
 import type { LangCode } from "@/biodata/types";
 import { documentVariants, FIXTURE_TODAY, type DocVariant } from "../../../../test/fixtures/documents";
+import { pdfHarness, type PdfHarness } from "../pdf/harness";
 
 // The document engine's dev page (BUILD_PLAN Step 3.2): every fixture variant laid out at true size, plus the short
 // Classic Gold biodata in each of the other eight document languages (Step 4.2) to check glyphs and label widths.
 // When all are laid out, <body data-doc-ready> is set and window.__doc lets the e2e spec read each variant's page
-// count, the text it should print and the display list of its pages (the Download engine's input, D49).
+// count, the text it should print and the display list of its pages (the Download engine's input, D49), and
+// `pdf(id)` runs the Download engine on a variant (Step 4.1; the PDF and Images buttons download them by hand).
 
 declare global {
   interface Window {
     __doc?: {
       variants: { id: string; length: string; pages: number; step: string; overflow: boolean; expected: string[] }[];
       displayList: (id: string) => DisplayList;
+      /** The Download engine on one variant's pages (Step 4.1, e2e/pdf.spec.ts). */
+      pdf: (id: string) => PdfHarness;
     };
   }
 }
@@ -56,6 +61,42 @@ function galleryVariants(): DocVariant[] {
     return { ...base, id: `classic-gold-${lang}-short`, lang, profile };
   });
   return [...all, ...more];
+}
+
+/** Dev-only: download a variant as the Download engine makes it (the editor's buttons come in Step 4.1 part 2). */
+function DownloadButtons({ root, profile }: { root: () => HTMLElement | undefined; profile: DocVariant["profile"] }) {
+  const save = (blob: Blob, name: string) => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  const style = { font: "inherit", fontSize: 12, padding: "1px 8px", marginLeft: 6 };
+  return (
+    <>
+      <button
+        type="button"
+        style={style}
+        onClick={async () => {
+          const { createPdf } = await import("@/pdf");
+          save(await createPdf(root()!), pdfFileName(profile));
+        }}
+      >
+        PDF
+      </button>
+      <button
+        type="button"
+        style={style}
+        onClick={async () => {
+          const { createPageImages } = await import("@/pdf");
+          (await createPageImages(root()!, { format: "jpeg" })).forEach((b, i) => save(b, pageImageFileName(profile, i + 1)));
+        }}
+      >
+        Images
+      </button>
+    </>
+  );
 }
 
 export function DocumentGallery() {
@@ -95,6 +136,7 @@ export function DocumentGallery() {
         return { id: v.id, length: v.length, ...layouts[v.id], expected: [...printed, ...values] };
       }),
       displayList: (id) => readDisplayList(roots.current.get(id)!),
+      pdf: (id) => pdfHarness(() => roots.current.get(id)!),
     };
     document.body.dataset.docReady = "1";
   }, [allLaidOut, layouts, variants]);
@@ -112,7 +154,8 @@ export function DocumentGallery() {
           style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}
         >
           <h2 style={{ font: "600 14px/1.4 system-ui, sans-serif", color: "#292524", margin: 0 }}>
-            {v.id} {layouts[v.id] ? `· ${layouts[v.id].pages} page(s) at ${layouts[v.id].step}` : ""}
+            {v.id} {layouts[v.id] ? `· ${layouts[v.id].pages} page(s) at ${layouts[v.id].step}` : ""}{" "}
+            <DownloadButtons root={() => roots.current.get(v.id)} profile={v.profile} />
           </h2>
           <DocumentView doc={v.doc} photo={photos.get(v.id)} onLayout={callbacks.get(v.id)} />
         </section>

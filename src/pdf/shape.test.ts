@@ -3,6 +3,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadShapingFont, shapeRun, type HarfBuzzModule } from "./shape";
 import { createSubsetter } from "./subset";
+import { unicodeRangeTest } from "./unicode-range";
+import { FONT_UNICODE_RANGE } from "@/document/tokens";
 
 const fonts = path.join(process.cwd(), "public/fonts");
 const hb = (await import("harfbuzzjs")) as HarfBuzzModule;
@@ -38,6 +40,30 @@ describe("shapeRun", () => {
     const run = shapeRun(hb, "ఆ Ω", [telugu, latin], 13.5, 0, "te");
     expect(run.glyphs.map((g) => g.font.family)).toEqual(["Noto Sans Telugu", "Noto Sans Telugu", "Noto Sans"]);
     expect(run.glyphs.every((g) => g.gid !== 0)).toBe(true);
+  });
+});
+
+describe("per-glyph fallback with unicode-range", () => {
+  const range = unicodeRangeTest(FONT_UNICODE_RANGE["Noto Sans Kannada"]);
+  const kannadaBold = loadShapingFont(hb, "Noto Sans Kannada", 700, readFileSync(path.join(fonts, "NotoSansKannada-Bold.ttf")), range);
+  const latinBold = loadShapingFont(hb, "Noto Sans", 700, readFileSync(path.join(fonts, "NotoSans-Bold.ttf")));
+
+  it("draws Latin letters, digits and ₹ with Noto Sans Bold, Kannada and spaces with the Kannada font", () => {
+    // The Kannada font has Latin glyphs too, but its Bold carries Regular-weight ones: its range keeps them out.
+    expect(kannadaBold.unicodes.has(0x42)).toBe(true);
+    expect(kannadaBold.covers(0x42)).toBe(false);
+    const text = "Blood ಹೆಸರು ₹5";
+    const run = shapeRun(hb, text, [kannadaBold, latinBold], 13.5, 0, "kn");
+    const fontAt = (i: number) => run.glyphs.find((g) => g.cluster === i)!.font.family;
+    expect(fontAt(0)).toBe("Noto Sans"); // B
+    expect(fontAt(5)).toBe("Noto Sans Kannada"); // space
+    expect(fontAt(6)).toBe("Noto Sans Kannada"); // ಹೆ
+    expect(fontAt(text.indexOf("₹"))).toBe("Noto Sans");
+    expect(fontAt(text.indexOf("5"))).toBe("Noto Sans");
+    // Same width as Noto Sans Bold's own "Blood": bold Latin, not the lighter glyphs.
+    const blood = shapeRun(hb, "Blood", [latinBold], 13.5, 0, "en").width;
+    const latinPart = run.glyphs.filter((g) => g.cluster < 5);
+    expect(latinPart.at(-1)!.x + (latinBold.advance(latinPart.at(-1)!.gid) * 13.5) / latinBold.upem).toBeCloseTo(blood, 5);
   });
 });
 

@@ -24,7 +24,7 @@ flowchart LR
 | `src/app/not-found.tsx`, `error.tsx` | The "page not found" and "Something went wrong" screens. |
 | `src/app/robots.ts` | Writes `robots.txt`: search engines may read the public pages on the live site only. |
 | `src/app/icon.svg` | The app icon (a copy of `docs/brand/app-icon.svg`), used for the browser tab. `favicon.ico`, `apple-icon.png` and `opengraph-image.png` (the link preview) beside it are made from it by `npm run images`. |
-| `src/app/dev/` | Development-only pages, a "page not found" on the live site unless built with `ENABLE_DEV_PAGES=1` (the e2e tests do). `/dev/pdf-spike` shows the PDF spike's reference pages. |
+| `src/app/dev/` | Development-only pages, a "page not found" on the live site unless built with `ENABLE_DEV_PAGES=1` (the e2e tests do). `/dev/pdf` checks the PDF writer; `/dev/document` shows every template. |
 | `src/biodata/` | The biodata itself, as pure TypeScript: profile types and zod schema, a new draft's default sections and fields, the fictional sample, format migrations, every edit as a small pure function, and `document.ts`/`format.ts` which turn a profile into what gets printed (labels, dates, height, age); `draft-name.ts`, a draft's automatic name from the Full name; `inputs.ts`, typed text ↔ stored dates, times and heights; `completion.ts`, "3 of 9 filled". Unit-tested, no browser code. |
 | `src/document/` | The document engine: page tokens, blocks, the A4 `Page`, `paginate` (pure: blocks → pages), `measure` (browser: sizes blocks off-screen), `DocumentView`; `templates/` holds one folder per design with a registry (Classic Gold, Minimal Ivory); `frames/` and `motifs/` the original artwork. |
 | `src/i18n/doc/` | Printed labels per document language (English, Telugu so far); `index.ts` loads them with English fallback. |
@@ -38,11 +38,11 @@ flowchart LR
 | `src/lib/photos.ts`, `src/biodata/photo-crop.ts` | Getting a picked photo ready (checked, upright, at most 3000 px, JPEG) and drawing the cropped picture for the document; the crop maths (always covering the frame, dots per inch). |
 | `src/lib/site.ts` | The product's name, address, title and descriptions in one place. |
 | `src/lib/empty-module.ts` | An empty stand-in the bundler uses for Node's `module` in the browser (needed by the PDF text shaper). |
-| `src/pdf-spike/` | The PDF spike (Step 0.2), which picked how PDFs are made: `display-list.ts` reads every line, box and picture from the laid-out pages; `vector/` writes them as a PDF, shaping Indian scripts with HarfBuzz; `raster/` draws them on a canvas for page images; `reference/` is the Classic Gold test page. Moves into `src/pdf/` and `src/document/` in Steps 3.2 and 4.1. |
+| `src/pdf/` | The Download engine: reads the laid-out pages into a display list, then writes a PDF (HarfBuzz shapes Indian scripts, pdf-lib writes the file) or one image per page. Loaded only when downloading. |
 | `public/` | Files served as they are: the logo (`brand/app-icon.svg`), the installable app's icons (`icons/`) and the Noto fonts with their licence (`fonts/`, copied by `npm run fonts`). |
-| `scripts/` | Helper programs run with `npm run …`: `serve-out.mts` serves `out/` like Vercel; `site-images.mts` draws the icons and previews; `fonts.mts` copies the fonts; `spike-vector.mts` makes the spike's PDF in Node. |
+| `scripts/` | Helper programs run with `npm run …`: `serve-out.mts` serves `out/` like Vercel; `site-images.mts` draws the icons and previews; `fonts.mts` copies the fonts. |
 | `test/` | Shared test setup for Vitest, and `fixtures/scripts.ts`: fictional biodata text in ten languages chosen to stress Indian-script shaping. Unit tests sit beside the code they test (`*.test.ts`). |
-| `e2e/` | Playwright tests that open the built site in Chrome, on a phone and a desktop screen. `screens.spec.ts` saves a screenshot of every page at phone, tablet and desktop size in Day and Night (`test-results/screenshots/`); `spike/` makes the PDF spike's PDFs and images (`test-results/spike/`). |
+| `e2e/` | Playwright tests that open the built site in Chrome, on a phone and a desktop screen. `screens.spec.ts` saves a screenshot of every page at phone, tablet and desktop size in Day and Night (`test-results/screenshots/`); `pdf.spec.ts` makes PDFs and page images of the templates (`test-results/pdf/`). |
 | `docs/` | The vision, build plan, this guide, the brand icon (`brand/app-icon.svg`), GitHub's social preview (`social-preview.png`), pictures it is drawn from (`screenshots/`) and the PDF spike's report and evidence (`spikes/`). |
 | `.github/workflows/ci.yml` | The checks GitHub runs on every push: lint, types, tests, build, e2e. |
 
@@ -68,4 +68,4 @@ flowchart LR
 | `/dev/error` | `src/app/dev/error/page.tsx` | Development only: shows the error screen. |
 | `/dev/photo` | `src/app/dev/photo/page.tsx` | Development only: the photo card and cropper with in-memory storage and a drawn test picture. |
 | `/dev/document` | `src/app/dev/document/page.tsx` | Development only: every template × English/Telugu × short/sample/long/split profiles at true size. |
-| `/dev/pdf-spike` | `src/app/dev/pdf-spike/page.tsx` | Development only: the PDF spike's eleven reference pages. |
+| `/dev/pdf` | `src/app/dev/pdf/page.tsx` | Development only: one page using every feature the PDF writer must draw. |

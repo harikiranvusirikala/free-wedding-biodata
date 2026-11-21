@@ -3,7 +3,7 @@ import { useId } from "react";
 // Original motif artwork for the top of a biodata (VISION §7 D21, D45, D47): our own drawings, ported from the
 // mockup library (docs/mockups/assets/motifs.js). Every motif takes the template's colours: `ink` fills the main
 // shapes as a vertical gradient to a lighter tint, `base` (a pale tint) cuts the details. Plain paths, circles
-// and linear gradients only, the SVG subset the PDF writer draws (src/pdf-spike/vector/svg-to-pdf.ts); no
+// and linear gradients only, the SVG subset the PDF writer draws (src/pdf/svg-to-pdf.ts); no
 // paint-order or text. Nothing is ever shown unless the user picks a motif ("None" first, never inferred).
 // Step 4.4 adds the rest of the library.
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Matrix } from "./matrix";
-import { svgToPdf, viewBoxMatrix, type LinearGradient } from "./svg-to-pdf";
+import { paintUrl, svgToPdf, viewBoxMatrix, type LinearGradient } from "./svg-to-pdf";
 import { parseXml } from "./xml";
 
 const PAGE: Matrix = [0.75, 0, 0, -0.75, 0, 841.89];
@@ -58,6 +58,24 @@ describe("svgToPdf", () => {
     // The line has no height: an objectBoundingBox gradient isn't rendered (SVG rule), so no stroke is drawn.
     expect(patterns).toHaveLength(1);
     expect(ops).not.toContain("SCN");
+  });
+
+  it("resolves gradient ids made by React's useId (colons, «», quotes, CSS escapes)", () => {
+    expect(paintUrl("url(#:r1:)")).toEqual({ id: ":r1:", fallback: "" });
+    expect(paintUrl("url(#\\:r1\\:) #fff")).toEqual({ id: ":r1:", fallback: "#fff" });
+    expect(paintUrl("url('#«r1»')")).toEqual({ id: "«r1»", fallback: "" });
+    expect(paintUrl('url("#a\\3A b")')).toEqual({ id: "a:b", fallback: "" });
+    expect(paintUrl("#fff")).toBeNull();
+    for (const [id, ref] of [
+      [":r1:", "url(#:r1:)"],
+      ["«r2»", "url(#«r2»)"],
+      [":r3:", "url(#\\:r3\\:)"],
+    ]) {
+      const { patterns } = render(
+        `<svg viewBox="0 0 100 100"><linearGradient id="${id}"><stop offset="0" stop-color="#000"/><stop offset="1" stop-color="#fff"/></linearGradient><rect width="10" height="10" fill="${ref}"/></svg>`,
+      );
+      expect(patterns, id).toHaveLength(1);
+    }
   });
 
   it("reports what it can't draw", () => {
