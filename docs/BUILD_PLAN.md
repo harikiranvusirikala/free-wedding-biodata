@@ -144,6 +144,34 @@ Dexie stores (`src/lib/db.ts`): `profiles` (`id`, `updatedAt`), `photos` (`profi
 
 Hand-written `public/sw.js` like EnglishEasy's: precache the app shell pages and their `_next/static` assets, fonts on first use, versioned cache names, `Cache-Control: no-cache` for `sw.js` in `vercel.json`. It never caches anything but same-origin GETs of static files; profiles and photos live only in IndexedDB.
 
+## A7. Design system and quality bar (owner request, 2026-11-20)
+
+Every screen is built **production-quality the first time**, to the standard of Family Tree and EnglishEasy, so the owner never has to ask for spacing, polish or layout fixes screen by screen. The local mockups (`docs/mockups/`) show the target; these rules make it repeatable.
+
+**Visual language**
+- Neutral warm surfaces (Tailwind `stone`: page `stone-50`, cards white; Night `stone-950` / `stone-900`) and **one brand colour**, a deep maroon (`#8a1c2b`; Night a warm gold `#e0a64a`) for primary buttons, active states and accents; gold as a secondary accent. Status colours: green saved, amber warnings, red danger.
+- **Sans-serif UI everywhere** (the system stack, as in the sibling apps; Noto for Indic text), headings `font-semibold`/`font-bold` with `tracking-tight`. Serif faces appear only inside biodata templates.
+- Line icons (inline SVG, 1.8 stroke), rounded controls `rounded-lg`, cards `rounded-2xl` with a 1 px border and `shadow-sm`, soft focus rings.
+
+**Recipes (copy the sibling pattern: plain class-string modules plus a few components in `src/components/ui/`)**
+- `button.ts`: `primary` (brand), `secondary` (outlined), `ghost`, `danger`, `dangerOutline`; sizes `sm` h-8, `md` h-9, `lg` h-11; every control `pointer-coarse:min-h-11` (44 px on touch).
+- `card.ts` (`card`, `cardHeader`, `cardTitle`, `cardText`, `cardRows`, `dangerCard`), `field.ts` (h-9 fields, 16 px text on touch so iPhones don't zoom, label above, hint below, error/success messages), `badge.ts`, `page.ts`.
+- Components: `PageHeader` (title, one-sentence description, actions on the right; below on phones), `Dialog`, `Menu`, `Toast`, `Switch`, `SegmentedControl`, `Skeleton`, `EmptyState`, `Logo`.
+
+**Type scale:** body 15 px (14 in dense panels), hints 13 px, card titles 16 semibold, page titles 24/28, landing H1 44–60 bold tight (34 on phones), section titles 30–36, eyebrows 12 px uppercase with letter spacing.
+
+**Space and layout: use the width, never leave dead space**
+- Content width `max-w-6xl` (1152 px) with `px-4 sm:px-6 lg:px-8`; landing sections `py-16 sm:py-24`; card padding `p-4 sm:p-5`; gaps from a 4 px scale (8/12/16/24/32).
+- **Content pages** (`/help`, `/privacy`) use the full content width: a left section nav (`w-56`), the text column (`max-w-2xl`), and a right aside card (quick actions, "at a glance"), collapsing to one column below `lg`. No single 800 px column centred on a wide screen.
+- **Editor** is full-bleed in three panes: section rail (232 px; icons only below 1280 px), form (440–580 px) as a continuous scroll of section cards (no blank area under the last field), preview filling the rest with the page fitted to the available height. Tablet: form + preview with a toggle; phone: form with a bottom dock (Preview, Download) and a full-screen preview.
+- **Landing** follows the siblings' composition: pill badge → H1 (one phrase in the brand colour) → short description → primary + secondary buttons → a large **real product shot** (desktop editor with a phone overlapping) → how it works (3–4 steps) → alternating feature rows (text beside a real screenshot) → templates strip → features grid (3 × 2 cards) → privacy cards → FAQ → closing call-to-action band → footer.
+- Grids collapse 4 → 2 → 1; nothing scrolls sideways at 360 px; long words and Indic text wrap (`text-pretty`, `break-words`).
+
+**Quality gate (part of every step's Done when, rule 9)**
+- E2e screenshots of every screen the step touches at **phone 390 × 844, tablet 810 × 1080 and desktop 1440 × 900, Day and Night**, saved in `test-results/screenshots/`. Claude **looks at each one before committing** and fixes cramped spacing, dead space, misalignment, clipping, overflow and contrast first.
+- Automated checks: no horizontal overflow at 360 px, touch targets ≥ 44 px on phones, visible focus, WCAG AA contrast in both themes.
+- Each built screen is compared with its mockup; deliberate differences are noted in the step's notes.
+
 ---
 
 # Part B — Rules for every step
@@ -156,7 +184,7 @@ Hand-written `public/sw.js` like EnglishEasy's: precache the app shell pages and
 6. Printed labels come from `src/i18n/doc/*`, app text from `src/i18n/app/*`; no hardcoded user-facing strings in components after Step 1.1.
 7. App chrome supports light and dark (every colour class has a `dark:` twin); the document is always a light page.
 8. Pure logic lives in `src/biodata/` or `src/document/` with unit tests beside it. A bug the owner finds gets a test that fails without the fix.
-9. **Done when** for every step: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` and `npm run test:e2e` all pass, plus the step's own checks. A step whose outline is short gets its detailed section written here first (decisions with sensible defaults, recorded in its notes) rather than waiting for agreement.
+9. **Done when** for every step: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build` and `npm run test:e2e` all pass, plus the step's own checks and the **A7 quality gate** (screenshots at phone, tablet and desktop in Day and Night, looked at and fixed before committing). A step whose outline is short gets its detailed section written here first (decisions with sensible defaults, recorded in its notes) rather than waiting for agreement.
 10. **Commit and continue** (owner's choice, 2026-11-20): when the checks pass, commit straight to `main` with a clear title (imperative, ≤ 72 characters, e.g. `Step 1.3: Save drafts to IndexedDB with honest autosave status`) and a description that says what the step adds, decisions and deviations, the test results (counts), and anything the owner should check by hand. No AI attribution trailer. Update the Progress table in the same commit, then start the next step without waiting. Push only when the owner asks (otherwise the owner pushes). Owner-only checks (real iPhone/Android, Vercel, Search Console) are listed in the step's Progress notes and collected; they don't block the next step.
     **Stop and ask only when:** a decision would change the product direction (VISION) or needs an account, payment or external service; a check fails and can't be fixed within the step; or the next step depends on something only the owner can do (e.g. milestone M1, which is the owner's own biodata).
 11. A deviation from this plan goes in the step's Progress-table notes (and Part A if architecture changes) in the same commit; a product decision also gets a VISION §24 row.
@@ -220,18 +248,20 @@ Hand-written `public/sw.js` like EnglishEasy's: precache the app shell pages and
 
 - **2.1** Section navigation and inputs for every field type (date, time, height picker, select with custom value, phone, email hints, textarea).
 - **2.2** Field and section management: add, rename, change type/display style, hide, remove (confirm), move up/down, **move to another section**, custom sections, restore defaults.
-- **2.3** Family members list (D28: relation with suggestions + details; add, edit, reorder, remove), sample profile ("Open a sample", always a new draft, fictional), completion indicators.
+- **2.0** Editor opening (VISION D43): the Top of your biodata card (motif / invocation / title, None first, in template colours), the language notice, tradition field chips.
+- **2.3** References section and multi-contact relations (D44); family members list (D28: relation with suggestions + details; add, edit, reorder, remove), sample profile ("Open a sample", always a new draft, fictional), completion indicators.
 
 ## Phase 3 — Photo and live preview
 
-- **3.1** Photo: pick, validate, downscale, own cropper (drag, pinch, zoom slider, rotate), replace, remove; stored per D12.
+- **3.1** Photo: pick, validate, downscale (≤ 3000 px long edge), own cropper (drag, pinch, zoom slider, rotate) with a 3:4 or tall 2:3 frame, replace, remove, optional second photo, empty-state tips (VISION D12, D40).
 - **3.2** Document primitives, tokens, `toDocument`, `paginate` (with D31 Auto text size: try the template's sizes largest first until one page fits, floor 9 pt), the **Classic skeleton** (D34); **Classic Gold first**, matched against the owner's reference side by side (original foliage and Ganesha artwork, D21/D29), then Minimal Ivory; document labels en + te.
-- **3.3** Preview pane (desktop sticky, tablet collapsible, phone full-screen), zoom, fit, page count, template/colour/document-language pickers, text size (Auto, XS–XL) and label case (D31), title and motif pickers.
+- **3.3** Preview pane (desktop sticky, tablet collapsible; on phones the floating Preview pill and bottom sheet with preview, design/colour chips, text size and Download / Share / Save image, VISION D45), zoom, fit, page count, template/colour/document-language pickers, text size (Auto, XS–XL) and label case (D31), title and motif pickers.
 
 ## Phase 4 — PDF and template collection
 
 - **4.1** Download PDF (engine from 0.2), Share PDF, **Save/Share as image** (JPEG/PNG per page from the same display list, VISION D38), Print, filenames `Marriage-Biodata-<FirstName>.pdf` / `-page-<n>.jpg`, progress and error feedback, no main-thread freeze. **Ends with milestone M1:** the owner builds their own biodata in the app and compares the PDF with their reference.
 - **4.2** All ten document dictionaries and fonts; script fixture PDFs regenerated and reviewed (VISION §15 PDF/script tests).
+- **4.2b** Photo pages (up to 4 extra photos, 1/2/4 per page, inside the template frame) and the attached horoscope page (VISION D40, D41).
 - **4.3** Templates 3–5 (adds the Modern and Minimal skeletons, D34); **4.4** templates 6–8 and the motif library (D21).
 
 ## Phase 5 — Backup and offline
@@ -258,6 +288,7 @@ Hand-written `public/sw.js` like EnglishEasy's: precache the app shell pages and
 | 1.2 | Profile model | Not started |
 | 1.3 | Persistence and autosave | Not started |
 | 1.4 | Drafts and storage status | Not started |
+| 2.0 | Editor opening: top element card, language notice, tradition chips | Not started |
 | 2.1 | Editor inputs | Not started |
 | 2.2 | Field and section management | Not started |
 | 2.3 | Family members and sample profile | Not started |
@@ -267,6 +298,7 @@ Hand-written `public/sw.js` like EnglishEasy's: precache the app shell pages and
 | 4.1 | Download, Share, image export, Print | Not started |
 | M1 | Owner's own biodata made with the app (VISION D29) | Not started |
 | 4.2 | Ten languages in the document | Not started |
+| 4.2b | Photo pages and attached horoscope page | Not started |
 | 4.3 | Templates 3–5 | Not started |
 | 4.4 | Templates 6–8 and motifs | Not started |
 | 5.1 | Backup and restore | Not started |

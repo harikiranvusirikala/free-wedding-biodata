@@ -26,6 +26,8 @@ Read only the sections a task needs (`grep -n '^#' <file>`, then `Read` with `of
 
 ## Invariants
 
+- **Production-quality screens the first time** (BUILD_PLAN A7): sibling-style design recipes, the full content width used (no dead space), and every touched screen screenshotted at phone/tablet/desktop in Day and Night and looked at before committing.
+
 - Nothing the user types or uploads leaves the browser. The editor makes no third-party request of any kind (CSP `connect-src 'self'`, VISION D15). Google Tag Manager runs only on public pages in Production (D22); links from public pages into `/editor` are plain `<a href>` full page loads, never `next/link`. No `/admin`, no backend (D24).
 - No server code: `output: 'export'`; no route handlers, server actions, `proxy.ts` or `headers()` in `next.config.ts` (headers go in `vercel.json`).
 - User text is rendered as text, never HTML. Imports are validated before any write. Never silently delete a draft or photo.

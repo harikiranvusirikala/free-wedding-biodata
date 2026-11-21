@@ -18,10 +18,10 @@
 |---|---|
 | App name | Free Wedding Biodata |
 | URL | https://free-wedding-biodata.vercel.app |
-| SEO title | Free Wedding Biodata Maker – Create & Download Biodata PDF |
+| SEO title | Free Wedding Biodata Maker – Marriage Biodata PDF & PNG (D42; was “… – Create & Download Biodata PDF”) |
 | Homepage H1 | Free Wedding Biodata Maker |
-| Short description (on the page) | Create a beautiful wedding biodata online for free. Add your personal, education, career, family and horoscope details, customize the design, and download a high-quality PDF. |
-| Meta description (≤ 160 characters) | Create a beautiful wedding biodata online for free. Add personal, education, career, family and horoscope details, pick a design and download a PDF. |
+| Short description (on the page) | Create a beautiful wedding biodata online for free. Add your personal, education, career, family and horoscope details, customize the design, and download a high-quality PDF or PNG. (D42) |
+| Meta description (≤ 160 characters) | Create a free marriage biodata online in minutes. Pick a beautiful design, add your photo and details, and download a high-quality PDF or PNG. No login needed. (159 characters, D42) |
 
 Build a polished, responsive, installable web application that lets anyone create, edit, preview, save and download a beautiful Indian marriage biodata without creating an account or paying.
 
@@ -213,17 +213,28 @@ A small motif library drawn for this app (original artwork, simple vector paths 
 
 | Tradition | Example motifs and lines (all optional, all editable) |
 |---|---|
-| Hindu | Om, Ganesha, Kalash, Swastika; “Shri Ganeshaya Namah” |
-| Muslim | Crescent and star; “Bismillah ir-Rahman ir-Rahim” |
+| Hindu | Om, Ganesha (simple and ornate), Kalash, Swastika, lotus; “Shri Ganeshaya Namah” / “॥ श्री गणेशाय नमः ॥”; the Telugu trio “శ్రీరస్తు · శుభమస్తు · అవిఘ్నమస్తు” |
+| Muslim | Crescent and star, an Allah calligraphy medallion; “Bismillah ir-Rahman ir-Rahim” |
 | Christian | Cross; a short verse |
-| Sikh | Ik Onkar, Khanda |
-| Jain | Jain symbol; Navkar mantra opening line |
-| Buddhist | Dharma wheel, lotus |
+| Sikh | Ik Onkar (plain or in a circle), Khanda |
+| Jain | Jain symbol (Ahimsa hand); Navkar mantra opening line |
+| Buddhist | Dharma wheel (light and solid), lotus |
 | Neutral | Floral, paisley, rings, none |
 
 Lines are stored as the user's text once picked, so they can be edited and are printed exactly as shown. The document title is optional too (“Biodata”, “BIODATA”, “Marriage Biodata”, the localised equivalent, or custom text).
 
 **Typography controls (D31):** text size **Auto** (the largest size in the template's range that fits everything on one page; only if the template's minimum readable size still doesn't fit does content flow to page 2) or a fixed XS–XL step; labels in Normal case or ALL CAPS. The minimum body size is 9 pt, so “fits one page” never means unreadable.
+
+**Design vocabulary (D39), learned from the reference set** (the competitor's ten showcase designs, kept git-ignored in `docs/references/`, never copied): every template is a combination of —
+- a **top element**: a motif, an invocation line, or a decorative script title (“Biodata”, “బయోడేటా”, “बायोडाटा”… in the document language), or nothing;
+- a **frame family**: fine double line with flourished corners, foliage or vine, floral corners, paisley, a festive **thoranam/toran** of mango leaves and marigolds, watercolour corner washes, a rangoli/temple pattern band, hanging bells and diyas — or no frame;
+- a **paper tint** (ivory, cream, blush, mint, sandal, white) and an optional faint **background watermark** (mandala or kolam) behind the text;
+- **heading bars** in a light tint with dark text or a solid colour with light text, either full width or as wide as the text column beside the photo;
+- a **photo frame**: 3:4 with a thin coloured border and soft corners, beside the first section.
+
+The default section order follows what families read first: **About me** (if filled) → Personal details → Horoscope → Education & career → Family → Contact → Partner preferences; users can reorder. Each template ships with **three colour variants**, so eight templates give 24 distinct looks.
+
+**Motif colour and titles (D45):** every motif takes the template's colours; title styles are “BIODATA” (spaced serif), script “Biodata” and the localized title, each between thin flourishes.
 
 **Template construction (D34):** the eight templates are built on three shared layout skeletons (Classic: heading bars, label/value rows, photo beside the first section; Modern: two columns with a side panel; Minimal: typographic, generous whitespace), each with its own original border artwork, palette and type. This keeps eight templates consistent and cheap to maintain.
 
@@ -839,6 +850,13 @@ Later rows override the sections they name. Add a row whenever a product or arch
 | D36 | 2026-11-20 | SEO structure modelled on the leading competitor: `hreflang` alternates and `og:locale` alternates for ten static language landing pages (`/te`, `/hi`, …, each in that language), five tradition pages (Hindu, Muslim, Christian, Sikh, Jain biodata format), a template gallery of real sample images, a “what to write in each part” guide; structured data `Organization`, `WebSite`, `WebApplication` (`isAccessibleForFree`, price 0), `BreadcrumbList`, `FAQPage`, image `ItemList`. No `HowTo` (Google stopped showing it), no fake counters (“biodatas created today”) since nothing is counted | Search is the only marketing; honest numbers only | D26 (extends), §25 Q4 |
 | D37 | 2026-11-20 | **Owner's choice:** name **Free Wedding Biodata**; URL `free-wedding-biodata.vercel.app`; SEO title “Free Wedding Biodata Maker – Create & Download Biodata PDF” (58 characters); homepage H1 “Free Wedding Biodata Maker”; the short description is shown on the page in full (174 characters) and trimmed to 148 characters for the meta description, which the D26 test keeps ≤ 160 | The name says what it does and matches the repository and the address; Google truncates descriptions near 160 characters | D17, §25 Q1, the working title in the header |
 | D38 | 2026-11-20 | **Owner's choice:** image export (PNG/JPEG per page, Save and Share) is in the launch scope, built with the PDF in Step 4.1 from the same display list | Families share biodatas as WhatsApp statuses and chat images, not only as PDFs | D19, §1 item 7, §26 |
+| D39 | 2026-11-20 | Template design vocabulary (top element, frame family incl. thoranam, paper tint, background watermark, heading-bar style, photo frame), About me first in the default order, three colour variants per template | Learned from the competitor's ten showcase designs (functional reference only, git-ignored); gives variety from eight maintainable templates | §7 (refines), §6 default order |
+| D40 | 2026-11-21 | **Owner's choice — photos:** the main photo frame is portrait **3:4 or tall 2:3** (the user picks; tall suits full-length photos), an optional **second photo** on page 1, and up to **4 extra photos on photo pages** (1, 2 or 4 per page) drawn inside the same template frame and top element. Photos are stored as downscaled sources up to 3000 px on the long edge (JPEG ≈ 0.9) so a full-page photo prints at about 300 dpi and zooming stays sharp; the PDF embeds each photo once at the resolution its frame needs | 10 of 32 real biodatas use tall full-length photos; 7 of 15 PDFs add photo pages (often on plain white); none repeat a photo on every page | D30 (aspect), D12 (≤ 1600 px) |
+| D41 | 2026-11-21 | **Owner's choice — horoscope chart:** at launch, attach a photo or scan of the horoscope as its own framed page (same pipeline as photo pages); a typed South Indian 12-box Rasi/Navamsa grid in the document language comes after launch (§26) | Culturally important for some families, rare in the sample (1/32); the attach route is cheap and reuses D40 | §2 non-goals (clarifies: display only, no calculation) |
+| D42 | 2026-11-21 | **Owner's choice — search wording:** title “Free Wedding Biodata Maker – Marriage Biodata PDF & PNG” (55 characters); meta description “Create a free marriage biodata online in minutes. Pick a beautiful design, add your photo and details, and download a high-quality PDF or PNG. No login needed.” (159); the on-page short description adds “or PNG”. H1 unchanged | “Marriage biodata” is the phrase families search; PNG is now a launch feature (D38) | D37 title and descriptions |
+| D43 | 2026-11-21 | **Owner's choice — first steps:** no wizard. “Create my biodata” opens the editor; its first card is **Top of your biodata** (blessing icon, invocation line or title, “None” first, drawn in the template colour), then a one-line language notice (“Labels print in English. Anything you type stays exactly as typed.”), then the sections. Tradition-specific fields are offered as one-tap chips inside Horoscope / Religion (“Add Hindu fields”, “Add Muslim fields”…) instead of an up-front choice | Simplest path for a new user; still never infers from the Religion value | D32 (when the starter set is offered) |
+| D44 | 2026-11-21 | **From the 32 real biodatas:** preset, correctly spelt labels with fixed alignment in every template; Partner preferences can print as rows, a bulleted list or a paragraph; a **References** section (repeating person, relation/business, place, phone) in the “Add a section” quick picks, and a relation note on every contact; wider relation suggestions (Brother-in-law, Sister-in-law, Paternal/Maternal uncle, “(Late)” prefix); a **large-name letterhead** header option in every skeleton; a dark festive colour variant (maroon or purple paper with gold text); a **9:16 phone-story** size in image export; character counters with example placeholders for About me (600) and Partner preferences (500); always a real text layer in the PDF (8 of 15 sample PDFs were image-only) | Each prevents a problem or matches a pattern seen repeatedly in real biodatas (misaligned colons ~8, label typos ~9, letterheads 9, references 5, multi-contact ~10, list-style preferences 7/8) | §6, §7, D38 (extends) |
+| D45 | 2026-11-21 | **From the competitor teardown (our own implementation):** motifs coloured from template tokens (ink gradient plus a pale base), so one drawing serves every colour variant; title styles “BIODATA” (spaced serif), script “Biodata” and the localized title, each between thin flourishes; on phones a floating **Preview** pill (hidden while the keyboard is up) opens a **bottom sheet** (≈ 92 % height; close by swipe, ✕, backdrop or Esc) holding the live preview, design and colour chips, text size, and Download PDF / Share / Save image, so phone users finish without leaving the editor; text-size hints with page counts (“Fits on one page”, “Takes 2 pages”); row-safe page breaks with headings kept with their first row; photo empty-state tips; per-row ⌃ ⌄ and a delete confirmation naming the field | Strongest parts of the reference flow, fixing its weak spots (stale snapshot preview, no download in the sheet, religion-driven field swaps, analytics with personal data) | §5 phone layout, §7, D31 (extends) |
 
 ## 25. Open questions for the owner
 
@@ -848,6 +866,7 @@ Later rows override the sections they name. Add a row whenever a product or arch
 | Q2 | ~~App (UI) languages at launch~~ — answered 2026-11-20: English only (D23) | — |
 | Q3 | Who can review the document-label translations for each language before they are marked reviewed? | Ship marked “not yet reviewed” |
 | Q4 | Per-language and per-tradition landing pages for search (D36)? The leading competitor has both. | Yes: ten language pages and five tradition pages, static, written once, with real sample pictures |
+| Q6 | App icon: five concepts in `docs/mockups/png/app-icons.png` (A rings on a page, B marigold, C thoranam over a page, D monogram, E profile page with marigold seal) | B, the marigold: religion-neutral wedding flower, the only one that stays a clear shape at 16 px, distinct from competitors' hearts, rings and Ganesha |
 | Q5 | Does the privacy page need a cookie notice for Google Analytics on public pages (India's DPDP Act)? The siblings have none. | Plain-language disclosure on the privacy page, no banner |
 
 ## 26. After launch (not in the MVP)
@@ -856,3 +875,5 @@ Later rows override the sections they name. Add a row whenever a product or arch
 - DOCX export.
 - Optional, user-controlled AI writing help (About me, partner expectations). It must stay optional, off by default, and never required for any essential flow; it would need a separate privacy decision because text would leave the device.
 - More templates, motif artwork and font presets.
+- Typed South Indian Rasi/Navamsa 12-box chart (D41).
+- Optional cover page (4 of 32 real biodatas had one).
