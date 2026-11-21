@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="tileFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9b2232"/><stop offset="1" stop-color="#6e1420"/>
+    </linearGradient>
+    <linearGradient id="gold" gradientUnits="userSpaceOnUse" x1="0" y1="170" x2="0" y2="360">
+      <stop offset="0" stop-color="#f2cd6b"/><stop offset="1" stop-color="#c8962e"/>
+    </linearGradient>
+    <linearGradient id="goldDeep" gradientUnits="userSpaceOnUse" x1="0" y1="170" x2="0" y2="360">
+      <stop offset="0" stop-color="#e2b453"/><stop offset="1" stop-color="#b07e22"/>
+    </linearGradient>
+  </defs>
+  <rect id="tile" width="512" height="512" rx="112" fill="url(#tileFill)"/>
+  <path d="M130 68 H320 L404 152 V422 A22 22 0 0 1 382 444 H130 A22 22 0 0 1 108 422 V90 A22 22 0 0 1 130 68 Z" fill="#fffaf0"/>
+  <path d="M320 68 V138 A14 14 0 0 0 334 152 H404 Z" fill="#e9d6a8"/>
+  <path d="M318.7 329.5 L253.2 287.1 A39 39 0 0 1 295.7 221.6 A39 39 0 0 1 361.1 264.1 Z" fill="#c8962e"/>
+  <path d="M193 339.1 L149.4 272 A40 40 0 0 1 216.5 228.4 A40 40 0 0 1 260.1 295.5 Z" fill="url(#gold)" stroke="#fffaf0" stroke-width="18" paint-order="stroke"/>
+</svg>

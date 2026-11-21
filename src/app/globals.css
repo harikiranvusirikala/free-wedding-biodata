@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/* Night theme: `dark:` follows the "dark" class on <html> (set before first paint in Step 1.1). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * The design system's colours (BUILD_PLAN A7): warm stone neutrals and one brand colour, maroon by day and
+ * warm gold by night. Each is a CSS variable switched by the `dark` class and exposed to Tailwind below
+ * (`bg-page`, `text-ink`, `bg-brand`, …), so a class written with a token needs no `dark:` twin.
+ * The biodata document never uses these: it is always a light page with its template's own colours.
+ */
+:root {
+  color-scheme: light;
+  --page: #fafaf9;
+  --surface: #ffffff;
+  --sunken: #f5f5f4;
+  --line: #e7e5e4;
+  --line-strong: #d6d3d1;
+  --ink: #1c1917;
+  --ink-2: #44403c;
+  --ink-3: #78716c;
+  --brand: #8a1c2b;
+  --brand-hover: #74151f;
+  --on-brand: #ffffff;
+  --brand-soft: #fbeff0;
+  --brand-ink: #8a1c2b;
+  --gold: #b7791f;
+  --gold-soft: #fdf6e7;
+  --good: #15803d;
+  --good-soft: #ecfdf3;
+  --danger: #b42318;
+  --ring: rgb(138 28 43 / 0.28);
+  --card-shadow: 0 1px 2px rgb(28 25 23 / 0.04);
+}
+
+.dark {
+  color-scheme: dark;
+  --page: #0c0a09;
+  --surface: #1c1917;
+  --sunken: #292524;
+  --line: #292524;
+  --line-strong: #44403c;
+  --ink: #fafaf9;
+  --ink-2: #d6d3d1;
+  --ink-3: #a8a29e;
+  --brand: #e0a64a;
+  --brand-hover: #eab35f;
+  --on-brand: #1c1206;
+  --brand-soft: #2a2012;
+  --brand-ink: #eab35f;
+  --gold: #e0a64a;
+  --gold-soft: #2a2012;
+  --good: #4ade80;
+  --good-soft: #10261a;
+  --danger: #f97066;
+  --ring: rgb(224 166 74 / 0.35);
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-on-brand: var(--on-brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-danger: var(--danger);
+  --shadow-card: var(--card-shadow);
+}

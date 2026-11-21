@@ -1,16 +1,29 @@
-.DS_Store
-node_modules/
-.next/
-out/
+# dependencies
+/node_modules
+
+# Next.js
+/.next/
+/out/
 next-env.d.ts
 *.tsbuildinfo
-.env*.local
+
+# tests
+/test-results/
+/playwright-report/
+/coverage/
+
+# env files
 .env
-test-results/
-playwright-report/
+.env*.local
 
-# The owner's real biodata and other private reference files: never committed (public repo)
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
+.vercel
+.claude/worktrees/
+
+# Private reference files (the owner's real biodata, competitor pages): never commit (.claude/CLAUDE.md)
 docs/references/
-
-# Pre-build mockups: local reference only; real screenshots go in docs/screenshots/ once the app exists
+# Pre-build mockups: local only (owner's choice, 2026-11-20)
 docs/mockups/

@@ -1,0 +1,106 @@
+// Makes the site's pictures: `npm run images`. Run it again after changing src/app/icon.svg or the preview's words.
+// - From src/app/icon.svg (a copy of docs/brand/app-icon.svg, VISION D48): favicon.ico (16, 32 and 48 px),
+//   apple-icon.png (180 px, square: iPhones round the corners themselves) and the installable app's icons in
+//   public/icons (192, 512 and a maskable 512).
+// - src/app/opengraph-image.png (1200 x 630, under 300 KB): the link preview WhatsApp, search results and social
+//   sites show; docs/social-preview.png (1280 x 640): GitHub's social preview, the same drawing.
+//   Until real screens exist (Step 6.1) the previews show the icon, the name and what it does.
+// Text is drawn with the fonts of the machine that runs this (Helvetica Neue on macOS).
+// sharp is Next.js's own image library, installed with it.
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import sharp from "sharp";
+import { HEADLINE, PRODUCTION_URL, SITE_NAME } from "../src/lib/site";
+
+const FONT = "Helvetica Neue, Helvetica, Arial, sans-serif";
+const MAROON = "#8a1c2b";
+
+const icon = await readFile("src/app/icon.svg", "utf8");
+const dataUrl = (type: string, data: Buffer | string) => `data:${type};base64,${Buffer.from(data).toString("base64")}`;
+
+/** The icon at `size` px: drawn four times larger, then scaled down, for smooth edges. */
+const iconPng = (svg: string, size: number) => sharp(Buffer.from(svg), { density: (72 * size * 4) / 512 }).resize(size, size).png().toBuffer();
+
+/** An .ico file holding PNG images (every browser since 2010 reads them). */
+function ico(images: { size: number; png: Buffer }[]): Buffer {
+  const header = Buffer.alloc(6 + 16 * images.length);
+  header.writeUInt16LE(1, 2); // type: icon
+  header.writeUInt16LE(images.length, 4);
+  let offset = header.length;
+  images.forEach(({ size, png }, i) => {
+    const entry = 6 + 16 * i;
+    header.writeUInt8(size, entry);
+    header.writeUInt8(size, entry + 1);
+    header.writeUInt16LE(1, entry + 4); // colour planes
+    header.writeUInt16LE(32, entry + 6); // bits per pixel
+    header.writeUInt32LE(png.length, entry + 8);
+    header.writeUInt32LE(offset, entry + 12);
+    offset += png.length;
+  });
+  return Buffer.concat([header, ...images.map((image) => image.png)]);
+}
+
+await writeFile("src/app/favicon.ico", ico(await Promise.all([16, 32, 48].map(async (size) => ({ size, png: await iconPng(icon, size) })))));
+
+// The tile without its rounded corners: iPhones and iPads cut their own.
+const square = icon.replace(/(<rect id="tile"[^>]*?) rx="[\d.]+"/, "$1");
+if (square === icon) throw new Error('src/app/icon.svg: no <rect id="tile" … rx="…"> to square off');
+await writeFile("src/app/apple-icon.png", await iconPng(square, 180));
+
+// The installable app's icons. The maskable one keeps the page inside the centre 80% ("safe zone"), since
+// Android may cut it to a circle.
+await mkdir("public/icons", { recursive: true });
+await writeFile("public/icons/icon-192.png", await iconPng(icon, 192));
+await writeFile("public/icons/icon-512.png", await iconPng(icon, 512));
+const maskable = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#7d1a27"/>
+  <image x="51" y="51" width="410" height="410" href="${dataUrl("image/svg+xml", square)}"/>
+</svg>`;
+await writeFile("public/icons/icon-maskable-512.png", await sharp(Buffer.from(maskable)).png().toBuffer());
+
+/** What it is, in short lines (VISION §1). */
+const LINES = ["Pick a design, add your photo and details,", "and download an A4 biodata as PDF or PNG.", "No login. Saved only on your device."];
+
+/**
+ * The brand card: the icon and name, the headline with "Wedding Biodata" in the landing page's gradient, what it
+ * does, the address, and a large icon on the right. Everything stays `margin` px in from every edge (GitHub's
+ * template asks for 80 px; chat apps may crop the sides).
+ */
+function brandCard(width: number, height: number, margin: number): string {
+  const text = (x: number, y: number, size: number, weight: number, fill: string, content: string) =>
+    `<text x="${x}" y="${y}" font-family="${FONT}" font-size="${size}" font-weight="${weight}" fill="${fill}">${content}</text>`;
+  const [first, second, third, ...rest] = HEADLINE.split(" "); // Free / Wedding Biodata / Maker
+  const art = height - 2 * margin;
+  const artX = width - margin - art;
+  const top = margin;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <defs>
+    <linearGradient id="phrase" x1="0" y1="0" x2="1" y2="0.2">
+      <stop offset="0" stop-color="#8a1c2b"/><stop offset="0.45" stop-color="#be123c"/><stop offset="1" stop-color="#ea580c"/>
+    </linearGradient>
+    <radialGradient id="glow"><stop offset="0" stop-color="#f2cd6b" stop-opacity="0.45"/><stop offset="1" stop-color="#f2cd6b" stop-opacity="0"/></radialGradient>
+    <radialGradient id="rose"><stop offset="0" stop-color="#be123c" stop-opacity="0.12"/><stop offset="1" stop-color="#be123c" stop-opacity="0"/></radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="22" stdDeviation="24" flood-color="#6e1420" flood-opacity="0.28"/></filter>
+  </defs>
+  <rect width="${width}" height="${height}" fill="#fafaf9"/>
+  <circle cx="${artX + art / 2}" cy="${height / 2}" r="${height * 0.62}" fill="url(#glow)"/>
+  <circle cx="${margin + 60}" cy="${height - 20}" r="260" fill="url(#rose)"/>
+
+  <image x="${margin}" y="${top}" width="64" height="64" href="${dataUrl("image/svg+xml", icon)}"/>
+  ${text(margin + 82, top + 43, 32, 700, "#1c1917", SITE_NAME)}
+  ${text(margin, top + 168, 66, 800, "#1c1917", first)}
+  <text x="${margin}" y="${top + 242}" font-family="${FONT}" font-size="66" font-weight="800" fill="url(#phrase)">${second} ${third}</text>
+  ${text(margin, top + 316, 66, 800, "#1c1917", rest.join(" "))}
+  ${LINES.map((line, i) => text(margin, top + 378 + i * 32, 24, 400, "#57534e", line)).join("")}
+  ${text(margin, height - margin, 21, 600, MAROON, PRODUCTION_URL.replace("https://", ""))}
+
+  <g filter="url(#shadow)"><image x="${artX}" y="${margin}" width="${art}" height="${art}" href="${dataUrl("image/svg+xml", icon)}"/></g>
+</svg>`;
+}
+
+/** As small a PNG as looks the same: chat apps skip big link previews (WhatsApp's limit is about 300 KB). */
+const smallPng = (svg: string) => sharp(Buffer.from(svg)).png({ palette: true, quality: 90, effort: 10 }).toBuffer();
+await writeFile("src/app/opengraph-image.png", await smallPng(brandCard(1200, 630, 64)));
+await writeFile("src/app/opengraph-image.alt.txt", `${SITE_NAME}: ${HEADLINE}. Create a marriage biodata and download it as PDF or PNG.`);
+await mkdir("docs", { recursive: true });
+await writeFile("docs/social-preview.png", await smallPng(brandCard(1280, 640, 80)));
+console.log("Wrote favicon.ico, apple-icon.png, public/icons/*, opengraph-image.png, docs/social-preview.png");

@@ -15,7 +15,7 @@ This file says **how** the app is built: architecture (Part A), rules every step
 ## A1. Stack (VISION §12, decided 2026-11-20)
 
 - **Next.js 16** (App Router, Turbopack) with **`output: 'export'`**: `next build` writes a static `out/` folder. No route handlers, server actions, `proxy.ts`, `headers()`, cookies or default image loader (unsupported in static export, and not wanted). Don't enable `cacheComponents`.
-- **React 19**, **TypeScript** strict, **Tailwind CSS v4** wired like the sibling apps (`@tailwindcss/turbopack` loader in `next.config.ts`, no PostCSS config).
+- **React 19**, **TypeScript 5** strict (TypeScript 7 exists but Next.js's tooling and the siblings use 5), **Tailwind CSS v4** wired like the sibling apps (`@tailwindcss/turbopack` loader in `next.config.ts`, no PostCSS config).
 - **zod 4** (profile, database reads, backup import), **Dexie** (IndexedDB), `fake-indexeddb` (unit tests only).
 - **PDF:** decided by Step 0.2. Expected: **`harfbuzzjs`** (text shaping, WebAssembly) + **`pdf-lib`** (PDF writing), both lazy-loaded on the first download. Print through `window.print()`.
 - **Fonts:** Noto Sans static TTFs (OFL 1.1) copied into `public/fonts/` by `npm run fonts` from an npm package that ships TTFs (candidate `@expo-google-fonts/noto-sans-*`; confirmed in Step 0.2).
@@ -47,7 +47,8 @@ src/document/                the shared render contract (A4)
   tokens.ts                  page size, margins, type scale, spacing, colours per template
   paginate.ts                PURE: measured blocks → pages
   Page.tsx, blocks/…         document primitives used by every template
-  templates/<id>/            one folder per template (8, §7)
+  templates/<id>/            one folder per design (20, D46) on three skeletons (classic, modern, minimal, D34)
+  frames/                    original SVG frame families (corner/border art, D46)
   motifs/                    original SVG motif artwork (D21)
 src/pdf/                     the Download engine chosen in Step 0.2 (lazy-loaded)
 src/lib/                     browser services (thin, mockable)
@@ -190,6 +191,23 @@ Every screen is built **production-quality the first time**, to the standard of 
     **Stop and ask only when:** a decision would change the product direction (VISION) or needs an account, payment or external service; a check fails and can't be fixed within the step; or the next step depends on something only the owner can do (e.g. milestone M1, which is the owner's own biodata).
 11. A deviation from this plan goes in the step's Progress-table notes (and Part A if architecture changes) in the same commit; a product decision also gets a VISION §24 row.
 12. `docs/PROJECT_GUIDE.md` stays true: a new or renamed folder, file or page goes in it in the same commit. README screenshots are refreshed when the screens they show change.
+13. **Parallel work** (owner's choice, 2026-11-21): steps with no dependency between them (the map below) run at the same time, each in a subagent working in its own git worktree with a self-contained brief (the step's section, the files it owns, the checks to run). Subagents don't edit the shared files (`package.json`, the Progress table, `PROJECT_GUIDE.md`, `.claude/CLAUDE.md`); they report what those need. The main thread reviews each result, merges it, runs the full checks, and commits **one step per commit, in plan order**. A step that touches another lane's files waits for it.
+14. **Verification in the local sandbox:** headless Chrome can't start inside Claude Code's sandbox (its profile lock socket is refused), so `npm run test:e2e` and the A7 screenshots run with the owner's one-time approval of that command (a dialog, or the Tools allowlist entry `npm run test:e2e`, exact match). If that isn't available, the step still writes its e2e specs, runs everything else, notes "e2e not run locally" in its Progress row, and CI runs the e2e on the owner's next push. Static pages can also be screenshotted with the WebKit snapshot tool (`docs/mockups/tools/snap.swift`).
+15. **Look before building a screen:** a step that builds a screen opens its mockup in `docs/mockups/` (local) first and matches it; differences go in the step's notes.
+
+**Dependency map (what can run in parallel):**
+
+```text
+0.1 ─┬─ 0.2 PDF spike ───────────────────────────────┐
+     ├─ 1.1 App shell ─┐                              │
+     └─ 1.2 Profile ───┼─ 1.3 Persistence ─ 1.4 Drafts├─ 4.1 Download/M1 ─ 4.2b
+                       │       ├─ 3.1 Photo ──────────┤
+                       │       └─ 5.1 Backup          │
+                       ├─ 2.0 → 2.1 → 2.2 → 2.3 ──────┤
+                       ├─ 3.2 Document engine → 3.3 ──┘─ 4.3 ∥ 4.4 (designs split across agents)
+                       └─ 4.2 dictionaries (labels can be drafted any time after 1.2; fonts after 0.2)
+5.2 after 4.1 · 6.1 after 4.4 (landing needs real screens) · 6.2 → 6.3
+```
 
 ---
 
@@ -209,8 +227,9 @@ Every screen is built **production-quality the first time**, to the standard of 
   - Next.js 16.4 + React 19 + TypeScript + Tailwind v4 + ESLint (configs mirroring EnglishEasy: `eslint.config.mjs`, `tsconfig.json` with `@/*`, `.npmrc` with `omit-lockfile-registry-resolved=true` and `legacy-peer-deps=false`), `engines.node >=24`.
   - `next.config.ts`: `output: 'export'`, `poweredByHeader: false`, `images.unoptimized: true`, Turbopack Tailwind rule.
   - `vercel.json`: framework `nextjs`; headers for every path: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera, microphone, geolocation off), `Cross-Origin-Opener-Policy: same-origin`; **CSP per path (D15, D22):** `/editor` gets the strict D15 policy (`connect-src 'self'`); the public pages get the same plus Google Tag Manager/Analytics origins (`www.googletagmanager.com`, `*.google-analytics.com`, `*.analytics.google.com`) in `script-src`, `img-src`, `connect-src` and `frame-src`. `sw.js` gets `Cache-Control: no-cache` later (5.2).
-  - Routes `/` (a short real landing text: what the app is and the privacy promise, no buttons yet), `/editor` (client page that reads `?d=` and shows it, proving query-param routing in a static export), `/privacy` (the local-storage explanation, VISION §9), a `not-found.tsx`.
-  - `src/lib/site.ts` (D17). Vitest + Testing Library + jsdom (`test/setup.ts`), Playwright config like EnglishEasy (phone + desktop projects, installed Chrome locally). For a static export, Playwright's web server is `npm run build` then a tiny static file server script (`scripts/serve-out.mts`, no dependency) on port 3100.
+  - Public pages live in the `(public)` route group from the start (A2); its layout gets `GoogleTagManager` in 6.1.
+  - Routes `/` (a short real landing text: what the app is and the privacy promise, no buttons yet), `/editor` (client page that reads `?d=` with `useSearchParams` inside `<Suspense>` and shows it, proving query-param routing in a static export), `/privacy` (the local-storage explanation, VISION §9), a `not-found.tsx`.
+  - `src/lib/site.ts` (D17). Vitest + Testing Library + jsdom (`test/setup.ts`), Playwright config like EnglishEasy (phone + desktop projects, installed Chrome locally). For a static export, Playwright's web server is `npm run build` then a tiny static file server script (`scripts/serve-out.mts`, no dependency) on port 3100 that serves `/editor` from `editor.html` the way Vercel does.
   - CI workflow (`.github/workflows/ci.yml`): `npm ci`, lint, typecheck, test, build, Playwright Chromium, e2e.
   - `.gitignore` (`.DS_Store`, `node_modules/`, `.next/`, `out/`, `test-results/`, `playwright-report/`, `*.tsbuildinfo`, `next-env.d.ts`), README (what, why, run locally, known limitations), MIT `LICENSE`, `.claude/CLAUDE.md`.
   - `src/app/icon.svg` copied from the approved `docs/brand/app-icon.svg` (VISION D48; no text, so sharp renders it exactly) and a first `npm run images`: favicon, apple icon, `opengraph-image.png` and **`docs/social-preview.png`** from the icon, name and tagline (no screenshots exist yet; Step 6.1 rebuilds both with real screens). The owner uploads the social preview in the GitHub repo settings.
@@ -223,6 +242,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 - **Fixture** (`test/fixtures/scripts.ts`): for each of the ten languages, a label set and values chosen to stress shaping: conjuncts and reph (శ్రీ, క్ష్మ, స్త్రీ, కృష్ణమూర్తి; श्रीमती, द्वितीय, कार्यालय, कि; ஸ்ரீ, க்ஷ, கொ; ಕರ್ನಾಟಕ, ಶ್ರೀ; ശ്രീ, ക്ഷ, ൻ; महाराष्ट्र, ळ, र्‍य; શ્રી, દ્ર; শ্রী, ক্ষ, র্য, কি; ਸ਼੍ਰੀ, ਪ੍ਰ, ਕਿ), ZWJ/ZWNJ (సాఫ్ట్‌వేర్), Indic and Latin digits, mixed English/Indic values, a 60-character name, a long address and a 600-word paragraph that must flow to page 2.
 - **Fonts:** `npm run fonts` copies Noto Sans + the eight script fonts (Regular, Bold, static TTF) into `public/fonts/` with `OFL.txt`; record total and per-file sizes.
 - **Reference page:** `/dev/pdf-spike` renders the fixture as A4 HTML pages laid out like the owner's reference biodata (gold corner foliage, motif, amber heading bars, label/value rows, photo top-right; a fictional profile and a placeholder photo, never the real values), page 1 in English and further pages per language, so the spike also proves the Classic Gold look.
+- **Parallel:** the fixture and font script come first (main thread); then candidates A, B, C and D are independent and run as parallel subagents; the evaluation and decision come last (main thread).
 - **Candidates**, each producing `docs/spikes/pdf/<candidate>-<lang>.pdf`:
   - **A** `@react-pdf/renderer` with the same TTFs (a minimal equivalent layout).
   - **B** Chrome print-to-PDF of the reference page (Playwright `page.pdf()`, identical to `window.print()` → Save as PDF).
@@ -247,9 +267,9 @@ Every screen is built **production-quality the first time**, to the standard of 
 
 ## Phase 2 — Editor and dynamic fields
 
+- **2.0** Editor opening (VISION D43): the Top of your biodata card (motif / invocation / title, None first, in template colours), the language notice, tradition field chips.
 - **2.1** Section navigation and inputs for every field type (first letter of labels and values capitalised automatically, VISION D47) (date, time, height picker, select with custom value, phone, email hints, textarea).
 - **2.2** Field and section management: add, rename, change type/display style, hide, remove (confirm), move up/down, **move to another section**, custom sections, restore defaults.
-- **2.0** Editor opening (VISION D43): the Top of your biodata card (motif / invocation / title, None first, in template colours), the language notice, tradition field chips.
 - **2.3** References section and multi-contact relations (D44); family members list (D28: relation with suggestions + details; add, edit, reorder, remove), sample profile ("Open a sample", always a new draft, fictional), completion indicators.
 
 ## Phase 3 — Photo and live preview
@@ -283,8 +303,8 @@ Every screen is built **production-quality the first time**, to the standard of 
 
 | Step | What | Status |
 |---|---|---|
-| 0.0 | Prerequisites (owner): npm token, sandbox allowlist, Vercel project | npm token refreshed 2026-11-20 (`npm login`; all Phase 0 packages resolve). Sandbox allowlist and Vercel project still to do |
-| 0.1 | Skeleton and static-hosting proof | Not started |
+| 0.0 | Prerequisites (owner): npm token, sandbox allowlist, Vercel project | npm token refreshed 2026-11-20. Sandbox: the existing allowlist entries (`npm run build`, `npm run dev`, `npm run test:e2e`, `npm run images`) work here. Vercel project still to do |
+| 0.1 | Skeleton and static-hosting proof | Done 2026-11-21. Unit 15, e2e 16 (+8 phone duplicates of the screenshot spec skipped), A7 screenshots of 4 screens × 3 sizes × Day/Night reviewed (home hero centred until 6.1 brings the product shot; privacy aside fixed). Also added beyond the step: `robots.ts` (preview/local builds disallow all), `vercel.json` header unit test, `e2e/screens.spec.ts` (screenshots + 360 px overflow), HSTS and `X-Frame-Options` headers. Night follows the device until 1.1's theme menu. Owner: import the repo in Vercel, open `/`, `/privacy`, `/editor?d=abc` on the preview and check `curl -I <preview>/editor` shows the strict CSP; upload `docs/social-preview.png` in GitHub Settings → Social preview |
 | 0.2 | PDF and Indian-script spike | Not started |
 | 1.1 | App shell | Not started |
 | 1.2 | Profile model | Not started |
