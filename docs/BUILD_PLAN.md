@@ -324,6 +324,17 @@ Every screen is built **production-quality the first time**, to the standard of 
 - **3.2** Document primitives, tokens, `toDocument`, `paginate` (with D31 Auto text size: try the template's sizes largest first until one page fits, floor 9 pt), the **Classic skeleton** (D34); **Classic Gold first**, matched against the owner's reference side by side (original foliage and Ganesha artwork, D21/D29), then Minimal Ivory; document labels en + te.
 - **3.3** Preview pane (desktop sticky, tablet collapsible; on phones the floating Preview pill and bottom sheet with preview, design/colour chips, text size and Download / Share / Save image, VISION D45), zoom, fit, page count, template/colour/document-language pickers, text size (Auto, XS–XL) and label case (D31), title and motif pickers.
 
+### Step 3.1: Photo (component built 2026-11-21; editor integration: next)
+
+- **Built:** `src/biodata/photo-crop.ts` (pure: clamp, pan, zoom around a point, rotate, `effectiveDpi`, CSS placement), `src/lib/photos.ts` (check, decode upright, ≤ 3000 px JPEG 0.9, `renderCrop`/`renderCropDataUrl`), `src/components/photo/` (`PhotoField`, `Cropper`, `CropImage`), dev-only `/dev/photo`, `e2e/photo.spec.ts`.
+- **Crop:** frame centre in source fractions; zoom 1–5; quarter turns clockwise; the frame is always covered.
+- **Input:** JPEG/PNG/WebP ≤ 25 MB; the picker lists only those (iPhone converts HEIC); a dropped HEIC is tried, then a clear message. Re-encoding drops EXIF/GPS (a privacy plus); transparent PNGs go on white.
+- **Cropper** (our own, D12): drag, pinch, wheel, slider, ± and arrow keys, Rotate, Reset; transform-only rAF updates; React state set at gesture end; on phones the stage adapts to the screen height and Cancel/Done sit side by side.
+- **Low-resolution warning** below 200 dpi at Classic Gold's printed width (53 mm for 3:4, 49 mm for 2:3), in the card and live in the cropper (D47).
+- **Contract:** `PhotoField` emits `{ photo, put, delete }`, mapping straight onto `profile-repo` `save(…, { photos: { put, delete } })`; it opens the cropper after picking. The document gets `renderCropDataUrl(blob, crop, frame, printPixels(mm))` (a JPEG data URL).
+- **Deviations:** second photo, photo pages and the horoscope chart wait for 4.2b; photo icons live in `src/components/photo/icons.tsx` (move to the kit later). Built by a subagent in parallel with 2.1.
+- **Next:** wire into the editor and the document's photo input.
+
 ### Step 3.2: Document engine and first two templates (built 2026-11-21)
 
 - **Built:** document dictionaries `src/i18n/doc/` en + te (Telugu drafted, unreviewed, 22 notes in `meta.reviewNotes` for the D47 native review; English fallback key by key); `toDocument`/`docTexts` (`src/biodata/document.ts`) and `format.ts`; `src/document/` (`tokens`, `blocks/`, `Page`, `paginate` (pure), `measure` (browser), `DocumentView`, `document.css`, `frames/Foliage`, `motifs/` Ganesha); Classic Gold and Minimal Ivory × 3 colours with a registry; dev-only `/dev/document` (19 variants, `window.__doc`); `e2e/document.spec.ts` (desktop).
@@ -376,7 +387,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 | 2.1 | Editor inputs | Not started |
 | 2.2 | Field and section management | Not started |
 | 2.3 | Family members and sample profile | Not started |
-| 3.1 | Photo | Not started |
+| 3.1 | Photo | Component done 2026-11-21 (unit 419 at the time, 37 new; e2e 118 passed, 7 new on `/dev/photo`; photo screens reviewed at 3 sizes × Day/Night, fixed: Done off-screen on phones, 360 px overflow, Remove contrast in Night, slider focus ring). Editor integration next |
 | 3.2 | Document engine and first two templates | Done 2026-11-21 (ahead of Phase 2, since it depends only on 1.2). Unit 304 at the time (58 new), e2e 68 passed (+32 skips by design); document screenshots for both templates × en/te × short/sample/long/split reviewed (fixed: Minimal's header band, a third page on long variants, a lone row opening page 2, and a paragraph-split bug with blank lines that overflowed 167 px). See the Step 3.2 section |
 | 3.3 | Live preview | Not started |
 | 4.1 | Download, Share, image export, Print | Not started |

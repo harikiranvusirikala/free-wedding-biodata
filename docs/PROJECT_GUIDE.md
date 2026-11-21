@@ -29,11 +29,13 @@ flowchart LR
 | `src/document/` | The document engine: page tokens, blocks, the A4 `Page`, `paginate` (pure: blocks → pages), `measure` (browser: sizes blocks off-screen), `DocumentView`; `templates/` holds one folder per design with a registry (Classic Gold, Minimal Ivory); `frames/` and `motifs/` the original artwork. |
 | `src/i18n/doc/` | Printed labels per document language (English, Telugu so far); `index.ts` loads them with English fallback. |
 | `src/components/` | Shared screen parts: `Logo`, `SiteHeader`/`SiteFooter` (public pages), `AppHeader` (editor), `ThemeMenu`, `ContentPage` and `SectionNav` (help and privacy), `MessageScreen` (not found, error), `Rich`, `ExternalLink`, `SkipLink`, `DeleteAllDialog` (Delete all my local data), `landing/ContinueEditing`. |
+| `src/components/photo/` | The photo card (`PhotoField`: add, crop, change, remove, frame 3:4 or tall 2:3, blur warning), our own `Cropper`, `CropImage` and their icons. |
 | `src/components/ui/` | The design kit (BUILD_PLAN A7): class-string recipes (button, card, field, badge, page) and `Menu`, `Dialog`, `Toast`, `Switch`, `SegmentedControl`, `Skeleton`, `EmptyState`, `PageHeader`, icons. |
 | `src/i18n/app/en.json` | Every word the app shows, read with `t()` from `src/lib/i18n.ts`. |
 | `src/lib/theme-script.ts`, `settings-store.ts` | Day / Night / Follow device: set before the first paint, saved in this browser. |
 | `src/lib/db.ts`, `profile-repo.ts`, `autosave.ts`, `use-autosave.ts`, `open-draft.ts` | Drafts saved in this browser's IndexedDB (Dexie): the database layout; the repo, the only code that writes it (one transaction per save, checked against other tabs); autosave (writes after a short pause and when the page is hidden; "Saved" only after the write); which draft the editor opens. |
 | `src/lib/draft-title.ts`, `storage-status.ts`, `local-data.ts` | A draft's shown name and "Edited 2 days ago"; how much storage is used and whether the browser will keep it; the draft the home page offers to continue, and Delete all my local data. |
+| `src/lib/photos.ts`, `src/biodata/photo-crop.ts` | Getting a picked photo ready (checked, upright, at most 3000 px, JPEG) and drawing the cropped picture for the document; the crop maths (always covering the frame, dots per inch). |
 | `src/lib/site.ts` | The product's name, address, title and descriptions in one place. |
 | `src/lib/empty-module.ts` | An empty stand-in the bundler uses for Node's `module` in the browser (needed by the PDF text shaper). |
 | `src/pdf-spike/` | The PDF spike (Step 0.2), which picked how PDFs are made: `display-list.ts` reads every line, box and picture from the laid-out pages; `vector/` writes them as a PDF, shaping Indian scripts with HarfBuzz; `raster/` draws them on a canvas for page images; `reference/` is the Classic Gold test page. Moves into `src/pdf/` and `src/document/` in Steps 3.2 and 4.1. |
@@ -64,5 +66,6 @@ flowchart LR
 | `/editor` | `src/app/editor/page.tsx` | Opens or creates a draft and saves it as you type: one Personal details card for now; the full form comes in Phase 2. |
 | `/dev/ui` | `src/app/dev/ui/page.tsx` | Development only: every kit component in every state. |
 | `/dev/error` | `src/app/dev/error/page.tsx` | Development only: shows the error screen. |
+| `/dev/photo` | `src/app/dev/photo/page.tsx` | Development only: the photo card and cropper with in-memory storage and a drawn test picture. |
 | `/dev/document` | `src/app/dev/document/page.tsx` | Development only: every template × English/Telugu × short/sample/long/split profiles at true size. |
 | `/dev/pdf-spike` | `src/app/dev/pdf-spike/page.tsx` | Development only: the PDF spike's eleven reference pages. |
