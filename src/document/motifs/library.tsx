@@ -1,28 +1,32 @@
 import type { ReactNode } from "react";
-import { arc, circlePath, crescent, mirror, pt, r2, scallop, starPoints, taper, xf } from "./geometry";
-import { IK_ONKAR_PATH, OM_PATH } from "./glyphs";
+import { arc, arcSegs, blob, brush, circleC, circlePath, crescent, drop, mirror, points, pt, r2, spline, starPoints, xf, type Pt } from "./geometry";
+import { ALLAH_PATH, IK_ONKAR_PATH } from "./glyphs";
 
-// The motif drawings (VISION §7 D21, D45, D47): our own original artwork, ported from the mockup library
-// (docs/mockups/assets/motifs.js), never traced from anyone else's. Each one is drawn on a 120 × 120 box in the
-// template's colours: `g` is the ink gradient that fills the main shapes, `base` the pale tint that cuts details
-// and backs the symbol, `lite` the gradient's light end and `ink` the plain ink.
+// The motif drawings (VISION §7 D21, D45, D47): our own original artwork, never traced from anyone else's. Redrawn
+// on 2026-11-22 as single-colour wedding-card artwork: calligraphic brush strokes that swell and taper (geometry.ts
+// `brush`), airy silhouettes with no pale disc behind them (the Allah medallion is a deliberate medallion), and one
+// smooth vertical gradient. Each is drawn on a 120 × 120 box in the template's colours: `g` is the ink gradient that
+// fills the main shapes, `cut` the paper colour that cuts details out of them (so a cut reads as a hole on the page),
+// `base` the pale tint, `lite` the gradient's light end and `ink` the plain ink.
 //
-// Only the SVG the PDF writer draws (src/pdf/svg-to-pdf.ts): paths, circles, rects, polygons, groups with
-// transforms, strokes, opacities and linear gradients. No text (D47 (4): Om and Ik Onkar are outlines), no masks
-// (the crescent and the interlocking rings are built from arcs), no paint-order (Keyed draws the keyline first).
+// Only the SVG the PDF writer draws (src/pdf/svg-to-pdf.ts): paths, circles, rects, polygons, strokes and linear
+// gradients. No text (D47 (4): Ik Onkar and Allah are font outlines in ./glyphs.ts), no masks (the crescent and the
+// interlocking rings are built from arcs), no paint-order (Keyed draws the keyline first), and no transforms on
+// gradient-filled shapes (paths are turned with xf, so the gradient stays vertical).
 
 export interface Ink {
   g: string;
   base: string;
+  cut: string;
   lite: string;
   ink: string;
 }
 
-/** A filled shape with a thin base-coloured keyline around it (the mockup's paint-order trick, PDF-safe). */
-function Keyed({ d, fill, base, width }: { d: string; fill: string; base: string; width: number }) {
+/** A filled shape with a paper-coloured keyline round it, parting it from the shapes it overlaps (PDF-safe). */
+function Keyed({ d, fill, cut, width }: { d: string; fill: string; cut: string; width: number }) {
   return (
     <>
-      <path d={d} fill="none" stroke={base} strokeWidth={width} strokeLinejoin="round" />
+      <path d={d} fill="none" stroke={cut} strokeWidth={width} strokeLinejoin="round" />
       <path d={d} fill={fill} />
     </>
   );
@@ -31,118 +35,374 @@ function Keyed({ d, fill, base, width }: { d: string; fill: string; base: string
 // ---------------------------------------------------------------------------------------------------------------
 // Hindu
 
-const G = {
-  crown: "M47 41 L47 33 C47 25 53 21 56.5 16 L60 9.5 L63.5 16 C67 21 73 25 73 33 L73 41 Z",
-  face: "M45 43 C44 55 47 64 53.5 70 L66.5 70 C73 64 76 55 75 43 Z",
-  earL: "M47.5 47 C40 39 27 37 20 45 C14 52 15 65 21 72 C27 79 36 82 43 79 C47 77 49.5 72 49.5 68 Z",
-  earLine: "M43 50 C35 45 26 46 23 53 C20 60 24 70 31 74",
-  trunk: taper(
-    [
-      [[60, 58], [60, 76], [54.5, 86], [57, 96]],
-      [[57, 96], [59, 105], [72, 108.5], [78, 100.5]],
-      [[78, 100.5], [82, 94], [78, 87], [72.5, 89]],
-    ],
-    16,
-    5,
-  ),
-  tusk: "M66.5 66 C71.5 69.5 75 74 76.5 80 C72 78.5 68 75 64.5 70.5 Z",
-};
+const sp = spline;
 
-/** Ganesha: crown, face, ears, trunk and tusk. */
-export function Ganesha({ g, base }: Ink) {
+/** Computes a drawing's paths once, the first time it is drawn (they don't depend on the colours). */
+function once<T>(make: () => T): () => T {
+  let value: T | undefined;
+  return () => (value ??= make());
+}
+
+/** A bell-shaped pressure curve peaking at `at` (0…1), never below `floor`. */
+const bell = (at: number, spread: number, floor = 0.35) => (s: number) => floor + (1 - floor) * Math.exp(-(((s - at) / spread) ** 2));
+
+const GANESHA = once(() => [
+    // Crown: three tiers of brush dashes, narrowing upwards, on a band.
+    brush(sp([[53.5, 22.6], [60, 21.4], [66.5, 22.6]]), { w: 3.4, in: 0.45, out: 0.45, tip: 0.1 }),
+    brush(sp([[49.5, 28.4], [60, 26.8], [70.5, 28.4]]), { w: 4, in: 0.4, out: 0.4, tip: 0.1 }),
+    brush(sp([[45, 34.6], [60, 32.6], [75, 34.6]]), { w: 4.8, in: 0.35, out: 0.35, tip: 0.1 }),
+    // Ears: broad sweeps that curl in, each with a fine inner fold.
+    brush(sp([[50, 37.5], [40, 34], [30, 35.5], [24, 42], [22, 51], [24, 60], [30, 66], [37, 67.5], [41.2, 64], [40, 59.5]]), { w: 9.5, press: bell(0.42, 0.28, 0.25), in: 0.08, out: 0.2 }),
+    brush(sp([[70, 37.5], [80, 34], [90, 35.5], [96, 42], [98, 51], [96, 60], [90, 66], [83, 67.5], [78.8, 64], [80, 59.5]]), { w: 9.5, press: bell(0.42, 0.28, 0.25), in: 0.08, out: 0.2 }),
+    brush(sp([[43.5, 41], [35.5, 40.5], [30.5, 46], [29.5, 53], [32, 59]]), { w: 1.7, in: 0.3, out: 0.5 }),
+    brush(sp([[76.5, 41], [84.5, 40.5], [89.5, 46], [90.5, 53], [88, 59]]), { w: 1.7, in: 0.3, out: 0.5 }),
+    // Eyes.
+    brush(sp([[48.8, 46.6], [52, 44.3], [56.2, 45]]), { w: 3.2, in: 0.35, out: 0.55 }),
+    brush(sp([[71.2, 46.6], [68, 44.3], [63.8, 45]]), { w: 3.2, in: 0.35, out: 0.55 }),
+    // Trunk: from the brow, swelling on the down-stroke, thinning round the curl.
+    brush(sp([[60, 44], [60.6, 51], [59, 59], [55.5, 69], [53, 79], [53, 88.5], [57, 96], [64.5, 99], [71, 96], [72.5, 89.5], [68.5, 85.5], [64.5, 87.5], [65, 91.5]]), { w: 11.5, nib: 15, thin: 0.5, press: bell(0.28, 0.34, 0.32), in: 0.12, out: 0.22, tip0: 0.25 }),
+    // Tusks: the whole one and the broken one.
+    brush(sp([[66, 56], [70.5, 59.5], [74, 66.5]]), { w: 3.8, in: 0.12, out: 0.75, tip0: 0.8 }),
+    brush(sp([[54, 56.5], [51.6, 59]]), { w: 3.4, in: 0.1, out: 0.5, tip0: 0.8, tip1: 0.6 }),
+    blob([[60, 7], [62.6, 12.4], [62.4, 15.6], [60, 17.2], [57.6, 15.6], [57.4, 12.4]]),
+    drop(60, 40.3, 1.35, 60, 35.6),
+  ]);
+
+/** Ganesha in a few calligraphic brush strokes: a tiered crown, sweeping ears, the eyes and tilak, a curling trunk. */
+export function Ganesha({ g }: Ink) {
   return (
     <>
-      <path d={G.earL} fill={g} />
-      <path d={mirror(G.earL)} fill={g} />
-      <path d={G.earLine} fill="none" stroke={base} strokeWidth="1.6" strokeLinecap="round" />
-      <path d={mirror(G.earLine)} fill="none" stroke={base} strokeWidth="1.6" strokeLinecap="round" />
-      <Keyed d={G.face} fill={g} base={base} width={3.6} />
-      <path d={G.trunk} fill={g} />
-      <Keyed d={G.crown} fill={g} base={base} width={3.2} />
-      <circle cx="60" cy="8.5" r="2.6" fill={g} />
-      <Keyed d="M46 38.5 H74 Q76 38.5 76 40.5 V42 Q76 44 74 44 H46 Q44 44 44 42 V40.5 Q44 38.5 46 38.5 Z" fill={g} base={base} width={3.2} />
-      <path d="M60 46.5 C61.6 49 61.6 51 60 52.5 C58.4 51 58.4 49 60 46.5 Z" fill={base} />
-      <path d="M50.5 55 Q53.5 52.6 56.5 55 Q53.5 56.6 50.5 55 Z" fill={base} />
-      <path d="M63.5 55 Q66.5 52.6 69.5 55 Q66.5 56.6 63.5 55 Z" fill={base} />
-      <path d="M54.5 77 Q60 79.5 65 76.5 M54 84 Q59 86.5 63.5 83.5" fill="none" stroke={base} strokeWidth="1.3" strokeLinecap="round" />
-      <path d={G.tusk} fill={base} stroke={g} strokeWidth="1.4" strokeLinejoin="round" />
+      {GANESHA().map((d, i) => (
+        <path key={i} d={d} fill={g} />
+      ))}
     </>
   );
 }
 
-/** Om in a ringed disc. */
-export function Om({ g, base }: Ink) {
+const GO = once(() => ({
+  ear: blob([[46.5, 41], [40, 35.6], [31, 34], [23.2, 38], [19.2, 47], [20, 57.5], [25, 66.5], [32, 73.5], [36.6, 80.5], [38.6, 87.5], [41.6, 79.5], [45.4, 68], [47.4, 56]]),
+  head: blob([[60, 35.5], [72.5, 38], [77.6, 47], [75, 56.5], [68.5, 63.5], [60, 66], [51.5, 63.5], [45, 56.5], [42.4, 47], [47.5, 38]]),
+  crown: "M46.5 36 C46 27.5 53 23.5 56.6 18.4 L60 11.6 L63.4 18.4 C67 23.5 74 27.5 73.5 36 Z",
+  crownCut: "M50.5 33 C50.6 27.6 55.4 24.6 58 20.6 L60 17 L62 20.6 C64.6 24.6 69.4 27.6 69.5 33",
+  band: "M45 35 H75 Q77 35 77 37.2 Q77 39.4 75 39.4 H45 Q43 39.4 43 37.2 Q43 35 45 35 Z",
+  trunk: brush(sp([[60, 52], [60.4, 61], [58.8, 70], [55.4, 79], [54.4, 88.5], [58, 96.4], [65.6, 99.4], [72, 95.6], [72.6, 88.6], [68, 85.4], [64.6, 88.4]]), { w: 12.4, in: 0.05, out: 0.6, tip0: 0.9, tip1: 0.3 }),
+  tusk: "M67.4 61.6 C72.2 64 75.6 68.4 77 74.4 C72.6 72.8 69.2 69.6 66 65.6 Z",
+  fold: brush(sp([[42.4, 41.6], [33.6, 39.2], [26.4, 44], [24.6, 53], [27.6, 62.4], [33.4, 70.4], [37.6, 77.6]]), { w: 1.8, in: 0.2, out: 0.4 }),
+}));
+
+/** Ganesha, ornate: filled paisley ears with a fold and jewels, a pointed jewelled crown, the trunk banded, a tusk. */
+export function GaneshaOrnate({ g, cut }: Ink) {
+  const { ear, head, crown, crownCut, band, trunk, tusk, fold } = GO();
+  const jewels = [
+    [30, 47],
+    [29.4, 55.4],
+    [32.6, 63],
+  ] as const;
   return (
     <>
-      <circle cx="60" cy="60" r="52" fill={base} />
-      <circle cx="60" cy="60" r="47.5" fill="none" stroke={g} strokeWidth="1.2" />
-      <path d={OM_PATH} fill={g} />
+      <path d={ear} fill={g} />
+      <path d={mirror(ear)} fill={g} />
+      <path d={fold} fill={cut} />
+      <path d={mirror(fold)} fill={cut} />
+      {jewels.flatMap(([x, y]) => [
+        <circle key={`l${y}`} cx={x} cy={y} r="1.5" fill={cut} />,
+        <circle key={`r${y}`} cx={r2(120 - x)} cy={y} r="1.5" fill={cut} />,
+      ])}
+      <Keyed d={head} fill={g} cut={cut} width={2.6} />
+      <path d={trunk} fill={g} />
+      <Keyed d={crown} fill={g} cut={cut} width={2.6} />
+      <path d={crownCut} fill="none" stroke={cut} strokeWidth="1.1" />
+      <path d={drop(60, 29.2, 2, 60, 23.4)} fill={cut} />
+      <circle cx="60" cy="9" r="2.4" fill={g} />
+      <Keyed d={band} fill={g} cut={cut} width={2.4} />
+      {[49, 54.5, 60, 65.5, 71].map((x) => (
+        <circle key={x} cx={x} cy="37.2" r="1.15" fill={cut} />
+      ))}
+      <path d="M47.6 49 Q51.2 45.6 55.2 48.4 Q51.2 50.8 47.6 49 Z" fill={cut} />
+      <path d="M72.4 49 Q68.8 45.6 64.8 48.4 Q68.8 50.8 72.4 49 Z" fill={cut} />
+      <path d="M56.4 42 Q60 50.4 63.6 42" fill="none" stroke={cut} strokeWidth="1.3" strokeLinecap="round" />
+      <circle cx="60" cy="44.2" r="1.2" fill={cut} />
+      <path d="M54.6 68.6 Q59.4 71 64.4 68.4 M53.4 75.6 Q58.2 78.2 62.8 75.8 M52.6 82.6 Q56.6 85 60.6 83.4" fill="none" stroke={cut} strokeWidth="1.2" strokeLinecap="round" />
+      <path d={tusk} fill={cut} stroke={g} strokeWidth="1.5" strokeLinejoin="round" />
     </>
   );
 }
 
-const KALASH_LEAF = "M60 55 C66.5 47 67.5 37 60 26 C52.5 37 53.5 47 60 55 Z";
+const OM = once(() => {
+  // Drawn at 1 : 1 round (62, 51), then enlarged into the box.
+  const S = 1.2;
+  const at = (pts: Pt[]) => sp(pts.map(([x, y]) => [60 + (x - 62) * S, 61 + (y - 51) * S] as Pt));
+  const strokes = [
+    brush(at([[33, 43.5], [39, 38.6], [47, 38], [52.6, 42], [52.2, 49], [46.5, 53.4], [40.5, 54.6]]), { w: 8.8 * S, press: bell(0.55, 0.3, 0.3), in: 0.12, out: 0.12, tip0: 0.3, tip1: 0.4 }),
+    brush(at([[40.5, 54.6], [50, 55.2], [57, 60.5], [59, 69.5], [55, 78], [47, 82.5], [38.5, 81.5], [32.6, 76], [31.6, 70.4]]), { w: 10 * S, press: bell(0.36, 0.3, 0.25), in: 0.06, out: 0.25, tip0: 0.5 }),
+    brush(at([[51, 57], [57, 57.8], [64, 56.4], [70.5, 51.5], [77, 48], [83.5, 48.8], [88, 54.5], [88.8, 62.5], [86.2, 70.5], [88.8, 77], [93.5, 78.6]]), { w: 8.4 * S, press: bell(0.62, 0.36, 0.45), in: 0.2, out: 0.18 }),
+    brush(at([[63, 32.5], [69.5, 38], [78, 39.4], [86, 35.6], [90.5, 29.6]]), { w: 5.4 * S, in: 0.45, out: 0.45 }),
+  ];
+  const dot = at([[76.6, 19.2], [80.6, 22.4], [79.8, 26.8], [75.6, 28], [72.4, 24.6]]).map((c) => c[0]);
+  return [...strokes, blob(dot)];
+});
 
-/** Kalash: a pot with mango leaves and a coconut. */
-export function Kalash({ g, base }: Ink) {
+/** Om (ॐ) in brush strokes: the two bowls, the tail sweeping right, the crescent and the dot. */
+export function Om({ g }: Ink) {
   return (
     <>
-      <circle cx="60" cy="60" r="52" fill={base} />
-      <g transform="translate(60 60) scale(0.92) translate(-60 -62)">
-        {[-68, -36, 36, 68].map((a) => (
-          <g key={a}>
-            <Keyed d={xf(KALASH_LEAF, a, 60, 55)} fill={g} base={base} width={2.8} />
-            <path d={xf("M60 52 L60 31", a, 60, 55)} stroke={base} strokeWidth="1" strokeLinecap="round" />
-          </g>
-        ))}
-        <Keyed d="M60 14 C64 21 72.5 25 72.5 38 C72.5 48 66.5 54 60 54 C53.5 54 47.5 48 47.5 38 C47.5 25 56 21 60 14 Z" fill={g} base={base} width={3.2} />
-        <path d="M60 19 C56 27 54 36 55.5 50 M60 19 C64 27 66 36 64.5 50 M60 19 L60 51" fill="none" stroke={base} strokeWidth="0.9" strokeLinecap="round" />
-        <Keyed d="M50 62 C44 66 31 72 30.5 85 C30 97 42 105 60 105 C78 105 90 97 89.5 85 C89 72 76 66 70 62 Z" fill={g} base={base} width={3.2} />
-        <Keyed d="M51 58 L69 58 L70.5 64 L49.5 64 Z" fill={g} base={base} width={2.8} />
-        <Keyed d="M46 52 H74 A3.5 3.5 0 0 1 74 59 H46 A3.5 3.5 0 0 1 46 52 Z" fill={g} base={base} width={3.2} />
-        <Keyed d="M50 103 L46.5 110.5 L73.5 110.5 L70 103 Z" fill={g} base={base} width={2.8} />
-        <path d="M33.5 77.5 Q60 86 86.5 77.5 M32 91.5 Q60 100 88 91.5" fill="none" stroke={base} strokeWidth="1.4" />
-        <circle cx="60" cy="86.5" r="2.4" fill={base} />
-        <circle cx="50" cy="85.6" r="1.6" fill={base} />
-        <circle cx="70" cy="85.6" r="1.6" fill={base} />
-        <circle cx="40.5" cy="83.5" r="1.2" fill={base} />
-        <circle cx="79.5" cy="83.5" r="1.2" fill={base} />
-      </g>
+      {OM().map((d, i) => (
+        <path key={i} d={d} fill={g} />
+      ))}
     </>
   );
 }
 
-/** Swastika (the Hindu sathiya, arms turning clockwise, upright, with four dots) on a scalloped disc. */
-export function Swastika({ g, base }: Ink) {
+const KALASH_LEAF = sp([[60, 52], [58, 40.5], [61, 29], [68.5, 19.5]]);
+
+const KALASH = once(() => ({
+  leaf: brush(KALASH_LEAF, { w: 11, in: 0.3, out: 0.65, tip0: 0.2 }),
+  vein: brush(sp([[60, 48.5], [58.6, 40.5], [61, 30.5], [65.6, 24]]), { w: 1.1, in: 0.2, out: 0.5 }),
+  tuft: brush(sp([[60, 22.5], [60.4, 17.5], [59.2, 12.5]]), { w: 2.4, in: 0.2, out: 0.7, tip0: 0.6 }),
+}));
+
+/** Kalash: a round pot on a foot, five mango leaves fanned from its mouth and a coconut with a tuft. */
+export function Kalash({ g, cut }: Ink) {
+  const { leaf, vein, tuft } = KALASH();
   return (
     <>
-      <path d={scallop(60, 60, 53, 16)} fill={base} />
-      <path d="M60 25 V95 M25 60 H95 M60 25 H90 M95 60 V90 M60 95 H30 M25 60 V30" fill="none" stroke={g} strokeWidth="10" strokeLinecap="square" strokeLinejoin="miter" />
-      <circle cx="42.5" cy="42.5" r="5" fill={g} />
-      <circle cx="77.5" cy="42.5" r="5" fill={g} />
-      <circle cx="42.5" cy="77.5" r="5" fill={g} />
-      <circle cx="77.5" cy="77.5" r="5" fill={g} />
+      {[-74, -40, 40, 74].map((a) => (
+        <g key={a}>
+          <path d={xf(a < 0 ? mirror(leaf) : leaf, a < 0 ? a + 8 : a - 8, 60, 54)} fill={g} />
+          <path d={xf(a < 0 ? mirror(vein) : vein, a < 0 ? a + 8 : a - 8, 60, 54)} fill={cut} />
+        </g>
+      ))}
+      <Keyed d="M60 21.5 C65.5 26.5 72 31.5 72 40.5 C72 48 66.6 52.6 60 52.6 C53.4 52.6 48 48 48 40.5 C48 31.5 54.5 26.5 60 21.5 Z" fill={g} cut={cut} width={2.6} />
+      <path d="M60 25.5 C56.4 31 54.6 38 55.6 49 M60 25.5 C63.6 31 65.4 38 64.4 49" fill="none" stroke={cut} strokeWidth="0.9" strokeLinecap="round" />
+      {[-26, 0, 26].map((a) => (
+        <path key={a} d={xf(tuft, a, 60, 22.5)} fill={g} />
+      ))}
+      <Keyed d="M51 60.5 C45 64.5 33 70 33 84 C33 97 44.5 104.5 60 104.5 C75.5 104.5 87 97 87 84 C87 70 75 64.5 69 60.5 Z" fill={g} cut={cut} width={2.6} />
+      <Keyed d="M51.5 57 H68.5 L70 62 H50 Z" fill={g} cut={cut} width={2.2} />
+      <Keyed d="M45.5 51.5 H74.5 A3.2 3.2 0 0 1 74.5 57.9 H45.5 A3.2 3.2 0 0 1 45.5 51.5 Z" fill={g} cut={cut} width={2.6} />
+      <Keyed d="M51 103 L47.5 110.5 H72.5 L69 103 Z" fill={g} cut={cut} width={2.2} />
+      <path d="M36.4 75.5 Q60 84 83.6 75.5 M35.2 91.5 Q60 100 84.8 91.5" fill="none" stroke={cut} strokeWidth="1.3" strokeLinecap="round" />
+      {[-21, -10.5, 0, 10.5, 21].map((x) => (
+        <path key={x} d={drop(60 + x, 85.5 - Math.abs(x) * 0.09, Math.abs(x) > 15 ? 1.4 : 1.8, 60 + x, 80.5 - Math.abs(x) * 0.09)} fill={cut} />
+      ))}
     </>
   );
 }
 
-const PETAL = "M60 20 C73.5 38 75 63 60 88 C45 63 46.5 38 60 20 Z";
-
-/** Lotus: five petals over water. */
-export function Lotus({ g, base, lite }: Ink) {
+/** Swastika (the Hindu sathiya: upright, arms turning clockwise) with the four dots. */
+export function Swastika({ g }: Ink) {
+  // Each piece is a rectangle of the same winding, so overlaps simply join (non-zero fill).
+  const R = 35;
+  const H = 27;
+  const w = 4.2;
+  const rect = (x0: number, y0: number, x1: number, y1: number) => `M${x0} ${y0} L${x1} ${y0} L${x1} ${y1} L${x0} ${y1} Z`;
+  const up = [rect(60 - w, 60 - R, 60 + w, 60 + R), rect(60 - R, 60 - w, 60 + R, 60 + w), rect(60 - w, 60 - R, 60 + H, 60 - R + 2 * w)];
+  const hook = up[2];
   return (
     <>
-      <circle cx="60" cy="62" r="50" fill={base} />
+      <path d={`${up[0]} ${up[1]}`} fill={g} />
+      {[0, 90, 180, 270].map((a) => (
+        <path key={a} d={xf(hook, a, 60, 60)} fill={g} />
+      ))}
+      {[
+        [43, 43],
+        [77, 43],
+        [43, 77],
+        [77, 77],
+      ].map(([x, y]) => (
+        <circle key={`${x}${y}`} cx={x} cy={y} r="4.8" fill={g} />
+      ))}
+    </>
+  );
+}
+
+const PETAL = "M60 17 C69.5 29 76 45 72.4 63 C70.6 72 65.6 79 60 84 C54.4 79 49.4 72 47.6 63 C44 45 50.5 29 60 17 Z";
+
+const LOTUS = once(() => ({
+  vein: brush(sp([[60, 28], [60.5, 52], [60, 77]]), { w: 1.5, in: 0.3, out: 0.3 }),
+  sideVein: brush(sp([[60, 38], [60.4, 58], [60, 76]]), { w: 1.2, in: 0.3, out: 0.3 }),
+  calyx: brush(sp([[31, 83], [45, 90.5], [60, 92.4], [75, 90.5], [89, 83]]), { w: 5.6, in: 0.4, out: 0.4 }),
+  ripples: [brush(sp([[38, 99], [60, 96.8], [82, 99]]), { w: 2.8, in: 0.45, out: 0.45 }), brush(sp([[47, 105], [60, 103.6], [73, 105]]), { w: 2.2, in: 0.45, out: 0.45 })],
+}));
+
+/** Lotus: a broad pointed centre petal, two filled and two light outer petals on a calyx, over ripples. */
+export function Lotus({ g, cut, lite }: Ink) {
+  const { vein, sideVein, calyx, ripples } = LOTUS();
+  return (
+    <>
       {[-62, 62].map((a) => (
-        <Keyed key={a} d={xf(PETAL, a, 60, 88, 0.72)} fill={lite} base={base} width={3.2} />
+        <Keyed key={a} d={xf(PETAL, a, 60, 86, 0.76)} fill={lite} cut={cut} width={2.6} />
       ))}
-      {[-31, 31].map((a) => (
-        <Keyed key={a} d={xf(PETAL, a, 60, 88, 0.86)} fill={g} base={base} width={3.6} />
+      {[-32, 32].map((a) => (
+        <Keyed key={a} d={xf(PETAL, a, 60, 86, 0.9)} fill={g} cut={cut} width={2.8} />
       ))}
-      <Keyed d={PETAL} fill={g} base={base} width={3.6} />
-      <path d="M60 32 C64 46 64 66 60 82 C56 66 56 46 60 32 Z" fill={base} opacity="0.55" />
-      <Keyed d="M24 89 C38 99 82 99 96 89 C88 103 32 103 24 89 Z" fill={g} base={base} width={3.2} />
-      <path d="M40 106 Q50 102 60 106 Q70 110 80 106" fill="none" stroke={g} strokeWidth="1.4" strokeLinecap="round" />
+      <Keyed d={PETAL} fill={g} cut={cut} width={2.8} />
+      <path d={vein} fill={cut} />
+      {[-32, 32].map((a) => (
+        <path key={a} d={xf(sideVein, a, 60, 86, 0.9)} fill={cut} />
+      ))}
+      <Keyed d={calyx} fill={g} cut={cut} width={2.4} />
+      {ripples.map((d) => (
+        <path key={d.length} d={d} fill={g} />
+      ))}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Muslim
+
+/** Crescent and star: a slender crescent with sharp horns and a five-pointed star with slightly drawn-in sides. */
+export function CrescentStar({ g }: Ink) {
+  return (
+    <>
+      <path d={crescent(54, 62, 40, 68, 52.5, 35.5)} fill={g} />
+      <polygon points={starPoints(80, 47, 13.5, 5.6, 5, 14)} fill={g} stroke={g} strokeWidth="0.8" strokeLinejoin="round" />
+    </>
+  );
+}
+
+/** The outline of an eight-pointed star (two squares of half-side `a`, one turned 45°). */
+function eightPoint(cx: number, cy: number, a: number): Pt[] {
+  const out: Pt[] = [];
+  const inner = a / Math.cos(Math.PI / 8);
+  for (let k = 0; k < 16; k++) out.push(pt(cx, cy, k % 2 ? inner : a * Math.SQRT2, -90 + k * 22.5));
+  return out;
+}
+
+/** Allah (الله, an Amiri outline) inside a fine double eight-pointed star, with a dot at each point. */
+export function Allah({ g }: Ink) {
+  const tips = Array.from({ length: 8 }, (_, k) => pt(60, 60, 57, -90 + k * 45));
+  return (
+    <>
+      <polygon points={points(eightPoint(60, 60, 37.5))} fill="none" stroke={g} strokeWidth="2.4" strokeLinejoin="miter" />
+      <polygon points={points(eightPoint(60, 60, 33.6))} fill="none" stroke={g} strokeWidth="1" strokeLinejoin="miter" />
+      {tips.map(([x, y]) => (
+        <circle key={`${x}${y}`} cx={x} cy={y} r="1.7" fill={g} />
+      ))}
+      <path d={xf(ALLAH_PATH, 0, 60, 60, 0.8)} fill={g} />
+    </>
+  );
+}
+
+/** A medallion (shamsa): a sun disc with a ring of rays, a fine inner ring, and Allah cut out of it. */
+export function AllahMedallion({ g, cut }: Ink) {
+  const rays = Array.from({ length: 24 }, (_, k) => {
+    const a = k * 15;
+    const long = k % 2 === 0;
+    return `M${pt(60, 60, 43, a - 4.2).join(" ")} L${pt(60, 60, long ? 56 : 51.5, a).join(" ")} L${pt(60, 60, 43, a + 4.2).join(" ")} Z`;
+  }).join(" ");
+  return (
+    <>
+      <path d={rays} fill={g} />
+      <circle cx="60" cy="60" r="45" fill={g} />
+      <circle cx="60" cy="60" r="40.6" fill="none" stroke={cut} strokeWidth="1.3" />
+      <path d={xf(ALLAH_PATH, 0, 60, 60, 0.84)} fill={cut} />
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Christian
+
+/** One arm of a cross pointing up from (60, cy), `len` long, `h` half wide, ending in `end` (drawn at the tip). */
+function crossArm(cy: number, len: number, h: number, end: (tipY: number) => string): string {
+  return `M${60 - h} ${cy} L${60 - h} ${r2(cy - len + 10)} L${60 + h} ${r2(cy - len + 10)} L${60 + h} ${cy} Z ${end(cy - len)}`;
+}
+
+/** The angles and lengths of a Latin cross's arms round its crossing at (60, 40). */
+const CROSS_ARMS = [
+  [0, 28],
+  [90, 30],
+  [180, 68],
+  [270, 30],
+] as const;
+
+/** A Latin cross with slender beams flaring into pointed tips, and an engraved line down each arm. */
+export function Cross({ g, cut }: Ink) {
+  const h = 3.7;
+  const flare = (t: number) => `M${60 - h} ${t + 11} C${60 - h} ${t + 5} ${60 - 6.6} ${t + 4.4} ${60 - 6.6} ${t + 1.4} L60 ${t - 2.6} L${60 + 6.6} ${t + 1.4} C${60 + 6.6} ${t + 4.4} ${60 + h} ${t + 5} ${60 + h} ${t + 11} Z`;
+  return (
+    <>
+      {CROSS_ARMS.map(([a, len]) => (
+        <path key={a} d={xf(crossArm(40, len, h, flare), a, 60, 40)} fill={g} />
+      ))}
+      {CROSS_ARMS.map(([a, len]) => (
+        <path key={a} d={xf(`M60 ${40 - 6.5} L60 ${40 - len + 9}`, a, 60, 40)} stroke={cut} strokeWidth="1" strokeLinecap="round" />
+      ))}
+      <path d="M60 36.6 L63.4 40 L60 43.4 L56.6 40 Z" fill={cut} />
+    </>
+  );
+}
+
+/** A budded cross: each arm ends in three buds (the trefoil of the Apostles' cross). */
+export function CrossBudded({ g, cut }: Ink) {
+  const h = 3.5;
+  const arms = [
+    [0, 26],
+    [90, 28],
+    [180, 62],
+    [270, 28],
+  ] as const;
+  const buds = (t: number) =>
+    `${circleC(60, t + 1, 5.2)} ${circleC(60 - 5.6, t + 7.2, 4.1)} ${circleC(60 + 5.6, t + 7.2, 4.1)}`;
+  return (
+    <>
+      {arms.map(([a, len]) => (
+        <path key={a} d={xf(crossArm(42, len, h, buds), a, 60, 42)} fill={g} />
+      ))}
+      {arms.map(([a, len]) => (
+        <circle key={a} cx={pt(60, 42, len - 1, a - 90)[0]} cy={pt(60, 42, len - 1, a - 90)[1]} r="1.5" fill={cut} />
+      ))}
+      <path d="M60 38.4 L63.6 42 L60 45.6 L56.4 42 Z" fill={cut} />
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Sikh
+
+/** Ik Onkar (ੴ, a Noto Serif Gurmukhi outline), on its own. */
+export function IkOnkar({ g }: Ink) {
+  return <path d={xf(IK_ONKAR_PATH, 0, 60, 60, 1.12)} fill={g} />;
+}
+
+const KIRPAN = brush(sp([[46, 93], [31, 90], [21.5, 79], [19.5, 64], [20, 51], [16.5, 37]]), { w: 9.5, in: 0.04, out: 0.85, tip0: 0.9 });
+
+/** One kirpan's hilt: a guard across the blade root, a grip crossing under the centre and a round pommel. */
+function Hilt({ g, cut, side }: { g: string; cut: string; side: 1 | -1 }) {
+  const x = (v: number) => (side === 1 ? v : r2(120 - v));
+  const grip = `M${x(48)} 94 L${x(69)} 106.4`;
+  const guard = `M${x(44.4)} 87.6 L${x(47.8)} 98.6`;
+  return (
+    <>
+      <path d={grip} stroke={cut} strokeWidth="6.4" strokeLinecap="round" />
+      <path d={grip} stroke={g} strokeWidth="3.8" strokeLinecap="round" />
+      <circle cx={x(71.2)} cy="107.6" r="4" fill={cut} />
+      <circle cx={x(71.2)} cy="107.6" r="2.8" fill={g} />
+      <path d={guard} stroke={g} strokeWidth="3.2" strokeLinecap="round" />
+    </>
+  );
+}
+
+/**
+ * The Khanda: the double-edged khanda in the centre, the chakkar around it and two kirpans.
+ * COMMUNITY REVIEW (VISION D47 (3), BUILD_PLAN Step 6.3): to be checked by members of the Sikh community before
+ * launch; an owner check. Change nothing here on taste alone.
+ */
+export function Khanda({ g, cut }: Ink) {
+  return (
+    <>
+      <path d={KIRPAN} fill={g} />
+      <path d={mirror(KIRPAN)} fill={g} />
+      <Hilt g={g} cut={cut} side={1} />
+      <Hilt g={g} cut={cut} side={-1} />
+      <path d={`${circlePath(60, 58, 27)} ${circlePath(60, 58, 20.5)}`} fill={g} fillRule="evenodd" />
+      <Keyed d="M60 8 C63.6 14 66.6 21.5 66.4 30 L65.4 77 H54.6 L53.6 30 C53.4 21.5 56.4 14 60 8 Z" fill={g} cut={cut} width={3.2} />
+      <path d="M60 15.5 L60 74" stroke={cut} strokeWidth="1.1" strokeLinecap="round" />
+      <Keyed d="M51.6 76.4 H68.4 A2.6 2.6 0 0 1 68.4 81.6 H51.6 A2.6 2.6 0 0 1 51.6 76.4 Z" fill={g} cut={cut} width={2.4} />
+      <Keyed d="M58.2 81.6 H61.8 L62.6 92 H57.4 Z" fill={g} cut={cut} width={2} />
+      <Keyed d={circlePath(60, 95.6, 3.6)} fill={g} cut={cut} width={2} />
     </>
   );
 }
@@ -156,148 +416,31 @@ export function Lotus({ g, base, lite }: Ink) {
  * COMMUNITY REVIEW (VISION D47 (3), BUILD_PLAN Step 6.3): to be checked by members of the Jain community before
  * launch; an owner check. Change nothing here on taste alone.
  */
-export function Jain({ g, base }: Ink) {
-  const spokes = Array.from({ length: 12 }, (_, k) => `M60 94 L${pt(60, 94, 5.6, k * 30).join(" ")}`).join(" ");
+export function Jain({ g, cut }: Ink) {
+  const spokes = Array.from({ length: 12 }, (_, k) => `M60 93.5 L${pt(60, 93.5, 5.4, k * 30).join(" ")}`).join(" ");
+  const fingers = [
+    [50.6, 75.4],
+    [55.3, 71.8],
+    [60, 71],
+    [64.7, 73.6],
+  ] as const;
   return (
     <>
-      <path d="M51 8 L69 8 L88 37 L69 60 L95 112 L25 112 L51 60 L32 37 Z" fill={base} stroke={g} strokeWidth="3.4" strokeLinejoin="round" />
-      <circle cx="60" cy="14.5" r="2" fill={g} />
-      <path d="M51.5 18.5 Q60 27.5 68.5 18.5 Q60 23.5 51.5 18.5 Z" fill={g} stroke={g} strokeWidth="0.8" strokeLinejoin="round" />
+      <path d="M51.5 8.5 H68.5 L87 37 L68.5 60 L94 111 H26 L51.5 60 L33 37 Z" fill="none" stroke={g} strokeWidth="2.8" strokeLinejoin="round" />
+      <circle cx="60" cy="15" r="2" fill={g} />
+      <path d="M51.5 19 Q60 28 68.5 19 Q60 24 51.5 19 Z" fill={g} stroke={g} strokeWidth="0.8" strokeLinejoin="round" />
       <circle cx="53" cy="31" r="2" fill={g} />
       <circle cx="60" cy="31" r="2" fill={g} />
       <circle cx="67" cy="31" r="2" fill={g} />
-      <path d="M60 39 V53 M53 46 H67 M60 39 H66 M67 46 V52 M60 53 H54 M53 46 V40" fill="none" stroke={g} strokeWidth="2.4" strokeLinecap="square" />
-      {(
-        [
-          [50.4, 76],
-          [55.2, 72.5],
-          [60, 72],
-          [64.8, 74.5],
-        ] as const
-      ).map(([x, y]) => (
-        <rect key={x} x={x} y={y} width="4.8" height={r2(92 - y)} rx="2.4" fill={g} stroke={base} strokeWidth="0.8" />
+      <path d="M60 39 V53 M53 46 H67 M60 39 H66 M67 46 V52 M60 53 H54 M53 46 V40" fill="none" stroke={g} strokeWidth="2.3" strokeLinecap="square" />
+      {fingers.map(([x, y]) => (
+        <rect key={x} x={r2(x - 2.25)} y={y} width="4.5" height={r2(91 - y)} rx="2.25" fill={g} stroke={cut} strokeWidth="0.8" />
       ))}
-      <path d="M50 88 L50 99 C50 104.5 54 107 60 107 C66 107 70 104.5 70 99 L70 88 Z" fill={g} />
-      <path d="M50.5 99 C47 96 44 90.5 43.5 86.5 C43.2 84.5 45.6 83.7 46.8 85.4 C48.6 88 49.8 90 51 91.5 Z" fill={g} stroke={base} strokeWidth="0.8" strokeLinejoin="round" />
-      <circle cx="60" cy="94" r="6.2" fill="none" stroke={base} strokeWidth="1.2" />
-      <path d={spokes} stroke={base} strokeWidth="0.7" />
-      <circle cx="60" cy="94" r="1.4" fill={base} />
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------------------------------------------
-// Sikh
-
-/** Ik Onkar in a ringed, scalloped disc. */
-export function IkOnkar({ g, base }: Ink) {
-  return (
-    <>
-      <path d={scallop(60, 60, 53, 18)} fill={base} />
-      <circle cx="60" cy="60" r="46" fill="none" stroke={g} strokeWidth="1.2" />
-      <path d={IK_ONKAR_PATH} fill={g} />
-    </>
-  );
-}
-
-const BLADE_L = taper(
-  [
-    [[46, 92], [30, 90], [20, 78], [21, 62]],
-    [[21, 62], [21, 53], [20.5, 45], [16.5, 36]],
-  ],
-  10,
-  0.8,
-  true,
-);
-
-/** One kirpan's hilt: a guard across the blade root, a grip crossing under the centre and a round pommel. */
-function Hilt({ g, base, side }: { g: string; base: string; side: 1 | -1 }) {
-  const x = (v: number) => (side === 1 ? v : r2(120 - v));
-  const grip = `M${x(47.5)} 93 L${x(69.5)} 106.5`;
-  const guard = `M${x(44.6)} 86.6 L${x(47.6)} 97.4`;
-  return (
-    <>
-      <path d={grip} stroke={base} strokeWidth="6.6" strokeLinecap="round" />
-      <path d={grip} stroke={g} strokeWidth="4" strokeLinecap="round" />
-      <circle cx={x(71.5)} cy="107.8" r="4" fill={base} />
-      <circle cx={x(71.5)} cy="107.8" r="2.8" fill={g} />
-      <path d={guard} stroke={base} strokeWidth="5.6" strokeLinecap="round" />
-      <path d={guard} stroke={g} strokeWidth="3.2" strokeLinecap="round" />
-    </>
-  );
-}
-
-/**
- * The Khanda: the double-edged khanda in the centre, the chakkar around it and two kirpans.
- * COMMUNITY REVIEW (VISION D47 (3), BUILD_PLAN Step 6.3): to be checked by members of the Sikh community before
- * launch; an owner check. Change nothing here on taste alone.
- */
-export function Khanda({ g, base }: Ink) {
-  return (
-    <>
-      <circle cx="60" cy="60" r="53" fill={base} />
-      <Keyed d={BLADE_L} fill={g} base={base} width={2.8} />
-      <Keyed d={mirror(BLADE_L)} fill={g} base={base} width={2.8} />
-      <Hilt g={g} base={base} side={1} />
-      <Hilt g={g} base={base} side={-1} />
-      <path d={`${circlePath(60, 59, 27)} ${circlePath(60, 59, 19.5)}`} fill="none" stroke={base} strokeWidth="3.2" />
-      <path d={`${circlePath(60, 59, 27)} ${circlePath(60, 59, 19.5)}`} fill={g} fillRule="evenodd" />
-      <Keyed d="M60 8 L66.5 21 L66 80 L54 80 L53.5 21 Z" fill={g} base={base} width={4} />
-      <path d="M60 15 L60 77" stroke={base} strokeWidth="1.1" />
-      <Keyed d="M51.5 79 H68.5 A2.5 2.5 0 0 1 68.5 84 H51.5 A2.5 2.5 0 0 1 51.5 79 Z" fill={g} base={base} width={3.2} />
-      <Keyed d="M58.5 84 H61.5 Q63 84 63 85.5 V91.5 Q63 93 61.5 93 H58.5 Q57 93 57 91.5 V85.5 Q57 84 58.5 84 Z" fill={g} base={base} width={2.8} />
-      <Keyed d={circlePath(60, 96, 3.6)} fill={g} base={base} width={2.8} />
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------------------------------------------
-// Christian
-
-/** A plain Latin cross with bevelled faces. */
-export function Cross({ g, base, ink }: Ink) {
-  const cx = 60;
-  const cy = 43;
-  const w = 7;
-  const T = 14;
-  const B = 106;
-  const Lx = 30;
-  const Rx = 90;
-  const light = (pts: number[][]) => <polygon points={pts.map((p) => p.join(",")).join(" ")} fill="#fff" fillOpacity="0.26" />;
-  const dark = (pts: number[][]) => <polygon points={pts.map((p) => p.join(",")).join(" ")} fill={ink} fillOpacity="0.32" />;
-  const shape = `M${cx - w} ${T} H${cx + w} V${cy - w} H${Rx} V${cy + w} H${cx + w} V${B} H${cx - w} V${cy + w} H${Lx} V${cy - w} H${cx - w} Z`;
-  return (
-    <>
-      <circle cx="60" cy="60" r="52" fill={base} />
-      <path d={shape} fill={g} />
-      <g>
-        {light([[cx - w, T], [cx, T + w], [cx, cy], [cx - w, cy - w]])}
-        {dark([[cx + w, T], [cx, T + w], [cx, cy], [cx + w, cy - w]])}
-        {light([[cx - w, T], [cx + w, T], [cx, T + w]])}
-        {light([[cx - w, B], [cx, B - w], [cx, cy], [cx - w, cy + w]])}
-        {dark([[cx + w, B], [cx, B - w], [cx, cy], [cx + w, cy + w]])}
-        {dark([[cx - w, B], [cx + w, B], [cx, B - w]])}
-        {light([[Lx, cy - w], [Lx + w, cy], [cx, cy], [cx - w, cy - w]])}
-        {dark([[Lx, cy + w], [Lx + w, cy], [cx, cy], [cx - w, cy + w]])}
-        {light([[Lx, cy - w], [Lx, cy + w], [Lx + w, cy]])}
-        {light([[Rx, cy - w], [Rx - w, cy], [cx, cy], [cx + w, cy - w]])}
-        {dark([[Rx, cy + w], [Rx - w, cy], [cx, cy], [cx + w, cy + w]])}
-        {dark([[Rx, cy - w], [Rx, cy + w], [Rx - w, cy]])}
-      </g>
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------------------------------------------
-// Muslim
-
-/** Crescent and star. */
-export function CrescentStar({ g, base }: Ink) {
-  return (
-    <>
-      <circle cx="60" cy="60" r="52" fill={base} />
-      <path d={crescent(55, 61, 38, 67, 53, 31)} fill={g} />
-      <polygon points={starPoints(77, 50, 13, 5.4, 5, 12)} fill={g} stroke={g} strokeWidth="0.8" strokeLinejoin="round" />
+      <path d="M50 87 L50 98.5 C50 104 54 106.5 60 106.5 C66 106.5 70 104 70 98.5 L70 87 Z" fill={g} />
+      <path d="M50.5 98.5 C47 95.5 44 90 43.5 86 C43.2 84 45.6 83.2 46.8 84.9 C48.6 87.5 49.8 89.5 51 91 Z" fill={g} stroke={cut} strokeWidth="0.8" strokeLinejoin="round" />
+      <circle cx="60" cy="93.5" r="6" fill="none" stroke={cut} strokeWidth="1.2" />
+      <path d={spokes} stroke={cut} strokeWidth="0.7" />
+      <circle cx="60" cy="93.5" r="1.4" fill={cut} />
     </>
   );
 }
@@ -305,7 +448,7 @@ export function CrescentStar({ g, base }: Ink) {
 // ---------------------------------------------------------------------------------------------------------------
 // Buddhist
 
-/** A point `r` out along angle `a` (degrees), moved `hw` sideways. */
+/** A point `r` out along angle `a` (degrees) from the centre, moved `hw` sideways. */
 function radial(r: number, hw: number, a: number): string {
   const t = (a * Math.PI) / 180;
   const d = [Math.cos(t), Math.sin(t)];
@@ -313,89 +456,170 @@ function radial(r: number, hw: number, a: number): string {
   return `${r2(60 + d[0] * r + p[0] * hw)} ${r2(60 + d[1] * r + p[1] * hw)}`;
 }
 
-/** The Dharma wheel: eight spokes, a rim with finials and a hub. */
-export function DharmaWheel({ g, base }: Ink) {
+const EIGHT = Array.from({ length: 8 }, (_, k) => k * 45 - 90);
+
+/** The Dharma wheel, light: a fine double rim, eight slender spokes with a bead, a lotus hub and dots outside. */
+export function DharmaWheel({ g, cut }: Ink) {
+  const spokes = EIGHT.map((a) => `M${radial(12, -1.4, a)} L${radial(23, -2.6, a)} L${radial(36, -0.8, a)} L${radial(36, 0.8, a)} L${radial(23, 2.6, a)} L${radial(12, 1.4, a)} Z`).join(" ");
+  const petals = EIGHT.map((a) => xf("M60 60 C62.6 56 62.6 52.4 60 49 C57.4 52.4 57.4 56 60 60 Z", a + 90 + 22.5, 60, 60)).join(" ");
+  return (
+    <>
+      <circle cx="60" cy="60" r="41.5" fill="none" stroke={g} strokeWidth="3.4" />
+      <circle cx="60" cy="60" r="35.6" fill="none" stroke={g} strokeWidth="1.3" />
+      <path d={spokes} fill={g} />
+      {EIGHT.map((a) => {
+        const [x, y] = pt(60, 60, 49, a + 22.5);
+        const [sx, sy] = pt(60, 60, 47.6, a);
+        return (
+          <g key={a}>
+            <circle cx={x} cy={y} r="1.7" fill={g} />
+            <path d={drop(sx, sy, 2.4, pt(60, 60, 54.5, a)[0], pt(60, 60, 54.5, a)[1])} fill={g} />
+          </g>
+        );
+      })}
+      <path d={petals} fill={g} />
+      <circle cx="60" cy="60" r="4.6" fill={g} />
+      <circle cx="60" cy="60" r="2.4" fill="none" stroke={cut} strokeWidth="0.9" />
+    </>
+  );
+}
+
+/** The Dharma wheel, solid: a broad rim, eight flared spokes, a hub with a cut ring and eight spear-tip finials. */
+export function DharmaWheelSolid({ g, cut }: Ink) {
   let spokes = "";
   let tips = "";
-  for (let k = 0; k < 8; k++) {
-    const a = k * 45 - 90;
-    spokes += `M${radial(10, -1.7, a)} Q${radial(22, -5.2, a)} ${radial(36, -1.5, a)} L${radial(36, 1.5, a)} Q${radial(22, 5.2, a)} ${radial(10, 1.7, a)} Z `;
-    tips += `M${radial(41, -4.6, a)} Q${radial(46, -4.4, a)} ${radial(51.5, 0, a)} Q${radial(46, 4.4, a)} ${radial(41, 4.6, a)} Z `;
+  for (const a of EIGHT) {
+    spokes += `M${radial(10, -1.9, a)} Q${radial(22, -5.4, a)} ${radial(35, -1.6, a)} L${radial(35, 1.6, a)} Q${radial(22, 5.4, a)} ${radial(10, 1.9, a)} Z `;
+    tips += `M${radial(42, -4.6, a)} Q${radial(47, -4.4, a)} ${radial(53, 0, a)} Q${radial(47, 4.4, a)} ${radial(42, 4.6, a)} Z `;
   }
   return (
     <>
-      <circle cx="60" cy="60" r="54" fill={base} />
       <path d={tips} fill={g} />
       <path d={spokes} fill={g} />
-      <path d="M60 17.5 A42.5 42.5 0 1 1 59.99 17.5 Z M60 25 A35 35 0 1 0 60.01 25 Z" fill={g} fillRule="evenodd" />
-      <circle cx="60" cy="60" r="38.75" fill="none" stroke={base} strokeWidth="1.1" />
-      <circle cx="60" cy="60" r="12" fill={g} />
-      <circle cx="60" cy="60" r="7.8" fill="none" stroke={base} strokeWidth="1.4" />
-      <circle cx="60" cy="60" r="2.6" fill={base} />
+      <path d={`${circlePath(60, 60, 44)} ${circlePath(60, 60, 33.5)}`} fill={g} fillRule="evenodd" />
+      <circle cx="60" cy="60" r="38.8" fill="none" stroke={cut} strokeWidth="1.1" />
+      <circle cx="60" cy="60" r="12.5" fill={g} />
+      <circle cx="60" cy="60" r="8.2" fill="none" stroke={cut} strokeWidth="1.4" />
+      <circle cx="60" cy="60" r="2.8" fill={cut} />
     </>
   );
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// Secular
+// Not religious
 
-const FLORAL_POINTED = "M60 50 C66 42 68 26 60 12 C52 26 54 42 60 50 Z";
-const FLORAL_ROUND = "M60 48 C68 42 71 30 66 22 C64 19 62 19 60 21.5 C58 19 56 19 54 22 C49 30 52 42 60 48 Z";
+const FLORAL_ROUND = "M60 47 C68 41 71 30 66 22.5 C64 19.5 62 19.5 60 22 C58 19.5 56 19.5 54 22.5 C49 30 52 41 60 47 Z";
 
-/** Floral: an eight-petalled flower with a dotted ring (no religious meaning). */
-export function Floral({ g, base, lite }: Ink) {
-  const k8 = Array.from({ length: 8 }, (_, k) => k);
+const FLORAL = once(() => {
+  const edge = brush(sp([pt(60, 60, 17, -104), pt(60, 60, 33, -106.5), pt(60, 60, 46, -98), pt(60, 60, 54, -90)]), { w: 2.8, in: 0.25, out: 0.4 });
+  return { edges: EIGHT.map((a) => `${xf(edge, a + 112.5, 60, 60)} ${xf(mirror(edge), a + 112.5, 60, 60)}`) };
+});
+
+/** Floral: a rangoli flower, eight outlined pointed petals behind eight filled round ones, and a ring of dots. */
+export function Floral({ g, cut }: Ink) {
+  const { edges } = FLORAL();
   return (
     <>
-      <circle cx="60" cy="60" r="56" fill={base} />
-      {k8.map((k) => {
-        const [x, y] = pt(60, 60, 52, k * 45 - 90);
-        return <circle key={`d${k}`} cx={x} cy={y} r="2.2" fill={g} />;
-      })}
-      {k8.map((k) => (
-        <Keyed key={`b${k}`} d={xf(FLORAL_POINTED, k * 45 + 22.5, 60, 60)} fill={lite} base={base} width={2.8} />
-      ))}
-      {k8.map((k) => (
-        <g key={`f${k}`}>
-          <Keyed d={xf(FLORAL_ROUND, k * 45, 60, 60)} fill={g} base={base} width={3.2} />
-          <path d={xf("M60 44 L60 28", k * 45, 60, 60)} stroke={base} strokeWidth="1" strokeLinecap="round" />
+      {EIGHT.map((a, k) => (
+        <g key={a}>
+          <path d={edges[k]} fill={g} />
+          <circle cx={pt(60, 60, 47.5, a + 22.5 + 22.5)[0]} cy={pt(60, 60, 47.5, a + 45)[1]} r="1.7" fill={g} />
         </g>
       ))}
-      <Keyed d={circlePath(60, 60, 12)} fill={g} base={base} width={3.2} />
-      <circle cx="60" cy="60" r="7.5" fill="none" stroke={base} strokeWidth="1.2" />
-      <circle cx="60" cy="60" r="2.6" fill={base} />
+      {EIGHT.map((a) => (
+        <g key={a}>
+          <Keyed d={xf(FLORAL_ROUND, a + 90, 60, 60)} fill={g} cut={cut} width={2.6} />
+          <path d={xf("M60 43.5 L60 28", a + 90, 60, 60)} stroke={cut} strokeWidth="1" strokeLinecap="round" />
+        </g>
+      ))}
+      <Keyed d={circlePath(60, 60, 11.5)} fill={g} cut={cut} width={2.6} />
+      <circle cx="60" cy="60" r="7.4" fill="none" stroke={cut} strokeWidth="1.2" />
+      <circle cx="60" cy="60" r="2.6" fill={cut} />
     </>
   );
 }
 
-/** Rings: two interlocking wedding rings, one with a stone (no religious meaning). */
-export function Rings({ g, base }: Ink) {
-  const A = [47, 72] as const;
-  const B = [73, 72] as const;
-  const r = 23;
-  const ring = (c: readonly [number, number]) => (
-    <>
-      <circle cx={c[0]} cy={c[1]} r={r} fill="none" stroke={g} strokeWidth="7.5" />
-      <circle cx={c[0]} cy={c[1]} r={r} fill="none" stroke={base} strokeWidth="0.9" strokeOpacity="0.75" />
-    </>
-  );
-  // Interlocked without masks: A, then B over it with a keyline where it crosses A at the bottom, then the top
-  // crossing of A drawn again over B, with its own keyline.
-  const overB = arc(A[0], A[1], r, -80, -35);
+const PAISLEY = blob([
+  [55, 104],
+  [38, 98],
+  [30, 81],
+  [33, 63],
+  [44, 50.5],
+  [56.5, 42],
+  [66.5, 33],
+  [73.5, 23.5],
+  [80, 16.4],
+  [87.6, 14.2],
+  [93, 18.4],
+  [92.2, 25.6],
+  [87.4, 27.8],
+  [86, 24.2],
+  [82.6, 28.6],
+  [79.6, 37],
+  [80.6, 50],
+  [81.6, 66],
+  [79, 85],
+  [70.5, 99],
+]);
+
+const PAISLEY_LINES = once(() => ({
+  contour: brush(sp([[72.6, 34.5], [60, 47], [47, 56], [39.6, 67], [38.6, 81], [45, 93], [56, 97], [67, 93], [72.6, 82], [73, 66], [71.6, 52]]), { w: 1.9, in: 0.12, out: 0.12, tip: 0.3 }),
+  outline: brush(sp([[66, 107.6], [48, 108], [32.4, 99], [25.6, 81], [28.6, 61.5], [40, 46.6], [52.6, 37.8], [62, 28.6], [69.6, 18.6], [77.6, 11.4]]), { w: 1.8, in: 0.25, out: 0.3 }),
+}));
+
+/** Paisley (the mango buta): a filled teardrop whose tip curls over, an outer hairline, an inner contour, a flower. */
+export function Paisley({ g, cut }: Ink) {
+  const petal = "M56 80 C58.4 76 58.4 72.6 56 69.2 C53.6 72.6 53.6 76 56 80 Z";
+  const { contour, outline } = PAISLEY_LINES();
+  const seeds = [
+    [96.4, 34, 1.9],
+    [96.6, 42, 1.5],
+    [95, 49, 1.15],
+  ] as const;
   return (
     <>
-      <circle cx="60" cy="60" r="52" fill={base} />
-      {ring(A)}
-      <path d={arc(B[0], B[1], r, 100, 145)} fill="none" stroke={base} strokeWidth="11" />
-      {ring(B)}
-      <path d={overB} fill="none" stroke={base} strokeWidth="11" />
-      <path d={overB} fill="none" stroke={g} strokeWidth="7.5" />
-      <path d={overB} fill="none" stroke={base} strokeWidth="0.9" strokeOpacity="0.75" />
-      <path d="M69 46 L70.5 42.5 L75.5 42.5 L77 46 Z" fill={g} />
-      <Keyed d="M65 36 L68.5 30.5 L77.5 30.5 L81 36 L73 45.5 Z" fill={g} base={base} width={2.6} />
-      <path d="M65.5 36 H80.5 M68.5 30.5 L71 36 L73 45 L75 36 L77.5 30.5" fill="none" stroke={base} strokeWidth="0.9" strokeLinejoin="round" />
-      <path d="M89 25 L90.2 29 L94 30.2 L90.2 31.4 L89 35.4 L87.8 31.4 L84 30.2 L87.8 29 Z" fill={g} />
-      <path d="M55 30 L55.8 32.6 L58.4 33.4 L55.8 34.2 L55 36.8 L54.2 34.2 L51.6 33.4 L54.2 32.6 Z" fill={g} />
+      <path d={outline} fill={g} />
+      <path d={PAISLEY} fill={g} />
+      <path d={contour} fill={cut} />
+      {Array.from({ length: 6 }, (_, k) => (
+        <path key={k} d={xf(petal, k * 60, 56, 80)} fill={cut} />
+      ))}
+      <circle cx="56" cy="80" r="1.8" fill={g} />
+      {[50, 58.5].map((y, k) => (
+        <circle key={y} cx={63 - k * 4.6} cy={y - 4} r={1.3 - k * 0.15} fill={cut} />
+      ))}
+      {seeds.map(([x, y, rr]) => (
+        <circle key={y} cx={x} cy={y} r={rr} fill={g} />
+      ))}
+    </>
+  );
+}
+
+const RING_A = [47, 72] as const;
+const RING_B = [73, 72] as const;
+const RINGS = once(() => {
+  const ring = (c: readonly [number, number], a0: number, a1: number) => brush(arcSegs(c[0], c[1], 22, a0, a1), { w: 7.2, nib: -35, thin: 0.42, in: 0, out: 0, tip: 1 });
+  return { a: ring(RING_A, 0, 360), b: ring(RING_B, 0, 360), aTop: ring(RING_A, -84, -34) };
+});
+
+/** Rings: two interlocked wedding rings drawn with a nib (thick and thin), one set with a stone. */
+export function Rings({ g, cut }: Ink) {
+  const [A, B, r] = [RING_A, RING_B, 22];
+  const rings = RINGS();
+  // Interlocked without masks: A, then B over it at the bottom crossing (with a paper keyline), then the top
+  // crossing of A drawn again over B, with its own keyline.
+  return (
+    <>
+      <path d={rings.a} fill={g} />
+      <path d={arc(B[0], B[1], r, 105, 145)} fill="none" stroke={cut} strokeWidth="11" />
+      <path d={rings.b} fill={g} />
+      <path d={arc(A[0], A[1], r, -78, -40)} fill="none" stroke={cut} strokeWidth="11" />
+      <path d={rings.aTop} fill={g} />
+      <path d="M68.6 47.6 L70.2 44 H75.8 L77.4 47.6 Z" fill={g} />
+      <Keyed d="M64.6 36.6 L68.4 31 H77.6 L81.4 36.6 L73 46.4 Z" fill={g} cut={cut} width={2.4} />
+      <path d="M65.2 36.6 H80.8 M68.4 31 L71 36.6 L73 45.6 L75 36.6 L77.6 31" fill="none" stroke={cut} strokeWidth="0.9" strokeLinejoin="round" />
+      <path d="M90 23 L91.2 27.4 L95.6 28.6 L91.2 29.8 L90 34.2 L88.8 29.8 L84.4 28.6 L88.8 27.4 Z" fill={g} />
+      <path d="M55 29 L55.8 31.8 L58.6 32.6 L55.8 33.4 L55 36.2 L54.2 33.4 L51.4 32.6 L54.2 31.8 Z" fill={g} />
     </>
   );
 }

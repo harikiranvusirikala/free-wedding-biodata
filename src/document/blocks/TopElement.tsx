@@ -68,7 +68,7 @@ export function TopElement({ doc, palette, look }: { doc: DocModel; palette: Pal
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.35em", paddingBottom: "0.2em", textAlign: "center" }}>
       <Invocation doc={doc} palette={palette} />
-      <Motif id={doc.motif} ink={palette.ink} base={palette.inkBase} size={look.motifSize} />
+      <Motif id={doc.motif} ink={palette.ink} base={palette.inkBase} paper={palette.paper} size={look.motifSize} />
       {doc.title ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.7em", width: "100%" }}>
           <Flourish color={flourish} style={look.titleStyle} side="left" />

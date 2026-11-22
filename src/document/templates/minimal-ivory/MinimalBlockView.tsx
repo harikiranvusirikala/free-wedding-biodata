@@ -66,7 +66,7 @@ function Header({ doc, palette, photo }: Pick<BlockViewProps, "doc" | "palette" 
         <div style={{ flex: "1 1 0", minWidth: 0 }}>
           {isMotif(doc.motif) || doc.invocation ? (
             <div style={{ display: "flex", alignItems: "center", gap: "0.7em", paddingBottom: "0.8em" }}>
-              <Motif id={doc.motif} ink={palette.ink} base={palette.inkBase} size={44} />
+              <Motif id={doc.motif} ink={palette.ink} base={palette.inkBase} paper={palette.paper} size={44} />
               {doc.invocation ? (
                 <div style={{ color: palette.label, fontFamily: mixedFontStack(doc.lang, doc.invocation), minWidth: 0, overflowWrap: "anywhere" }}>{doc.invocation}</div>
               ) : null}

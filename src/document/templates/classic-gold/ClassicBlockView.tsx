@@ -66,7 +66,7 @@ function TopElement({ doc, palette }: { doc: DocModel; palette: Palette }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.35em", paddingBottom: "0.2em", textAlign: "center" }}>
       <Invocation doc={doc} palette={palette} />
-      <Motif id={doc.motif} ink={palette.ink} base={palette.inkBase} size={MOTIF_SIZE} />
+      <Motif id={doc.motif} ink={palette.ink} base={palette.inkBase} paper={palette.paper} size={MOTIF_SIZE} />
       {doc.title ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.7em", width: "100%" }}>
           <div aria-hidden style={{ width: 72, height: 1.5, background: tint(palette.label, 0.35), flex: "none" }} />

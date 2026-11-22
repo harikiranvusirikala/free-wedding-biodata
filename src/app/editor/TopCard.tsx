@@ -39,7 +39,7 @@ function RadioTiles<T extends string>({
 }: {
   labelId: string;
   value: T;
-  options: readonly { value: T; label: string; content: ReactNode; className: string; style?: CSSProperties; testId?: string }[];
+  options: readonly { value: T; label: string; title?: string; content: ReactNode; className: string; style?: CSSProperties; testId?: string }[];
   onChange: (value: T) => void;
   disabled: boolean;
   className: string;
@@ -65,7 +65,7 @@ function RadioTiles<T extends string>({
             role="radio"
             aria-checked={checked}
             aria-label={option.label}
-            title={option.label}
+            title={option.title ?? option.label}
             data-value={option.value}
             data-testid={option.testId}
             tabIndex={checked ? 0 : -1}
@@ -83,8 +83,9 @@ function RadioTiles<T extends string>({
 }
 
 /**
- * A symbol tile. The fourteen choices sit in two rows of seven at every width (no ragged last row); on phones a tile
- * is 44 px tall, from tablets up it is square, and the drawing takes most of it so the details stay readable.
+ * A symbol tile. The twenty choices (None and nineteen symbols, in tradition order) sit in four rows of five on phones
+ * and two rows of ten from tablets up (no ragged last row); on phones a tile is 44 px tall, from tablets up it is
+ * square, and the drawing takes most of it so the details stay readable.
  */
 const TILE =
   "flex h-11 min-w-0 items-center justify-center rounded-[10px] border transition-[border-color,box-shadow] disabled:opacity-55 sm:aspect-square sm:h-auto aria-checked:border-brand aria-checked:ring-2 aria-checked:ring-ring [&_svg]:h-[78%] [&_svg]:w-[78%] sm:[&_svg]:h-[72%] sm:[&_svg]:w-[72%]";
@@ -96,8 +97,10 @@ const CHIP_OFF = "border-line-strong bg-surface text-ink-2 shadow-card hover:bg-
 
 /** A motif on a small piece of the design's paper. */
 function MotifTile({ id, palette, size }: { id: string; palette: Palette; size: number }) {
-  return <Motif id={id} ink={palette.ink} base={palette.inkBase} size={size} />;
+  return <Motif id={id} ink={palette.ink} base={palette.inkBase} paper={palette.paper} size={size} />;
 }
+
+const traditionName = (id: string) => t(`top.group.${motifTradition(id)}` as AppKey);
 
 /** The symbol tiles: None, then the whole library in its order (grouped by tradition), all at once. */
 function MotifPicker({ value, palette, readOnly, onChange }: { value: string | null; palette: Palette; readOnly: boolean; onChange: (id: string | null) => void }) {
@@ -114,6 +117,7 @@ function MotifPicker({ value, palette, readOnly, onChange }: { value: string | n
     ...MOTIF_IDS.map((id) => ({
       value: id,
       label: motifName(id),
+      title: `${motifName(id)} · ${traditionName(id)}`,
       content: <MotifTile id={id} palette={palette} size={30} />,
       className: `${TILE} ${value === id ? "" : TILE_OFF}`,
       style: { background: palette.paper },
@@ -136,35 +140,49 @@ function MotifPicker({ value, palette, readOnly, onChange }: { value: string | n
         options={options}
         onChange={(v) => onChange(v === "none" ? null : v)}
         disabled={readOnly}
-        className="mt-2 grid max-w-[31rem] grid-cols-7 gap-1 sm:gap-1.5"
+        className="mt-2 grid max-w-[37rem] grid-cols-5 gap-1.5 sm:grid-cols-10"
       />
       <MotifDialog open={open} value={value} palette={palette} onClose={() => setOpen(false)} onChange={onChange} />
     </div>
   );
 }
 
-/** Every symbol larger, with its name and tradition ("See them larger"). Picking one closes it. */
+/** Every symbol larger, with its name, in groups by tradition ("See them larger"). Picking one closes it. */
 function MotifDialog({ open, value, palette, onClose, onChange }: { open: boolean; value: string | null; palette: Palette; onClose: () => void; onChange: (id: string | null) => void }) {
   const pick = (id: string | null) => {
     onChange(id);
     onClose();
   };
   const cell = (selected: boolean) =>
-    `flex min-h-28 flex-col items-center justify-center gap-1 rounded-xl border p-2 text-center transition-colors ${selected ? "border-brand ring-2 ring-ring" : "border-line-strong hover:border-ink-3"} ${focusRing}`;
-  const ids = MOTIF_TRADITIONS.flatMap((tradition) => MOTIF_IDS.filter((id) => motifTradition(id) === tradition));
+    `flex min-h-28 flex-col items-center justify-center gap-1.5 rounded-xl border p-2 text-center transition-colors ${selected ? "border-brand ring-2 ring-ring" : "border-line-strong hover:border-ink-3"} ${focusRing}`;
+  const grid = "grid grid-cols-3 gap-2 sm:grid-cols-6";
+  const groups = MOTIF_TRADITIONS.map((tradition) => ({ tradition, ids: MOTIF_IDS.filter((id) => motifTradition(id) === tradition) })).filter((group) => group.ids.length);
   return (
     <Dialog open={open} onClose={onClose} title={t("top.motif.dialog.title")} description={t("top.motif.dialog.text")} wide>
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5" data-testid="motif-dialog">
-        <button type="button" aria-pressed={value === null} onClick={() => pick(null)} className={`${cell(value === null)} bg-surface`}>
+      <div className="space-y-4" data-testid="motif-dialog">
+        <button
+          type="button"
+          aria-pressed={value === null}
+          onClick={() => pick(null)}
+          className={`inline-flex min-h-12 items-center gap-2 rounded-xl border bg-surface px-4 transition-colors ${value === null ? "border-brand ring-2 ring-ring" : "border-line-strong hover:border-ink-3"} ${focusRing}`}
+        >
           <span className="text-sm font-semibold text-ink-2">{t("top.motif.none")}</span>
-          <span className="text-[12px] leading-tight text-ink-3">{t("top.motif.noneName")}</span>
+          <span className="text-[13px] text-ink-3">{t("top.motif.noneName")}</span>
         </button>
-        {ids.map((id) => (
-          <button key={id} type="button" aria-pressed={value === id} onClick={() => pick(id)} className={cell(value === id)} style={{ background: palette.paper }}>
-            <MotifTile id={id} palette={palette} size={56} />
-            <span className="text-[12.5px] leading-tight font-semibold text-stone-800">{motifName(id)}</span>
-            <span className="text-[11.5px] leading-tight text-stone-500">{t(`top.group.${motifTradition(id)}` as AppKey)}</span>
-          </button>
+        {groups.map(({ tradition, ids }) => (
+          <section key={tradition} aria-label={t(`top.group.${tradition}` as AppKey)}>
+            <h3 className="mb-1.5 text-[12px] font-semibold tracking-wide text-ink-3 uppercase">{t(`top.group.${tradition}` as AppKey)}</h3>
+            <div className={grid}>
+              {ids.map((id) => (
+                <button key={id} type="button" aria-pressed={value === id} onClick={() => pick(id)} className={cell(value === id)} style={{ background: palette.paper }}>
+                  <MotifTile id={id} palette={palette} size={60} />
+                  <span className="text-[12.5px] leading-tight font-semibold" style={{ color: palette.label }}>
+                    {motifName(id)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
       <DialogActions>
