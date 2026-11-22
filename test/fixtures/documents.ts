@@ -20,6 +20,8 @@ export interface DocVariant {
   length: DocLength;
   /** Draw the placeholder photo, and in which frame. */
   photo: "3:4" | "2:3" | null;
+  /** Draw the second placeholder photo on page 1 too (Step 4.4, D40; always the tall 2:3 frame). */
+  secondPhoto?: boolean;
   profile: BiodataProfile;
 }
 
@@ -165,6 +167,16 @@ const DEFAULT_COLOR: Record<string, string> = {
   deepam: "maroon",
   "executive-navy": "navy",
   "modern-two-column": "teal",
+  "floral-ivory": "blush",
+  "watercolour-rose": "rose",
+  "mango-grove": "mango",
+  "mint-vines": "green",
+  "baroque-gold": "gold",
+  peacock: "teal",
+  "peach-filigree": "peach",
+  "navy-rosette": "navy",
+  sandalwood: "sandal",
+  "slate-brush": "slate",
 };
 
 /**
@@ -180,7 +192,20 @@ export const NEW_DESIGNS: readonly { id: string; colors: readonly [string, strin
   { id: "deepam", colors: ["maroon", "purple", "night"], lang: "gu", photo: "3:4" },
   { id: "executive-navy", colors: ["navy", "forest", "plum"], lang: "bn", photo: "3:4" },
   { id: "modern-two-column", colors: ["teal", "amber", "rose"], lang: "pa", photo: "3:4" },
+  { id: "floral-ivory", colors: ["blush", "lavender", "marigold"], lang: "kn", photo: "2:3" },
+  { id: "watercolour-rose", colors: ["rose", "lilac", "coral"], lang: "hi", photo: "3:4" },
+  { id: "mango-grove", colors: ["mango", "leaf", "berry"], lang: "ta", photo: "3:4" },
+  { id: "mint-vines", colors: ["green", "teal", "olive"], lang: "ml", photo: "3:4" },
+  { id: "baroque-gold", colors: ["gold", "maroon", "navy"], lang: "gu", photo: "3:4" },
+  { id: "peacock", colors: ["teal", "blue", "emerald"], lang: "mr", photo: "3:4" },
+  { id: "peach-filigree", colors: ["peach", "rose", "sage"], lang: "bn", photo: "3:4" },
+  { id: "navy-rosette", colors: ["navy", "maroon", "green"], lang: "pa", photo: "3:4" },
+  { id: "sandalwood", colors: ["sandal", "rosewood", "tulsi"], lang: "kn", photo: "3:4" },
+  { id: "slate-brush", colors: ["slate", "heather", "sage"], lang: "hi", photo: "3:4" },
 ];
+
+/** How many designs there are (Classic Gold and Minimal Ivory plus NEW_DESIGNS; designs.test checks it against TEMPLATES), for e2e counts. */
+export const DESIGN_COUNT = NEW_DESIGNS.length + 2;
 
 function variant(templateId: string, colorId: string, lang: LangCode, length: DocLength, photo: DocVariant["photo"] = "3:4"): DocVariant {
   let profile = base(templateId, lang, colorId);
@@ -246,3 +271,27 @@ export function mixedScriptVariants(): DocVariant[] {
 
 /** The fixed "today" for fixtures, so ages don't change from run to run. */
 export const FIXTURE_TODAY = new Date(2026, 10, 21);
+
+/**
+ * Step 4.4's second photo on page 1 (D40), in every design given (the registry, so a new design is covered): the
+ * short biodata in English with both photos, `<id>-en-short-two`; plus, for one design of each skeleton and the
+ * letterhead, the same in Telugu and the full sample (more rows, so the second photo stands beside a longer
+ * section and pagination is exercised).
+ */
+export function secondPhotoVariants(templates: readonly { id: string; skeleton: string; colors: readonly { id: string }[] }[]): DocVariant[] {
+  const out: DocVariant[] = [];
+  const two = (v: DocVariant): DocVariant => {
+    v.profile.secondPhoto = { id: "placeholder-second", crop: { x: 0.5, y: 0.5, zoom: 1, rotation: 0 } };
+    return { ...v, id: `${v.id}-two`, secondPhoto: true };
+  };
+  for (const t of templates) {
+    const color = t.colors[0].id;
+    out.push(two(variant(t.id, color, "en", "short", NEW_DESIGNS.find((d) => d.id === t.id)?.photo ?? "3:4")));
+  }
+  for (const id of ["classic-gold", "minimal-ivory", "executive-navy", "sandalwood", "slate-brush"]) {
+    const t = templates.find((x) => x.id === id);
+    if (!t) continue;
+    out.push(two(variant(t.id, t.colors[0].id, "te", "short")), two(variant(t.id, t.colors[0].id, "en", "sample")));
+  }
+  return out;
+}

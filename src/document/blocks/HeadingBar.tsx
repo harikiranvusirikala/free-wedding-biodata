@@ -20,6 +20,10 @@ export interface HeadingLook {
   underline: string | null;
   /** Its thickness in px (default 1; the underline bar style uses 2). */
   underlineWidth?: number;
+  /** A 1 px outline all round the bar (the outline bar style; the display list draws it as the rect's stroke). */
+  border?: string;
+  /** The bar's corner radius in px, with `border`. */
+  radius?: number;
   /** Space below the heading, before its first row. */
   after: string;
 }
@@ -39,7 +43,8 @@ export function HeadingBar({ title, lang, look }: { title: string; lang: LangCod
           letterSpacing: hasIndicScript(title) ? 0 : look.letterSpacing,
           fontFamily: textFontStack(lang, title),
           textTransform: look.uppercase ? "uppercase" : undefined,
-          borderBottom: look.underline ? `${look.underlineWidth ?? 1}px solid ${look.underline}` : undefined,
+          borderBottom: look.border ? `1px solid ${look.border}` : look.underline ? `${look.underlineWidth ?? 1}px solid ${look.underline}` : undefined,
+          ...(look.border ? { borderTop: `1px solid ${look.border}`, borderLeft: `1px solid ${look.border}`, borderRight: `1px solid ${look.border}`, borderRadius: look.radius } : null),
           overflowWrap: "anywhere",
         }}
       >

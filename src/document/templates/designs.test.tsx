@@ -3,9 +3,10 @@ import { describe, expect, it } from "vitest";
 import { toDocument, type DocModel } from "@/biodata/document";
 import { getDocDictionary } from "@/i18n/doc";
 import { svgToPdf } from "@/pdf/svg-to-pdf";
-import { documentVariants, FIXTURE_TODAY, NEW_DESIGNS } from "../../../test/fixtures/documents";
+import { DESIGN_COUNT, documentVariants, FIXTURE_TODAY, NEW_DESIGNS } from "../../../test/fixtures/documents";
 import { blockTexts } from "../blocks/texts";
 import { contrast } from "../frames/geometry";
+import { washAt, washStops } from "../frames/paper-wash";
 import { paginate, type BlockMetrics } from "../paginate";
 import { MODERN_BOX, modernAsideTexts, modernBlocks, sideContact, SIDE_CONTACT_LIMIT } from "../skeletons/modern/layout";
 import { PAGE } from "../tokens";
@@ -22,7 +23,7 @@ const docFor = (id: string): DocModel => {
 };
 
 describe("design registry (D46)", () => {
-  it("lists designs 1–10 in picker order, Minimal Ivory last", () => {
+  it("lists the twenty designs in D46's picker order, Minimal Ivory last", () => {
     expect(TEMPLATES.map((t) => t.id)).toEqual([
       "classic-gold",
       "kalyanam",
@@ -31,8 +32,18 @@ describe("design registry (D46)", () => {
       "paisley",
       "royal-maroon",
       "deepam",
+      "baroque-gold",
+      "sandalwood",
+      "peacock",
+      "floral-ivory",
+      "watercolour-rose",
+      "mango-grove",
+      "mint-vines",
+      "peach-filigree",
       "executive-navy",
       "modern-two-column",
+      "slate-brush",
+      "navy-rosette",
       "minimal-ivory",
     ]);
   });
@@ -46,7 +57,7 @@ describe("design registry (D46)", () => {
       if (t.skeleton !== "minimal") expect(t.Frame, t.id).toBeDefined();
       expect(t.autoSteps.length, t.id).toBeGreaterThan(0);
     }
-    expect(TEMPLATES.filter((t) => t.skeleton === "modern").map((t) => t.id)).toEqual(["executive-navy", "modern-two-column"]);
+    expect(TEMPLATES.filter((t) => t.skeleton === "modern").map((t) => t.id)).toEqual(["executive-navy", "modern-two-column", "slate-brush"]);
   });
 
   it("keeps left and right margins the same on every page (the paginator measures one column width)", () => {
@@ -68,6 +79,11 @@ describe("design registry (D46)", () => {
       }
     }
     expect(new Set(NEW_DESIGNS.map((d) => d.lang)).size).toBe(8);
+  });
+
+  it("has fixtures for every design, so the e2e counts (DESIGN_COUNT) follow the registry", () => {
+    expect(new Set(["classic-gold", "minimal-ivory", ...NEW_DESIGNS.map((d) => d.id)])).toEqual(new Set(TEMPLATES.map((t) => t.id)));
+    expect(DESIGN_COUNT).toBe(TEMPLATES.length);
   });
 });
 
@@ -112,7 +128,7 @@ describe("colours (WCAG AA on the paper)", () => {
 
 describe("Classic designs on the shared skeleton", () => {
   it("use Classic Gold's block list (photo beside the first section) and start page 1 higher only with a top element", () => {
-    for (const id of ["kalyanam", "temple-bells", "rangoli", "paisley", "royal-maroon", "deepam"]) {
+    for (const id of ["kalyanam", "temple-bells", "rangoli", "paisley", "royal-maroon", "deepam", "baroque-gold", "peacock", "peach-filigree", "navy-rosette"]) {
       const t = getTemplate(id);
       const short = docFor(`${id}-en-short`);
       const kinds = t.blocks(short, { photo: true }).map((s) => s.block.kind);
@@ -127,6 +143,56 @@ describe("Classic designs on the shared skeleton", () => {
 
   it("Paisley is drawn for the tall 2:3 photo", () => {
     expect(getTemplate("paisley").photoFrame).toBe("2:3");
+  });
+});
+
+describe("Step 4.4: Baroque Gold, Peacock, Peach Filigree, Navy Rosette (D46, D51)", () => {
+  const WASHED = ["baroque-gold", "peacock", "peach-filigree", "navy-rosette"];
+
+  it("keep every text colour readable on the paper wash, not only on the paper", () => {
+    for (const id of WASHED) {
+      for (const p of getTemplate(id).colors) {
+        for (const stop of washStops(p)) {
+          expect(contrast(p.text, stop), `${id}/${p.id} text on ${stop}`).toBeGreaterThanOrEqual(7);
+          expect(contrast(p.label, stop), `${id}/${p.id} label on ${stop}`).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    }
+  });
+
+  it("draw the wash as one linear gradient, plain through the middle of the page", () => {
+    const p = getTemplate("baroque-gold").colors[0];
+    const [top, middle, , bottom] = washStops(p);
+    expect([washAt(p, 0), washAt(p, PAGE.height / 2), washAt(p, PAGE.height)]).toEqual([top, middle, bottom]);
+    for (const id of WASHED) {
+      const Frame = getTemplate(id).Frame!;
+      const markup = renderToStaticMarkup(<Frame palette={getTemplate(id).colors[0]} />);
+      // The first thing drawn: a page-sized rect filled with a vertical gradient.
+      expect(markup, id).toMatch(new RegExp(`^<svg[^>]*><defs><linearGradient id="(wash[^"]+)" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="${PAGE.height}">`));
+      expect(markup, id).toMatch(new RegExp(`</defs><rect width="${PAGE.width}" height="${PAGE.height}" fill="url\\(#wash`));
+    }
+  });
+
+  it("give each design a deep festive or a light variant set as D51 asks: gold on dark paper in Baroque Gold and Peacock", () => {
+    const dark = (id: string) => getTemplate(id).colors.filter((c) => contrast(c.paper, "#000000") < 2).map((c) => c.id);
+    expect(dark("baroque-gold")).toEqual(["navy"]);
+    expect(dark("peacock")).toEqual(["emerald"]);
+    expect(dark("peach-filigree")).toEqual([]);
+    expect(dark("navy-rosette")).toEqual([]);
+  });
+
+  it("Peach Filigree's headings are pale bars with a thin outline and soft corners", () => {
+    const t = getTemplate("peach-filigree");
+    const doc = docFor("peach-filigree-en-short");
+    const p = t.colors[0];
+    const html = renderToStaticMarkup(<t.BlockView block={{ kind: "heading", id: "h", title: "Personal details" }} doc={doc} palette={p} />);
+    expect(html).toContain(`background:${p.bar}`);
+    for (const side of ["top", "right", "bottom", "left"]) expect(html).toContain(`border-${side}:1px solid ${p.barRule}`);
+    expect(html).toContain("border-radius:6px");
+    // The other bar styles keep no outline.
+    const navy = getTemplate("navy-rosette");
+    const solid = renderToStaticMarkup(<navy.BlockView block={{ kind: "heading", id: "h", title: "Personal details" }} doc={doc} palette={navy.colors[0]} />);
+    expect(solid).not.toContain("border-top");
   });
 });
 

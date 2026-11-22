@@ -1,7 +1,7 @@
 import type { DocModel } from "@/biodata/document";
 import { HeadingBar, type HeadingLook } from "../blocks/HeadingBar";
 import { Paragraph, type ParagraphLook } from "../blocks/Paragraph";
-import { Photo } from "../blocks/Photo";
+import { Photo, secondPhotoWidth } from "../blocks/Photo";
 import { Row, type RowLook } from "../blocks/Row";
 import { TopElement, type TopElementLook } from "../blocks/TopElement";
 import { classicBlocks, hasTopElement } from "../templates/classic-gold/layout";
@@ -9,15 +9,19 @@ import type { BlockViewProps, TemplateDef } from "../templates/types";
 import { isLatin, SPACE, type Box, type Palette } from "../tokens";
 
 // The Classic skeleton as data (VISION D34, D39; Step 4.3): Classic Gold's block list (an optional top element,
-// heading bars with label/value rows, the photo beside the first section that starts with rows) drawn with a
+// heading bars with label/value rows, the photo beside the first section that starts with rows, the second photo
+// beside a later one) drawn with a
 // design's own look: its margins clear of its frame, its heading-bar style, photo size and title flourish. Every
 // framed Classic design (Kalyanam, Temple Bells, Rangoli, Paisley, Royal Maroon, Deepam; Step 4.4's ten more) is
 // `classicSkeleton(look)` plus a frame and three palettes. Classic Gold keeps its own drawing (the owner's
 // reference, D29) on the same block list.
 
 export interface ClassicLook {
-  /** Heading bars: a filled bar with `barText` (solid), or `barText` over a 2 px `barRule` underline. */
-  bar: "solid" | "underline";
+  /**
+   * Heading bars: a filled bar with `barText` (solid), `barText` over a 2 px `barRule` underline, or a pale filled
+   * bar with a 1 px `barRule` outline and soft corners (outline, Peach Filigree).
+   */
+  bar: "solid" | "underline" | "outline";
   /**
    * Margins clear of the frame in px. `topWithElement` is page 1's top when it has a top element: a frame that
    * leaves the middle of the top edge free lets the motif and title start higher.
@@ -51,6 +55,7 @@ function headingLook(look: ClassicLook, doc: DocModel, p: Palette): HeadingLook 
     uppercase: latin,
     underline: underline ? (p.barRule ?? p.label) : null,
     underlineWidth: 2,
+    ...(look.bar === "outline" ? { border: p.barRule ?? p.rule, radius: 6 } : null),
     after: `${SPACE.afterHeading}em`,
   };
 }
@@ -87,10 +92,19 @@ const paragraphLook = (doc: DocModel, p: Palette, underline: boolean): Paragraph
 /** Page margins, block list and drawings of a Classic design. */
 export function classicSkeleton(look: ClassicLook): Pick<TemplateDef, "skeleton" | "pageBox" | "blocks" | "BlockView" | "photoRadius"> {
   const underline = look.bar === "underline";
-  function ClassicView({ block, doc, palette, photo, text, continued }: BlockViewProps) {
+  function ClassicView({ block, doc, palette, photo, mainFrame, text, continued }: BlockViewProps) {
     const heading = headingLook(look, doc, palette);
     const paragraph = paragraphLook(doc, palette, underline);
-    const photoEl = photo ? <Photo photo={photo} width={look.photoWidth[photo.frame]} radius={look.photoRadius} /> : null;
+    // The second photo (Step 4.4) beside a later section, a little smaller than the main one.
+    const second = (block.kind === "lead" || block.kind === "photo") && !!block.second;
+    // It sits in a column as wide as the main photo's, at its right, so the heading bars beside both end in line.
+    const photoEl = !photo ? null : second ? (
+      <div style={{ width: look.photoWidth[mainFrame ?? "3:4"], display: "flex", justifyContent: "flex-end", flex: "none" }}>
+        <Photo photo={photo} width={secondPhotoWidth(look.photoWidth["2:3"])} radius={look.photoRadius} />
+      </div>
+    ) : (
+      <Photo photo={photo} width={look.photoWidth[photo.frame]} radius={look.photoRadius} />
+    );
     switch (block.kind) {
       case "header":
         return <TopElement doc={doc} palette={palette} look={look.top} />;

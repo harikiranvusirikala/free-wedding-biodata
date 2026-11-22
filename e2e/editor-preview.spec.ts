@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { DESIGN_COUNT } from "../test/fixtures/documents";
 import { SAVED, openStoredDraft, readStored, sampleDraft } from "./editor-helpers";
 
 // Step 3.3: the live preview. Desktop: the right column shows the real pages (the same DocumentView as the PDF),
@@ -81,7 +82,7 @@ test.describe("desktop", () => {
     // Design: Paisley, in its first colour (Copper), then its Teal.
     await page.getByRole("button", { name: /^Design: Classic Gold/ }).click();
     const panel = page.getByTestId("design-panel");
-    await expect(panel.getByRole("radio")).toHaveCount(10 + 3);
+    await expect(panel.getByRole("radio")).toHaveCount(DESIGN_COUNT + 3);
     await expect(panel.getByRole("radio", { name: "Classic Gold" })).toHaveAttribute("aria-checked", "true");
     await panel.getByRole("radio", { name: "Paisley" }).click();
     await expect.poll(paper).toBe("rgb(253, 247, 239)");
@@ -161,7 +162,7 @@ test.describe("desktop", () => {
     const sheet = page.getByRole("dialog", { name: "Preview" });
     await expect(sheet).toBeVisible();
     await expect.poll(async () => (await sheet.boundingBox())!.x).toBeGreaterThan(100); // from the right, not full width
-    await expect(sheet.getByTestId("design-choices").getByRole("radio")).toHaveCount(10);
+    await expect(sheet.getByTestId("design-choices").getByRole("radio")).toHaveCount(DESIGN_COUNT);
     await expect(sheet.locator('[data-page="1"]')).toBeInViewport();
     await sheet.getByRole("button", { name: "Close the preview" }).click();
     await expect(page.getByTestId("preview-sheet")).not.toHaveAttribute("data-open");

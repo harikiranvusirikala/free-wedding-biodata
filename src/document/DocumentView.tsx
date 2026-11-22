@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DocModel } from "@/biodata/document";
-import type { PhotoInput, PhotoPagesInput } from "./blocks/types";
+import { blockPhoto, type PhotoInput, type PhotoPagesInput } from "./blocks/types";
 import { layoutDocument, loadDocumentFonts, loadElementFonts, type DocumentLayout } from "./measure";
 import { Page } from "./Page";
 import { inputPageCounts } from "./photo-pages";
@@ -30,6 +30,12 @@ export interface DocumentViewProps {
   /** The main photo's picture; without it no photo frame is drawn. */
   photo?: PhotoInput;
   /**
+   * The second photo on page 1 (Step 4.4, D40; always the tall 2:3 frame), drawn only together with the main
+   * photo: each design places it beside its details (Classic: beside a later section; Modern: low in the side
+   * panel; Minimal: beside the main photo in the header). It is measured and paginated with the blocks.
+   */
+  secondPhoto?: PhotoInput;
+  /**
    * The pages after the biodata: extra photos and the horoscope chart (Step 4.2b). They are not part of the layout:
    * the biodata's pages, Auto text size and relaxed spacing are decided without them.
    */
@@ -40,16 +46,18 @@ export interface DocumentViewProps {
   relaxSpacing?: boolean;
 }
 
-export function DocumentView({ doc, photo, photoPages, onLayout, className, relaxSpacing = true }: DocumentViewProps) {
+export function DocumentView({ doc, photo, secondPhoto: secondInput, photoPages, onLayout, className, relaxSpacing = true }: DocumentViewProps) {
   const template = getTemplate(doc.templateId);
   const palette = getPalette(template, doc.colorId);
-  const specs = useMemo(() => template.blocks(doc, { photo: !!photo }), [template, doc, photo]);
+  // The second photo prints only beside a main photo (D40).
+  const secondPhoto = photo ? secondInput : undefined;
+  const specs = useMemo(() => template.blocks(doc, { photo: !!photo, secondPhoto: !!secondPhoto }), [template, doc, photo, secondPhoto]);
   const steps = useMemo(() => (doc.textSize === "auto" ? template.autoSteps : [doc.textSize]), [doc.textSize, template]);
   const box0 = template.pageBox(0, doc);
   const contentWidth = PAGE.width - box0.left - box0.right;
 
   const measureRef = useRef<HTMLDivElement>(null);
-  const [state, setState] = useState<{ layout: DocumentLayout; specs: typeof specs; doc: DocModel; photo?: PhotoInput } | null>(null);
+  const [state, setState] = useState<{ layout: DocumentLayout; specs: typeof specs; doc: DocModel; photo?: PhotoInput; secondPhoto?: PhotoInput } | null>(null);
   const fresh = state?.specs === specs && state.doc === doc;
   const onLayoutRef = useRef(onLayout);
   useEffect(() => {
@@ -71,13 +79,13 @@ export function DocumentView({ doc, photo, photoPages, onLayout, className, rela
       };
       const layout = layoutDocument(root, specs, steps, pageHeight, { relax: relaxSpacing });
       if (cancelled) return;
-      setState({ layout, specs, doc, photo });
+      setState({ layout, specs, doc, photo, secondPhoto });
       onLayoutRef.current?.({ pages: layout.pages.length, step: layout.step, overflow: layout.overflow, relax: layout.relax });
     })();
     return () => {
       cancelled = true;
     };
-  }, [doc, photo, specs, steps, template, relaxSpacing]);
+  }, [doc, photo, secondPhoto, specs, steps, template, relaxSpacing]);
 
   const shown = state;
   const { BlockView } = template;
@@ -96,7 +104,7 @@ export function DocumentView({ doc, photo, photoPages, onLayout, className, rela
             >
               {specs.map((spec, i) => (
                 <div key={spec.block.id} data-block={i} style={{ flex: "none" }}>
-                  <BlockView block={spec.block} doc={doc} palette={palette} photo={photo} />
+                  <BlockView block={spec.block} doc={doc} palette={palette} photo={blockPhoto(spec.block, photo, secondPhoto)} secondPhoto={secondPhoto} mainFrame={photo?.frame} />
                 </div>
               ))}
             </div>
@@ -104,7 +112,7 @@ export function DocumentView({ doc, photo, photoPages, onLayout, className, rela
           {template.Aside ? (
             // Page 1's fixed side panel isn't measured, but its text may need fonts of another script too.
             <div data-measure-aside style={{ position: "relative", width: PAGE.width, height: PAGE.height, fontSize: BODY_PX[steps[0]], fontFamily: fontStack(doc.lang), lineHeight: LINE_HEIGHT }}>
-              <template.Aside doc={doc} palette={palette} photo={photo} />
+              <template.Aside doc={doc} palette={palette} photo={photo} secondPhoto={secondPhoto} />
             </div>
           ) : null}
         </div>
@@ -124,14 +132,23 @@ export function DocumentView({ doc, photo, photoPages, onLayout, className, rela
                 box={t.pageBox(p, shown.doc)}
                 bodyPx={shown.layout.bodyPx}
                 relax={shown.layout.relax}
-                decor={p === 0 && t.Aside ? <t.Aside doc={shown.doc} palette={pal} photo={shown.photo} /> : null}
+                decor={p === 0 && t.Aside ? <t.Aside doc={shown.doc} palette={pal} photo={shown.photo} secondPhoto={shown.secondPhoto} /> : null}
               >
                 {page.fragments.map((f) => {
                   const spec = shown.specs[f.block];
                   const piece = f.fromLine !== undefined ? shown.layout.pieces.get(f.block)?.get(f.fromLine) : undefined;
                   return (
                     <div key={`${spec.block.id}:${f.fromLine ?? 0}`} data-block={f.block} style={{ flex: "none", marginTop: f.spaceBefore }}>
-                      <t.BlockView block={spec.block} doc={shown.doc} palette={pal} photo={shown.photo} text={piece} continued={!!f.fromLine} />
+                      <t.BlockView
+                        block={spec.block}
+                        doc={shown.doc}
+                        palette={pal}
+                        photo={blockPhoto(spec.block, shown.photo, shown.secondPhoto)}
+                        secondPhoto={shown.secondPhoto}
+                        mainFrame={shown.photo?.frame}
+                        text={piece}
+                        continued={!!f.fromLine}
+                      />
                     </div>
                   );
                 })}

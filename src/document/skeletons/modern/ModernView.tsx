@@ -1,7 +1,7 @@
 import type { DocModel } from "@/biodata/document";
 import { HeadingBar, type HeadingLook } from "../../blocks/HeadingBar";
 import { Paragraph, type ParagraphLook } from "../../blocks/Paragraph";
-import { Photo } from "../../blocks/Photo";
+import { Photo, secondPhotoWidth } from "../../blocks/Photo";
 import { Row, type RowLook } from "../../blocks/Row";
 import { TopElement } from "../../blocks/TopElement";
 import { hasIndicScript, textFontStack } from "../../scripts";
@@ -20,6 +20,8 @@ import { modernSubtitle, SIDE_PAD, sideContact } from "./layout";
 /** The photo inside the panel: the panel's inner width less the 4 px ring on each side. */
 const RING = 4;
 const PHOTO_WIDTH = SIDE_PANEL_WIDTH - 2 * SIDE_PAD.x - 2 * RING;
+/** The second photo: tall 2:3, a little smaller than the main one (152 × 228). */
+const SECOND_WIDTH = secondPhotoWidth(PHOTO_WIDTH);
 
 const sideColors = (p: Palette) => {
   const side = p.side ?? p.bar;
@@ -87,11 +89,12 @@ export function ModernBlockView({ block, doc, palette, text, continued }: BlockV
 /** Page 1's side panel content (the panel itself is the frame, drawn on every page). */
 const valueText = (item: { value: string; note?: string }) => (item.note ? `${item.value} (${item.note})` : item.value);
 
-export function ModernAside({ doc, palette, photo }: AsideProps) {
+export function ModernAside({ doc, palette, photo, secondPhoto }: AsideProps) {
   const c = sideColors(palette);
   const latin = isLatin(doc.lang);
   const subtitle = modernSubtitle(doc);
-  const contact = sideContact(doc);
+  const second = photo ? secondPhoto : undefined;
+  const contact = sideContact(doc, { secondPhoto: !!second });
   const upperLabels = doc.labelCase === "upper" && latin;
   const font = (text: string) => textFontStack(doc.lang, text);
   return (
@@ -155,6 +158,13 @@ export function ModernAside({ doc, palette, photo }: AsideProps) {
               </div>
             ) : null,
           )}
+        </div>
+      ) : null}
+      {second ? (
+        // The second photo (Step 4.4, D40) under the panel's text, a little smaller than the main one; the Contact
+        // section stays in the panel only when it is short enough to leave room for it (layout.ts).
+        <div style={{ alignSelf: "flex-start", padding: RING, background: c.ring, borderRadius: 9, marginTop: "1.6em", flex: "none" }}>
+          <Photo photo={second} width={SECOND_WIDTH} radius={6} />
         </div>
       ) : null}
     </div>

@@ -1,7 +1,7 @@
 import type { DocModel } from "@/biodata/document";
 import { HeadingBar, type HeadingLook } from "../../blocks/HeadingBar";
 import { Paragraph, type ParagraphLook } from "../../blocks/Paragraph";
-import { Photo } from "../../blocks/Photo";
+import { Photo, photoHeight } from "../../blocks/Photo";
 import { Row, type RowLook } from "../../blocks/Row";
 import { isMotif, Motif } from "../../motifs";
 import { mixedFontStack, scriptFamilies, textFontStack } from "../../scripts";
@@ -55,7 +55,7 @@ const paragraph = (doc: DocModel, p: Palette): ParagraphLook => ({
   padBottom: "0.32em",
 });
 
-function Header({ doc, palette, photo }: Pick<BlockViewProps, "doc" | "palette" | "photo">) {
+function Header({ doc, palette, photo, secondPhoto }: Pick<BlockViewProps, "doc" | "palette" | "photo" | "secondPhoto">) {
   // Step 2.0: the invocation line and a title of the user's own print in their own script (scripts.ts).
   const latin = isLatin(doc.lang) && !scriptFamilies(doc.title ?? "").length;
   const subtitle = minimalSubtitle(doc);
@@ -93,15 +93,21 @@ function Header({ doc, palette, photo }: Pick<BlockViewProps, "doc" | "palette" 
           ) : null}
           {subtitle ? <div style={{ color: palette.label, paddingTop: relaxed("0.5em"), fontFamily: textFontStack(doc.lang, subtitle) }}>{subtitle}</div> : null}
         </div>
-        {photo ? <Photo photo={photo} width={PHOTO_WIDTH[photo.frame]} radius={2} /> : null}
+        {photo ? (
+          // The second photo (Step 4.4) stands beside the main one at the same height, so the pair reads as one.
+          <div style={{ display: "flex", gap: 10, flex: "none" }}>
+            <Photo photo={photo} width={PHOTO_WIDTH[photo.frame]} radius={2} />
+            {secondPhoto ? <Photo photo={secondPhoto} width={Math.round((photoHeight(photo.frame, PHOTO_WIDTH[photo.frame]) * 2) / 3)} radius={2} /> : null}
+          </div>
+        ) : null}
     </div>
   );
 }
 
-export function MinimalBlockView({ block, doc, palette, photo, text, continued }: BlockViewProps) {
+export function MinimalBlockView({ block, doc, palette, photo, secondPhoto, text, continued }: BlockViewProps) {
   switch (block.kind) {
     case "header":
-      return <Header doc={doc} palette={palette} photo={photo} />;
+      return <Header doc={doc} palette={palette} photo={photo} secondPhoto={secondPhoto} />;
     case "heading":
       return <HeadingBar lang={doc.lang} title={block.title} look={heading(doc, palette)} />;
     case "row":

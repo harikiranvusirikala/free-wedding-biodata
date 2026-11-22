@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PHOTO_PAGE_FRAME, printedChart, printedPhotoPages } from "@/biodata/photo-pages";
-import type { BiodataProfile, MainPhoto, PhotoFrame } from "@/biodata/types";
-import type { PhotoInput, PhotoPagesInput } from "@/document/blocks/types";
+import type { BiodataProfile, MainPhoto, PhotoFrame, PhotoRef } from "@/biodata/types";
+import { SECOND_PHOTO_FRAME, type PhotoInput, type PhotoPagesInput } from "@/document/blocks/types";
 import { photoPagePixels } from "@/document/photo-pages";
 import { drawPicture, printPixels, renderCropDataUrl } from "./photos";
 import { cropKey, fitKey, resolvePicture, type DrawPicture, type PictureRequest, type PictureSnapshot } from "./picture-store";
@@ -68,20 +68,20 @@ export async function loadDocumentPhoto(
 export function useDocumentPhoto(
   photo: MainPhoto | undefined,
   loadBlob: LoadBlob,
-  { render = renderCropDataUrl }: { render?: RenderCrop } = {},
+  { render = renderCropDataUrl, printWidthMm = DOCUMENT_PHOTO_MM }: { render?: RenderCrop; printWidthMm?: number } = {},
 ): { photo?: PhotoInput; ready: boolean } {
   const key = documentPhotoKey(photo);
   const [drawn, setDrawn] = useState<{ key: string; photo?: PhotoInput } | null>(null);
-  const latest = useRef({ photo, loadBlob, render });
+  const latest = useRef({ photo, loadBlob, render, printWidthMm });
   useEffect(() => {
-    latest.current = { photo, loadBlob, render };
+    latest.current = { photo, loadBlob, render, printWidthMm };
   });
 
   useEffect(() => {
     if (!key) return;
     let live = true;
-    const { photo: current, loadBlob: load, render: draw } = latest.current;
-    void loadDocumentPhoto(current, load, { render: draw }).then((input) => {
+    const { photo: current, loadBlob: load, render: draw, printWidthMm: mm } = latest.current;
+    void loadDocumentPhoto(current, load, { render: draw, printWidthMm: mm }).then((input) => {
       if (live) setDrawn({ key, photo: input });
     });
     return () => {
@@ -91,6 +91,20 @@ export function useDocumentPhoto(
 
   if (!key) return { photo: undefined, ready: true };
   return { photo: drawn?.photo, ready: drawn?.key === key };
+}
+
+/**
+ * The second photo on page 1 (Step 4.4, D40): printed at most 152 px ≈ 40 mm wide in any design (Modern's side panel),
+ * so 42 mm at 300 dpi is enough.
+ */
+export const SECOND_PHOTO_MM = 42;
+
+/** The second photo as the document draws it: always the tall 2:3 frame. */
+export const secondPhotoAsMain = (ref: PhotoRef | undefined): MainPhoto | undefined => (ref ? { id: ref.id, crop: ref.crop, frame: SECOND_PHOTO_FRAME } : undefined);
+
+/** The document's second photo for React, drawn like the main one (useDocumentPhoto) in its 2:3 frame. */
+export function useSecondDocumentPhoto(ref: PhotoRef | undefined, loadBlob: LoadBlob, options: { render?: RenderCrop } = {}): { photo?: PhotoInput; ready: boolean } {
+  return useDocumentPhoto(secondPhotoAsMain(ref), loadBlob, { ...options, printWidthMm: SECOND_PHOTO_MM });
 }
 
 // ---------------------------------------------------------------------------------------------------------------

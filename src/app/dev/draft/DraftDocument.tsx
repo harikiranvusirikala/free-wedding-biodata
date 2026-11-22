@@ -7,7 +7,7 @@ import { DocumentView, type DocumentLayoutInfo } from "@/document/DocumentView";
 import { getDocDictionary } from "@/i18n/doc";
 import { openDb } from "@/lib/db";
 import { chartTitle } from "@/biodata/photo-pages";
-import { useDocumentPhoto, useDocumentPhotos } from "@/lib/document-photo";
+import { useDocumentPhoto, useDocumentPhotos, useSecondDocumentPhoto } from "@/lib/document-photo";
 import { createProfileRepo } from "@/lib/profile-repo";
 import { pdfHarness, type PdfHarness } from "../pdf/harness";
 
@@ -51,10 +51,11 @@ export function DraftDocument() {
     return result.ok ? result.value?.blob : undefined;
   }, []);
   const photo = useDocumentPhoto(profile?.photo, loadBlob);
+  const second = useSecondDocumentPhoto(profile?.photo ? profile.secondPhoto : undefined, loadBlob);
   // The pages after the biodata (Step 4.2b): extra photos and the horoscope chart.
   const heading = profile ? chartTitle(profile, getDocDictionary(profile.docLanguage)) : "";
   const extra = useDocumentPhotos({ photoPages: profile?.photoPages, horoscopeChart: profile?.horoscopeChart }, heading, loadBlob);
-  const ready = photo.ready && extra.ready;
+  const ready = photo.ready && second.ready && extra.ready;
 
   useEffect(() => {
     if (!layout || !ready) return;
@@ -66,7 +67,7 @@ export function DraftDocument() {
   if (!doc) return null;
   return (
     <div style={{ background: "#d6d3d1", padding: "24px 0", minHeight: "100vh" }} data-testid="draft-document">
-      {ready && <DocumentView doc={doc} photo={photo.photo} photoPages={extra.input} onLayout={setLayout} relaxSpacing={relax} />}
+      {ready && <DocumentView doc={doc} photo={photo.photo} secondPhoto={second.photo} photoPages={extra.input} onLayout={setLayout} relaxSpacing={relax} />}
     </div>
   );
 }

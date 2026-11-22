@@ -22,6 +22,17 @@ const NEW_DESIGNS = [
   ["deepam", "gu"],
   ["executive-navy", "bn"],
   ["modern-two-column", "pa"],
+  ["floral-ivory", "kn"],
+  ["watercolour-rose", "hi"],
+  ["mango-grove", "ta"],
+  ["mint-vines", "ml"],
+  // Step 4.4
+  ["baroque-gold", "gu"],
+  ["peacock", "mr"],
+  ["peach-filigree", "bn"],
+  ["navy-rosette", "pa"],
+  ["sandalwood", "kn"],
+  ["slate-brush", "hi"],
 ] as const;
 
 test.skip(({ isMobile }) => isMobile, "pages are a fixed A4 size; one project is enough");
@@ -31,7 +42,7 @@ test.use({ deviceScaleFactor: 2 });
 const squash = (s: string) => s.toLowerCase().replace(/\s+/g, "");
 
 test("document pages: page counts, no overflow, display list text, screenshots, no other origin", async ({ page }) => {
-  test.setTimeout(360_000);
+  test.setTimeout(900_000); // ≈ 250 variants since Step 4.4 (20 designs, second photo)
   const offsite: string[] = [];
   page.on("request", (request) => {
     const url = new URL(request.url());
@@ -88,8 +99,42 @@ test("document pages: page counts, no overflow, display list text, screenshots, 
     });
     if (aside) {
       expect.soft(aside.clipped, `${v.id} side panel clipped`).toBe(false);
-      expect.soft(aside.photos, `${v.id} side panel photo`).toBe(v.length === "long" || v.length === "split" ? 0 : 1);
+      expect.soft(aside.photos, `${v.id} side panel photo`).toBe(v.photos);
     }
+
+    // Step 4.4: page 1 draws as many photos as the variant has (the second only with the main one), each inside its
+    // page's content box (clear of the frame) or the Modern panel's padding, and no photo overlaps another or any text.
+    const photoProblems = await pages.first().evaluate((pageEl) => {
+      const out: string[] = [];
+      const page = pageEl.getBoundingClientRect();
+      const content = pageEl.querySelector<HTMLElement>("[data-content]")!.getBoundingClientRect();
+      const aside = pageEl.querySelector<HTMLElement>("[data-aside]");
+      // The photos are the dev page's JPEG placeholders (motif pictures are files).
+      const imgs = [...pageEl.querySelectorAll<HTMLImageElement>('img[src^="data:image/jpeg"]')].map((img) => img.getBoundingClientRect());
+      const within = (r: DOMRect, b: { left: number; right: number; top: number; bottom: number }) => r.left >= b.left - 0.5 && r.right <= b.right + 0.5 && r.top >= b.top - 0.5 && r.bottom <= b.bottom + 0.5;
+      const overlap = (a: DOMRect, b: DOMRect) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0.5 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0.5;
+      let panel: { left: number; right: number; top: number; bottom: number } | null = null;
+      if (aside) {
+        const r = aside.getBoundingClientRect();
+        const cs = getComputedStyle(aside);
+        panel = { left: r.left + parseFloat(cs.paddingLeft), right: r.right - parseFloat(cs.paddingRight), top: r.top + parseFloat(cs.paddingTop), bottom: r.bottom - parseFloat(cs.paddingBottom) };
+      }
+      imgs.forEach((r, i) => {
+        if (!within(r, content) && !(panel && within(r, panel))) out.push(`photo ${i + 1} outside the content box (${Math.round(r.left - page.left)},${Math.round(r.top - page.top)} ${Math.round(r.width)}×${Math.round(r.height)})`);
+        imgs.forEach((o, j) => j > i && overlap(r, o) && out.push(`photos ${i + 1} and ${j + 1} overlap`));
+      });
+      // Every piece of text on the page, by its line boxes.
+      const walker = document.createTreeWalker(pageEl, NodeFilter.SHOW_TEXT);
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        if (!node.textContent?.trim()) continue;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        for (const line of range.getClientRects()) imgs.forEach((r, i) => overlap(line, r as DOMRect) && out.push(`photo ${i + 1} overlaps "${node!.textContent!.slice(0, 24)}"`));
+      }
+      return { count: imgs.length, problems: out };
+    });
+    expect.soft(photoProblems.count, `${v.id} photos on page 1`).toBe(v.photos);
+    expect.soft(photoProblems.problems, `${v.id} photos`).toEqual([]);
 
     // The display list (what the PDF writer draws) has the text of every printed field.
     const text = await page.evaluate((id) => {

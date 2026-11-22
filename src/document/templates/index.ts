@@ -1,15 +1,25 @@
 import type { Palette } from "../tokens";
+import { baroqueGold } from "./baroque-gold";
 import { classicGold } from "./classic-gold";
 import { deepam } from "./deepam";
 import { executiveNavy } from "./executive-navy";
+import { floralIvory } from "./floral-ivory";
 import { kalyanam } from "./kalyanam";
+import { mangoGrove } from "./mango-grove";
 import { minimalIvory } from "./minimal-ivory";
+import { mintVines } from "./mint-vines";
 import { modernTwoColumn } from "./modern-two-column";
+import { navyRosette } from "./navy-rosette";
 import { paisley } from "./paisley";
+import { peachFiligree } from "./peach-filigree";
+import { peacock } from "./peacock";
 import { rangoli } from "./rangoli";
 import { royalMaroon } from "./royal-maroon";
+import { sandalwood } from "./sandalwood";
+import { slateBrush } from "./slate-brush";
 import { templeBells } from "./temple-bells";
 import type { TemplateDef } from "./types";
+import { watercolourRose } from "./watercolour-rose";
 
 // Every design (VISION D46), in picker order (D46's list; Step 4.4 adds designs 11–20 in their places, Minimal Ivory
 // stays last). An id that no longer exists (an old draft, a removed design) falls back to the first design at render
@@ -23,8 +33,18 @@ export const TEMPLATES: readonly TemplateDef[] = [
   paisley,
   royalMaroon,
   deepam,
+  baroqueGold,
+  sandalwood,
+  peacock,
+  floralIvory,
+  watercolourRose,
+  mangoGrove,
+  mintVines,
+  peachFiligree,
   executiveNavy,
   modernTwoColumn,
+  slateBrush,
+  navyRosette,
   minimalIvory,
 ];
 

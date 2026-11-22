@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
 import type { Palette } from "../tokens";
-import { at, bez, CORNERS, curlPts, DIAG, H, leafD, mix, R, rev, seg, spiral, taper, tp, W, type Pt } from "./geometry";
+import { bez, CORNERS, curlPts, DIAG, H, mix, nums, R, rev, seg, spiral, taper, thin, tp, W, type Pt } from "./geometry";
 import { FrameSvg, Metal, ornament, stroke, useFrameId } from "./svg";
 
-// The filigree frame family (Deepam on dark paper; Step 4.4's Baroque Gold reuses the corner with leaves, VISION
+// The filigree frame family (Deepam on dark paper; Step 4.4's Baroque Gold reuses the corner with leaves in
+// frames/Baroque, Peach Filigree a small light one in frames/FiligreeBow; VISION
 // D39, D44, D46): a C-scroll with a counter scroll and inner curl along each edge from every corner, a fleur pointing
 // out of the corner, fine double rules between the corners and a small cartouche at the bottom centre. Our own
 // drawing, ported from the mockup library (docs/mockups/assets/frames.js, "filigreeCorner"/"filigreeDark"). The
@@ -15,8 +16,8 @@ import { FrameSvg, Metal, ornament, stroke, useFrameId } from "./svg";
 type W3 = readonly [number, number, number];
 
 /** The scroll strokes of the top half of a corner (mirrored across the diagonal for the other half). */
-function scrolls(w: number, leaves: boolean): string[] {
-  const T = (pts: readonly Pt[], ws: W3) => taper(pts, [ws[0] * w, ws[1] * w, ws[2] * w]);
+function scrolls(w: number, leaves: boolean, step?: number): string[] {
+  const T = (pts: readonly Pt[], ws: W3) => taper(step ? thin(pts, step) : pts, [ws[0] * w, ws[1] * w, ws[2] * w]);
   const main = bez([40, 40], [52, 28], [80, 21], [118, 21], 24).concat(spiral(118, 33, 12, 3, -90, 1.15, 1).slice(1));
   const counter = bez([84, 21.5], [104, 17], [130, 12], [160, 17], 20).concat(spiral(160, 10, 7, 1.8, 90, 1.1, -1).slice(1));
   const out = [
@@ -37,6 +38,19 @@ const FRONDS = [
   [136, 14, -58, 11, 3],
 ] as const;
 
+/** The fronds as one leaf path and one vein path (placed point by point: compact, and one paint each). */
+const FROND_PATHS = (() => {
+  let leaves = "";
+  let veins = "";
+  for (const [x, y, a, L, hw] of FRONDS) {
+    const b = -hw * 0.3;
+    const p = (...xy: number[]) => nums(tp(Array.from({ length: xy.length / 2 }, (_, i): Pt => [xy[2 * i], xy[2 * i + 1]]), x, y, a).flat());
+    leaves += `M${p(0, 0)}C${p(L * 0.36, -hw, L * 0.72, -hw * 0.8 + b * 0.6, L, b)}C${p(L * 0.72, hw * 0.8 + b * 0.6, L * 0.36, hw, 0, 0)}Z`;
+    veins += `M${p(1, 0)}Q${p(L * 0.5, -hw * 0.25, L * 0.85, -hw * 0.3)}`;
+  }
+  return { leaves, veins };
+})();
+
 const FLEUR_BUD = "M0 -1C6.5 -7 6.5 -16 0 -25C-6.5 -16 -6.5 -7 0 -1Z";
 
 export interface FiligreeOptions {
@@ -46,14 +60,18 @@ export interface FiligreeOptions {
   w: number;
   /** Add acanthus fronds and an echo line (Baroque). */
   leaves: boolean;
+  /** Draw the corner fleur's bud as an outline, not a solid (Peach Filigree's lighter corner). */
+  outline?: boolean;
+  /** Spacing of the scroll outlines' points in px (default 2.2): Baroque's bigger, leafier corner uses more, to keep its markup light. */
+  step?: number;
 }
 
 const cache = new Map<string, { scrolls: string; side: string }>();
 function corner(o: FiligreeOptions) {
-  const key = `${o.w}:${o.leaves}`;
+  const key = `${o.w}:${o.leaves}:${o.step ?? ""}`;
   let c = cache.get(key);
   if (!c) {
-    c = { scrolls: scrolls(o.w, o.leaves).join(""), side: taper(tp(curlPts(11, 4.6, 1, 2, 1.05), 1.5, -3, -58), [2.2 * o.w, 2.6 * o.w, 0.4 * o.w]) };
+    c = { scrolls: scrolls(o.w, o.leaves, o.step).join(""), side: taper(tp(curlPts(11, 4.6, 1, 2, 1.05), 1.5, -3, -58), [2.2 * o.w, 2.6 * o.w, 0.4 * o.w]) };
     cache.set(key, c);
   }
   return c;
@@ -65,14 +83,12 @@ export function FiligreeCorner({ o, fill, line, accent, leafFill, vein }: { o: F
   const half: ReactNode = (
     <>
       <path d={c.scrolls} fill={fill} />
-      {o.leaves
-        ? FRONDS.map(([x, y, a, L, hw]) => (
-            <g key={x} transform={at(x, y, a)}>
-              <path d={leafD(L, hw, -hw * 0.3)} fill={leafFill ?? accent} />
-              <path d={`M1 0Q${R(L * 0.5)} ${R(-hw * 0.25)} ${R(L * 0.85)} ${R(-hw * 0.3)}`} {...stroke(vein ?? line, 0.6)} />
-            </g>
-          ))
-        : null}
+      {o.leaves ? (
+        <>
+          <path d={FROND_PATHS.leaves} fill={leafFill ?? accent} />
+          <path d={FROND_PATHS.veins} {...stroke(vein ?? line, 0.6)} />
+        </>
+      ) : null}
       <circle cx="118" cy="33" r={R(1.6 * o.w)} fill={line} />
       <circle cx="160" cy="10" r={R(1.2 * o.w)} fill={line} />
     </>
@@ -82,7 +98,7 @@ export function FiligreeCorner({ o, fill, line, accent, leafFill, vein }: { o: F
       {half}
       <g transform={DIAG}>{half}</g>
       <g transform="translate(40 40) rotate(-45)">
-        <path d={FLEUR_BUD} fill={fill} />
+        <path d={FLEUR_BUD} {...(o.outline ? stroke(line, R(0.9 * o.w)) : { fill })} />
         <path d={c.side} fill={fill} />
         <path d={c.side} fill={fill} transform="scale(-1 1)" />
         <ellipse cy="-2.5" rx="5" ry="1.7" fill={fill} />

@@ -1,7 +1,7 @@
 import type { DocModel, DocRow } from "@/biodata/document";
 import { HeadingBar, type HeadingLook } from "../../blocks/HeadingBar";
 import { Paragraph, type ParagraphLook } from "../../blocks/Paragraph";
-import { Photo } from "../../blocks/Photo";
+import { Photo, secondPhotoWidth } from "../../blocks/Photo";
 import { Row, type RowLook } from "../../blocks/Row";
 import { Invocation } from "../../blocks/TopElement";
 import { Motif, tint } from "../../motifs";
@@ -16,6 +16,8 @@ import type { BlockViewProps } from "../types";
 
 /** Photo width in px: 3:4 → 200 × 267; tall 2:3 → 186 × 279. */
 const PHOTO_WIDTH = { "3:4": 200, "2:3": 186 } as const;
+/** The second photo (Step 4.4, D40), beside a later section: tall 2:3, a little smaller (149 × 224). */
+const SECOND_WIDTH = secondPhotoWidth(PHOTO_WIDTH["2:3"]);
 const PHOTO_GAP = 24;
 const MOTIF_SIZE = 96;
 
@@ -98,7 +100,7 @@ function Rows({ rows, doc, palette }: { rows: DocRow[]; doc: DocModel; palette: 
   return rows.map((r) => <Row lang={doc.lang} key={r.id} label={r.label} value={r.value} note={r.note} multiline={r.multiline} look={look} />);
 }
 
-export function ClassicBlockView({ block, doc, palette, photo, text, continued }: BlockViewProps) {
+export function ClassicBlockView({ block, doc, palette, photo, mainFrame, text, continued }: BlockViewProps) {
   switch (block.kind) {
     case "header":
       return <TopElement doc={doc} palette={palette} />;
@@ -118,11 +120,12 @@ export function ClassicBlockView({ block, doc, palette, photo, text, continued }
     case "photo":
       return photo ? (
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <Photo photo={photo} width={PHOTO_WIDTH[photo.frame]} radius={10} />
+          <Photo photo={photo} width={block.second ? SECOND_WIDTH : PHOTO_WIDTH[photo.frame]} radius={10} />
         </div>
       ) : null;
     case "lead": {
       const { section } = block;
+      const width = block.second ? SECOND_WIDTH : photo ? PHOTO_WIDTH[photo.frame] : 0;
       return (
         <div style={{ display: "flex", alignItems: "flex-start", gap: PHOTO_GAP }}>
           <div style={{ flex: "1 1 0", minWidth: 0 }}>
@@ -135,7 +138,14 @@ export function ClassicBlockView({ block, doc, palette, photo, text, continued }
               ),
             )}
           </div>
-          {photo ? <Photo photo={photo} width={PHOTO_WIDTH[photo.frame]} radius={10} /> : null}
+          {photo && block.second ? (
+            // The second photo's column is as wide as the main photo's, so the heading bars beside both end in line.
+            <div style={{ width: PHOTO_WIDTH[mainFrame ?? "3:4"], display: "flex", justifyContent: "flex-end", flex: "none" }}>
+              <Photo photo={photo} width={width} radius={10} />
+            </div>
+          ) : photo ? (
+            <Photo photo={photo} width={width} radius={10} />
+          ) : null}
         </div>
       );
     }

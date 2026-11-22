@@ -86,7 +86,8 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
     },
     [controller],
   );
-  // More photos (Step 4.2b): the card's pure edit runs on the latest profile, its pictures travel with the same save.
+  // More photos (Step 4.2b) and the second photo (Step 4.4): the card's pure edit runs on the latest profile, its
+  // pictures travel with the same save.
   const onPagesChange = useCallback(
     (change: PhotoPagesChange) => {
       for (const put of change.put ?? []) given.current.set(put.id, put);
@@ -165,7 +166,15 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
                   readOnly={conflict}
                 />
                 <LanguageNotice lang={profile.docLanguage} edit={edit} readOnly={conflict} />
-                <PhotoCard photo={profile.photo} loadBlob={loadBlob} onChange={onPhotoChange} readOnly={conflict} />
+                <PhotoCard
+                  photo={profile.photo}
+                  secondPhoto={profile.secondPhoto}
+                  loadBlob={loadBlob}
+                  readPicture={readPicture}
+                  onChange={onPhotoChange}
+                  onSecondChange={onPagesChange}
+                  readOnly={conflict}
+                />
                 <PhotoPagesCard
                   photoPages={profile.photoPages}
                   chart={profile.horoscopeChart}

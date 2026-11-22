@@ -19,7 +19,7 @@ import { LanguageDialog, languageName } from "../LanguageNotice";
 import { PAGE_HEIGHT, PAGE_WIDTH, SIZE_LABELS, sizeHint, type SizeStep } from "./layout-math";
 
 // The live preview's controls (BUILD_PLAN Step 3.3, VISION §5 "Preview toolbar", D31, D39, D45, D46): the design
-// (ten designs as small thumbnails drawn with each design's own frame and colours), its three colours, the printing
+// (every design as a small thumbnail drawn with each design's own frame and colours), its three colours, the printing
 // language (the same dialog as the language notice), the text size (Auto or XS–XL, saying which size Auto chose and
 // whether it fits one page) and the label case. Every choice is a pure edit (src/biodata/edits.ts) through the
 // editor's one `edit()`, so it autosaves like typing.
@@ -138,7 +138,7 @@ export function ColourPicker({ doc, edit, disabled, labelled = false }: { doc: D
   );
 }
 
-/** The ten designs as a grid of thumbnails (desktop picker) or a scrolling strip (the phone sheet, mockup sheet-phone). */
+/** Every design as a grid of thumbnails (desktop picker) or a scrolling strip (the phone sheet, mockup sheet-phone). */
 export function DesignChoices({ doc, edit, disabled, layout, onPicked }: { doc: DocModel; edit: Edit; disabled?: boolean; layout: "grid" | "strip"; onPicked?: () => void }) {
   const currentId = getTemplate(doc.templateId).id;
   const width = layout === "grid" ? 62 : 60;
@@ -190,7 +190,8 @@ export function DesignPopover({ doc, edit, disabled }: { doc: DocModel; edit: Ed
       buttonLabel={t("preview.designButton", { name: template.name, colour: palette.name })}
       buttonClassName={`${button("secondary")} w-full min-w-0 justify-start px-3 aria-expanded:bg-sunken`}
       disabled={disabled}
-      panelClassName="w-[24.5rem]"
+      // Twenty designs make the panel taller than a short laptop screen: it scrolls, so the colours stay reachable.
+      panelClassName="max-h-[calc(100dvh-11rem)] w-[24.5rem] overflow-y-auto overscroll-contain"
       button={
         <>
           <span aria-hidden className="size-4 shrink-0 rounded-full ring-1 ring-black/15" style={{ background: palette.swatch }} />

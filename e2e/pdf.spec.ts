@@ -31,7 +31,20 @@ const NEW_DESIGNS = [
   ["deepam", "gu", "purple", "night"],
   ["executive-navy", "bn", "forest", "plum"],
   ["modern-two-column", "pa", "amber", "rose"],
+  ["floral-ivory", "kn", "lavender", "marigold"],
+  ["watercolour-rose", "hi", "lilac", "coral"],
+  ["mango-grove", "ta", "leaf", "berry"],
+  ["mint-vines", "ml", "teal", "olive"],
+  // Step 4.4
+  ["baroque-gold", "gu", "maroon", "navy"],
+  ["peacock", "mr", "blue", "emerald"],
+  ["peach-filigree", "bn", "rose", "sage"],
+  ["navy-rosette", "pa", "maroon", "green"],
+  ["sandalwood", "kn", "rosewood", "tulsi"],
+  ["slate-brush", "hi", "heather", "sage"],
 ] as const;
+/** Step 4.4: the second photo on page 1, in one design of each skeleton and the letterhead (fixtures secondPhotoVariants). */
+const TWO_PHOTOS = ["classic-gold-en-short-two", "classic-gold-en-sample-two", "minimal-ivory-en-short-two", "executive-navy-en-short-two", "sandalwood-en-short-two", "slate-brush-en-short-two"];
 /** Step 4.2: values in other scripts than the page's (test/fixtures/documents.ts mixedScriptVariants). */
 const MIXED = ["classic-gold-en-mixed", "minimal-ivory-en-mixed", "classic-gold-kn-mixed", "modern-two-column-ta-mixed"];
 const VARIANTS = [
@@ -40,6 +53,7 @@ const VARIANTS = [
   ...NEW_DESIGNS.flatMap(([d, lang, c2, c3]) => [`${d}-en-short`, `${d}-en-long`, `${d}-te-short`, `${d}-${lang}-short`, `${d}-en-short-${c2}`, `${d}-en-short-${c3}`]),
   "executive-navy-en-split",
   ...MIXED,
+  ...TWO_PHOTOS,
 ];
 
 function watchOffsite(page: Page): string[] {
@@ -270,4 +284,20 @@ test("values in other scripts: the same fonts and glyphs on screen as in the PDF
   expect(fontsOf("classic-gold-kn-mixed", "Blood group :")?.["NotoSans-Bold"]).toBe("Bloodgroup:".length);
   // The Modern side panel: a Telugu name on a Tamil page, bold.
   expect(Object.keys(fontsOf("modern-two-column-ta-mixed", "రవి తేజ మండపాటి") ?? {}).sort()).toEqual(["NotoSansTamil-Bold", "NotoSansTelugu-Bold"]);
+});
+
+test("the second photo on page 1 is embedded in the PDF once more than without it (Step 4.4)", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 900, height: 1200 });
+  await page.goto("/dev/document");
+  await expect(page.locator("body")).toHaveAttribute("data-doc-ready", "1", { timeout: 60_000 });
+  // Image XObjects are streams, which are never packed into object streams, so they can be counted in the file.
+  const images = async (id: string) => {
+    const run = await page.evaluate((v) => window.__doc!.pdf(v).pdf(), id);
+    expect.soft(run.warnings, `${id} warnings`).toEqual([]);
+    return (Buffer.from(run.pdf, "base64").toString("latin1").match(/\/Subtype\s*\/Image/g) ?? []).length;
+  };
+  for (const id of ["classic-gold-en-short", "minimal-ivory-en-short", "executive-navy-en-short", "sandalwood-en-short", "slate-brush-en-short"]) {
+    expect.soft(await images(`${id}-two`), id).toBe((await images(id)) + 1);
+  }
 });

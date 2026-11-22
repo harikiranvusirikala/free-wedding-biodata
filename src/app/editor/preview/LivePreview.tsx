@@ -11,7 +11,7 @@ import { inputPageCounts } from "@/document/photo-pages";
 import { getDocDictionary } from "@/i18n/doc";
 import { button, iconButton } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
-import { useDocumentPhoto, useDocumentPhotos, type LoadBlob } from "@/lib/document-photo";
+import { useDocumentPhoto, useDocumentPhotos, useSecondDocumentPhoto, type LoadBlob } from "@/lib/document-photo";
 import { t } from "@/lib/i18n";
 import type { Edit } from "../FieldRow";
 import { ExportToast, ToolbarActions, useExport, type ExportSource } from "./ExportActions";
@@ -117,13 +117,15 @@ export function LivePreview({ profile, edit, loadBlob, readOnly }: LivePreviewPr
   const exampleDate = useMemo(() => draftExampleDate(profile), [profile]);
 
   const photo = useDocumentPhoto(profile.photo, loadBlob);
+  // The second photo on page 1 (Step 4.4, D40): drawn only beside a main photo.
+  const second = useSecondDocumentPhoto(profile.photo ? profile.secondPhoto : undefined, loadBlob);
   // The pages after the biodata (Step 4.2b): extra photos and the horoscope chart, drawn as the settled draft says.
   const chartHeading = useMemo(() => chartTitle(shown, getDocDictionary(shown.docLanguage)), [shown]);
   const extra = useDocumentPhotos(shown, chartHeading, loadBlob);
   const extraCounts = inputPageCounts(extra.input);
   // The first layout waits for the photos, so the page doesn't reflow when they arrive; later ones keep the old ones.
   const [started, setStarted] = useState(false);
-  if (!started && photo.ready && extra.ready) setStarted(true);
+  if (!started && photo.ready && second.ready && extra.ready) setStarted(true);
 
   const [details, setDetails] = useState<{ pages: number; step: LayoutInfo["step"] } | null>(null);
   const onLayout = useCallback((info: DocumentLayoutInfo) => setDetails({ pages: info.pages, step: info.step }), []);
@@ -136,12 +138,12 @@ export function LivePreview({ profile, edit, loadBlob, readOnly }: LivePreviewPr
   // For downloads: the latest draft, what the pages show, and whether the photo is drawn.
   const latest = useRef(profile);
   const shownRef = useRef(shown);
-  const photoReady = useRef(photo.ready && extra.ready);
+  const photoReady = useRef(photo.ready && second.ready && extra.ready);
   const host = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     latest.current = profile;
     shownRef.current = shown;
-    photoReady.current = photo.ready && extra.ready;
+    photoReady.current = photo.ready && second.ready && extra.ready;
   });
 
   const source = useMemo<ExportSource>(
@@ -167,6 +169,7 @@ export function LivePreview({ profile, edit, loadBlob, readOnly }: LivePreviewPr
       hostRef={host}
       doc={started ? doc : null}
       photo={photo.photo}
+      secondPhoto={second.photo}
       photoPages={extra.input}
       layout={layout}
       onLayout={onLayout}
@@ -230,6 +233,7 @@ function PagesPane({
   hostRef,
   doc,
   photo,
+  secondPhoto,
   photoPages,
   layout,
   onLayout,
@@ -239,6 +243,7 @@ function PagesPane({
   hostRef: RefObject<HTMLDivElement | null>;
   doc: DocModel | null;
   photo?: PhotoInput;
+  secondPhoto?: PhotoInput;
   photoPages?: PhotoPagesInput;
   layout: LayoutInfo | null;
   onLayout: (info: DocumentLayoutInfo) => void;
@@ -291,6 +296,7 @@ function PagesPane({
               <DocumentView
                 doc={doc}
                 photo={photo}
+                secondPhoto={secondPhoto}
                 photoPages={photoPages}
                 onLayout={onLayout}
                 className="relative h-full w-full overflow-clip [overflow-clip-margin:2rem] [&_.doc-pages]:w-[794px] [&_.doc-pages]:origin-top-left [&_.doc-pages]:[transform:scale(var(--preview-scale))]"

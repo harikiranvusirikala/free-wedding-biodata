@@ -1081,6 +1081,23 @@ export function setPhoto(profile: BiodataProfile, photo: MainPhoto | undefined, 
   return { ...profile, photo, updatedAt: now().toISOString() };
 }
 
+/**
+ * Sets (or, with undefined, removes) the second photo on page 1 (Step 4.4, D40): its reference and crop (its frame is
+ * always tall 2:3). Refused (same profile) when the id belongs to another picture of this draft. It is kept when the
+ * main photo is removed (it just doesn't print until a main photo is back).
+ */
+export function setSecondPhoto(profile: BiodataProfile, photo: PhotoRef | undefined, now: Clock = systemClock): BiodataProfile {
+  const current = profile.secondPhoto;
+  if (!photo) {
+    if (!current) return profile;
+    return { ...without(profile, "secondPhoto"), updatedAt: now().toISOString() };
+  }
+  if (photo.id !== current?.id && photoIdsOf(profile).includes(photo.id)) return profile;
+  const next: PhotoRef = { id: photo.id, crop: photo.crop };
+  if (current && sameRef(current, next)) return profile;
+  return { ...profile, secondPhoto: next, updatedAt: now().toISOString() };
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // Photo pages and the horoscope chart (Step 4.2b, D40, D41). Like the main photo, only references and crops live in
 // the profile; the editor stores each picture with the same save. A picture id is used once per draft (the schema

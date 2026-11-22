@@ -4,6 +4,7 @@ import type { BlockSpec } from "../../blocks/types";
 import { SIDE_PANEL_WIDTH } from "../../frames/SidePanel";
 import { hasTopElement } from "../../templates/classic-gold/layout";
 import { minimalSubtitle } from "../../templates/minimal-ivory/layout";
+import type { PhotoOptions } from "../../templates/types";
 import type { Box } from "../../tokens";
 
 // The Modern skeleton's block list and margins (VISION D34, D46: Executive Navy, Modern Two-Column). PURE.
@@ -25,6 +26,12 @@ export const SIDE_PAD = { x: 26, top: 48, bottom: 40 } as const;
  */
 export const SIDE_CONTACT_LIMIT = { rows: 7, chars: 360 } as const;
 
+/**
+ * With the second photo low in the panel (Step 4.4, D40) the Contact section has less room: at most 4 rows and 200
+ * characters stay in the panel, a longer one goes to the main column.
+ */
+export const SIDE_CONTACT_LIMIT_TWO_PHOTOS = { rows: 4, chars: 200 } as const;
+
 /** More space between sections than Classic: no bars, so the white space separates them. */
 export const MODERN_SECTION_SPACE = 1.5;
 
@@ -35,21 +42,22 @@ export function modernPageBox(): Box {
 const rowChars = (r: DocRow) => r.label.length + r.value.length + (r.note?.length ?? 0);
 
 /** The Contact section when it goes in the side panel, else undefined. */
-export function sideContact(doc: DocModel): DocSection | undefined {
+export function sideContact(doc: DocModel, { secondPhoto = false }: Partial<PhotoOptions> = {}): DocSection | undefined {
   const section = doc.sections.find((s) => s.key === "contact");
   if (!section || !section.items.length) return undefined;
+  const limit = secondPhoto ? SIDE_CONTACT_LIMIT_TWO_PHOTOS : SIDE_CONTACT_LIMIT;
   const rows = section.items.filter((i): i is DocRow => i.kind === "row");
-  if (rows.length !== section.items.length || rows.length > SIDE_CONTACT_LIMIT.rows) return undefined;
-  return rows.reduce((n, r) => n + rowChars(r), 0) <= SIDE_CONTACT_LIMIT.chars ? section : undefined;
+  if (rows.length !== section.items.length || rows.length > limit.rows) return undefined;
+  return rows.reduce((n, r) => n + rowChars(r), 0) <= limit.chars ? section : undefined;
 }
 
 /** The line under the name in the panel: designation (or occupation) · work city (or current city). */
 export const modernSubtitle = minimalSubtitle;
 
-export function modernBlocks(doc: DocModel): BlockSpec[] {
+export function modernBlocks(doc: DocModel, options: Partial<PhotoOptions> = {}): BlockSpec[] {
   const out: BlockSpec[] = [];
   if (hasTopElement(doc)) out.push({ block: { kind: "header", id: "header" }, spaceBefore: 0 });
-  const contact = sideContact(doc);
+  const contact = sideContact(doc, options);
   for (const section of doc.sections) {
     if (section === contact) continue;
     // The name heads the side panel, so its row isn't repeated in the main column.
@@ -66,12 +74,12 @@ export function modernBlocks(doc: DocModel): BlockSpec[] {
 }
 
 /** Every string the side panel prints, in order. */
-export function modernAsideTexts(doc: DocModel): string[] {
+export function modernAsideTexts(doc: DocModel, options: Partial<PhotoOptions> = {}): string[] {
   const out: string[] = [];
   if (doc.name) out.push(doc.name);
   const subtitle = modernSubtitle(doc);
   if (subtitle) out.push(subtitle);
-  const contact = sideContact(doc);
+  const contact = sideContact(doc, options);
   if (contact) {
     out.push(contact.title);
     for (const item of contact.items) {
