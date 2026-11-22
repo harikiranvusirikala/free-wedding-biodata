@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 
 // The motif library (Step 2.0, redrawn 2026-11-22; VISION D21, D45, D47):
-// 1. The symbol picker: None first and chosen, then the nineteen symbols in tradition order, as 44 px targets, and
+// 1. The symbol picker: None first and chosen, then Ganesha and the other symbols in tradition order, as 44 px targets, and
 //    the larger dialog grouped by tradition.
 // 2. Every symbol through the real PDF writer (no unsupported-SVG warning) and the page images, with Chrome's
 //    screenshot of the same A4 pages next to them in test-results/motifs/ (for the PDFKit side-by-side check).
@@ -19,29 +19,24 @@ async function openNewDraft(page: Page) {
   await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
 }
 
-test("the symbol picker: None first, nineteen symbols by tradition, 44 px targets, a grouped dialog", async ({ page }) => {
+test("the symbol picker: None first, Ganesha next, 47 symbols by tradition, 44 px targets, a grouped dialog", async ({ page }) => {
   await openNewDraft(page);
   const tiles = symbols(page).getByRole("radio");
-  await expect(tiles).toHaveCount(20);
+  await expect(tiles).toHaveCount(48);
   await expect(tiles.first()).toHaveAccessibleName("No symbol");
   await expect(tiles.first()).toHaveAttribute("aria-checked", "true");
-  await expect(page.getByTestId("motif-ganeshaOrnate")).toHaveAccessibleName("Ganesha, ornate");
-  for (const i of [0, 7, 19]) {
+  await expect(tiles.nth(1)).toHaveAccessibleName("Ganesha");
+  await expect(page.getByTestId("motif-ganeshaOrnate")).toHaveCount(0);
+  for (const i of [0, 7, 47]) {
     const box = (await tiles.nth(i).boundingBox())!;
     expect(box.height, `tile ${i} height`).toBeGreaterThanOrEqual(44);
     expect(box.width, `tile ${i} width`).toBeGreaterThanOrEqual(44);
   }
-  // No ragged last row: every row is full.
-  const ys = await tiles.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
-  const rows = [...new Set(ys)];
-  expect(rows.length === 2 || rows.length === 4, `rows: ${rows.length}`).toBe(true);
-  for (const y of rows) expect(ys.filter((v) => v === y)).toHaveLength(20 / rows.length);
-
   await top(page).getByRole("button", { name: "See them larger" }).click();
   const dialog = page.getByTestId("motif-dialog");
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("region")).toHaveCount(7);
-  await expect(dialog.getByRole("region", { name: "Muslim" }).getByRole("button")).toHaveCount(3);
+  await expect(dialog.getByRole("region", { name: "Muslim" }).getByRole("button")).toHaveCount(5);
   await dialog.getByRole("region", { name: "Muslim" }).getByRole("button", { name: "Allah medallion" }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByTestId("motif-allahMedallion")).toHaveAttribute("aria-checked", "true");

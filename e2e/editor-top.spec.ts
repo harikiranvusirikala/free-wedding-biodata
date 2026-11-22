@@ -56,7 +56,7 @@ test("a new draft has nothing at the top and no tradition fields (D21, D43)", as
   for (const key of ["lagnam", "devak", "muslimSect", "church", "sikhPractice", "jainSect"]) expect(storedField(stored, key)).toBeUndefined();
   const pageOne = await openDocument(page, id);
   await expect(pageOne).toContainText("Sai Teja Mandapati");
-  await expect(pageOne.locator('svg[viewBox="0 0 120 120"]')).toHaveCount(0);
+  await expect(pageOne.locator('svg[viewBox="0 0 120 120"], img[src*="ganesha"]')).toHaveCount(0);
 });
 
 test("a symbol, an invocation line and a title are kept after a reload and printed (D21, D45)", async ({ page }) => {
@@ -83,7 +83,8 @@ test("a symbol, an invocation line and a title are kept after a reload and print
   await expect(status(page)).toHaveText(SAVED);
 
   const pageOne = await openDocument(page, id);
-  await expect(pageOne.locator('svg[viewBox="0 0 120 120"]')).toHaveCount(1);
+  // Ganesha is the owner's classic picture (an image, not a drawing), printed once.
+  await expect(pageOne.locator("img")).toHaveCount(1);
   await expect(pageOne).toContainText("॥ श्री गणेशाय नमः ॥ ॥ श्री ॥");
   await expect(pageOne).toContainText("Marriage Biodata");
   // The line prints in Devanagari's font on an English page, so the PDF can draw it too.

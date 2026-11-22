@@ -8,8 +8,6 @@ import {
   DharmaWheel,
   DharmaWheelSolid,
   Floral,
-  Ganesha,
-  GaneshaOrnate,
   IkOnkar,
   Jain,
   Kalash,
@@ -21,6 +19,7 @@ import {
   Swastika,
   type MotifDrawing,
 } from "./library";
+import { ART } from "./art";
 
 // The motif library for the top of a biodata (VISION §7 D21, D45, D47): our own drawings (./library.tsx), each in
 // the template's colours: `ink` fills the main shapes as a vertical gradient to a lighter tint and details are cut
@@ -43,8 +42,6 @@ export type MotifTradition = (typeof MOTIF_TRADITIONS)[number];
  * two Allah designs (the name of God as printed decoration).
  */
 const LIBRARY: Record<string, MotifDrawing & { tradition: MotifTradition; review?: true }> = {
-  ganesha: { draw: Ganesha, y1: 6, y2: 100, tradition: "hindu" },
-  ganeshaOrnate: { draw: GaneshaOrnate, y1: 7, y2: 100, tradition: "hindu" },
   om: { draw: Om, y1: 24, y2: 98, tradition: "hindu", review: true },
   kalash: { draw: Kalash, y1: 10, y2: 110, tradition: "hindu" },
   swastika: { draw: Swastika, y1: 23, y2: 97, tradition: "hindu" },
@@ -64,15 +61,68 @@ const LIBRARY: Record<string, MotifDrawing & { tradition: MotifTradition; review
   rings: { draw: Rings, y1: 22, y2: 98, tradition: "secular" },
 };
 
-export const MOTIF_IDS = Object.keys(LIBRARY);
+/**
+ * The owner's artwork (./art): pictures and line drawings, shown as images. Same contract as LIBRARY: ids are stored
+ * in drafts and never renamed. Colour pictures keep their own colours (the document colour doesn't change them).
+ */
+const PICTURES: Record<string, { src: string; tradition: MotifTradition; review?: true }> = {
+  ganeshaStencil: { src: ART.ganeshaStencil, tradition: "hindu" },
+  ganeshaLine: { src: ART.ganeshaLine, tradition: "hindu" },
+  ganeshaOutline: { src: ART.ganeshaOutline, tradition: "hindu" },
+  ganeshaSeated: { src: ART.ganeshaSeated, tradition: "hindu" },
+  ganeshaTrident: { src: ART.ganeshaTrident, tradition: "hindu" },
+  ganeshaLotusFrame: { src: ART.ganeshaLotusFrame, tradition: "hindu" },
+  ganeshaOrangeFrame: { src: ART.ganeshaOrangeFrame, tradition: "hindu" },
+  ganeshaNamah: { src: ART.ganeshaNamah, tradition: "hindu" },
+  omMandala: { src: ART.omMandala, tradition: "hindu" },
+  omSeal: { src: ART.omSeal, tradition: "hindu" },
+  venkateswara: { src: ART.venkateswara, tradition: "hindu", review: true },
+  ramaWithBow: { src: ART.ramaWithBow, tradition: "hindu", review: true },
+  allahWreath: { src: ART.allahWreath, tradition: "muslim", review: true },
+  jainHand: { src: ART.jainHand, tradition: "jain", review: true },
+  omGold: { src: ART.omGold, tradition: "hindu" },
+  ganeshaSeatedRight: { src: ART.ganeshaSeatedRight, tradition: "hindu" },
+  ganeshaSeatedLeft: { src: ART.ganeshaSeatedLeft, tradition: "hindu" },
+  ganeshaMandala: { src: ART.ganeshaMandala, tradition: "hindu" },
+  ganeshaLotus: { src: ART.ganeshaLotus, tradition: "hindu" },
+  ganeshaThrone: { src: ART.ganeshaThrone, tradition: "hindu" },
+  ganeshaTrunk: { src: ART.ganeshaTrunk, tradition: "hindu" },
+  // The first symbol: the owner's classic Ganesha. The id was the drawn Ganesha before, so drafts keep their choice.
+  ganesha: { src: ART.ganeshaSheet, tradition: "hindu" },
+  ikOnkarDisc: { src: ART.ikOnkarDisc, tradition: "sikh" },
+  khandaSheet: { src: ART.khandaSheet, tradition: "sikh", review: true },
+  crossLatinSheet: { src: ART.crossLatinSheet, tradition: "christian" },
+  crossBuddedSheet: { src: ART.crossBuddedSheet, tradition: "christian" },
+  allahMedallionSheet: { src: ART.allahMedallionSheet, tradition: "muslim", review: true },
+  dharmaLight: { src: ART.dharmaLight, tradition: "buddhist" },
+  dharmaSolid: { src: ART.dharmaSolid, tradition: "buddhist" },
+  jainMotto: { src: ART.jainMotto, tradition: "jain", review: true },
+};
 
-export const isMotif = (id: string | null | undefined): id is string => !!id && Object.hasOwn(LIBRARY, id);
+/** The symbols drawn as vectors (LIBRARY) and the pictures (PICTURES, ./art), in picker order: drawn first. */
+export const DRAWN_IDS = Object.keys(LIBRARY);
+export const PICTURE_IDS = Object.keys(PICTURES);
+/** Ids a draft saved earlier today may hold (a symbol since removed): they show the symbol that replaced them. */
+const LEGACY_IDS: Record<string, string> = { ganeshaOrnate: "ganesha" };
+
+export const isMotif = (id: string | null | undefined): id is string =>
+  !!id && (Object.hasOwn(LIBRARY, id) || Object.hasOwn(PICTURES, id) || Object.hasOwn(LEGACY_IDS, id));
 
 /** A motif's tradition (the picker's groups). */
-export const motifTradition = (id: string): MotifTradition | undefined => (isMotif(id) ? LIBRARY[id].tradition : undefined);
+export const motifTradition = (id: string): MotifTradition | undefined => {
+  const key = LEGACY_IDS[id] ?? id;
+  return Object.hasOwn(LIBRARY, key) ? LIBRARY[key].tradition : Object.hasOwn(PICTURES, key) ? PICTURES[key].tradition : undefined;
+};
+
+/** Every symbol in picker order: grouped by tradition, drawn and pictured ones together within each group. */
+const FIRST = ["ganesha"];
+const rank = (id: string) => (FIRST.includes(id) ? FIRST.indexOf(id) : FIRST.length);
+export const MOTIF_IDS = [...DRAWN_IDS, ...PICTURE_IDS].sort(
+  (a, b) => MOTIF_TRADITIONS.indexOf(motifTradition(a)!) - MOTIF_TRADITIONS.indexOf(motifTradition(b)!) || rank(a) - rank(b),
+);
 
 /** Motifs drawn for us that still need a community's review before launch (D47 (3)). */
-export const MOTIFS_AWAITING_REVIEW = MOTIF_IDS.filter((id) => LIBRARY[id].review);
+export const MOTIFS_AWAITING_REVIEW = MOTIF_IDS.filter((id) => (Object.hasOwn(LIBRARY, id) ? LIBRARY[id].review : PICTURES[id]?.review));
 
 /**
  * A motif in the template's colours, `size` px square; nothing for None or an unknown id. `paper` is the colour the
@@ -81,6 +131,11 @@ export const MOTIFS_AWAITING_REVIEW = MOTIF_IDS.filter((id) => LIBRARY[id].revie
 export function Motif({ id, ink, base, paper, size }: { id: string | null; ink: string; base: string; paper?: string; size: number }) {
   const gradientId = `motif${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   if (!isMotif(id)) return null;
+  id = LEGACY_IDS[id] ?? id;
+  if (Object.hasOwn(PICTURES, id)) {
+    // A picture: drawn as it is (its own colours), in a size x size box; the PDF writer fetches it when printing.
+    return <img src={PICTURES[id].src} width={size} height={size} alt="" style={{ display: "block", objectFit: "contain" }} />;
+  }
   const { draw: Drawing, y1, y2 } = LIBRARY[id];
   const lite = tint(ink, 0.35);
   return (
