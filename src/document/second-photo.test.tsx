@@ -4,6 +4,7 @@ import { toDocument, type DocModel } from "@/biodata/document";
 import { getDocDictionary } from "@/i18n/doc";
 import { documentVariants, FIXTURE_TODAY, secondPhotoVariants } from "../../test/fixtures/documents";
 import { secondPhotoWidth } from "./blocks/Photo";
+import { CLASSIC_PHOTO } from "./skeletons/classic";
 import { blockTexts } from "./blocks/texts";
 import { blockPhoto, SECOND_PHOTO_FRAME, type PhotoInput } from "./blocks/types";
 import { paginate, type BlockMetrics } from "./paginate";
@@ -109,7 +110,7 @@ describe("second photo on page 1 (D40)", () => {
 
   it("Classic: the second photo's width follows the design's tall photo", () => {
     const html = renderBlocks("kalyanam", variantDoc("kalyanam-en-short-two"), MAIN, SECOND);
-    expect(html).toContain(`width="${secondPhotoWidth(186)}"`);
+    expect(html).toContain(`width="${secondPhotoWidth(CLASSIC_PHOTO["2:3"])}"`);
   });
 
   it("Modern: keeps Contact in the panel only when it leaves room for the second photo", () => {

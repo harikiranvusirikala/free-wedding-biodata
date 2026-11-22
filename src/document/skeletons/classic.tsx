@@ -1,4 +1,5 @@
 import type { DocModel } from "@/biodata/document";
+import { BesideLead, FlowItem } from "../blocks/BesideLead";
 import { HeadingBar, type HeadingLook } from "../blocks/HeadingBar";
 import { Paragraph, type ParagraphLook } from "../blocks/Paragraph";
 import { Photo, secondPhotoWidth } from "../blocks/Photo";
@@ -120,19 +121,23 @@ export function classicSkeleton(look: ClassicLook): Pick<TemplateDef, "skeleton"
         const { section } = block;
         const narrow = rowLook(doc, palette, underline);
         return (
-          <div style={{ display: "flex", alignItems: "flex-start", gap: PHOTO_GAP }}>
-            <div style={{ flex: "1 1 0", minWidth: 0 }}>
+          // The photo floats at the top right; the heading and rows narrow beside it and take the full width below it.
+          <BesideLead photo={photoEl} gap={PHOTO_GAP}>
+            <FlowItem>
               <HeadingBar lang={doc.lang} title={section.title} look={heading} />
-              {section.items.map((item) =>
-                item.kind === "row" ? (
-                  <Row lang={doc.lang} key={item.id} label={item.label} value={item.value} note={item.note} multiline={item.multiline} look={narrow} />
-                ) : (
-                  <Paragraph lang={doc.lang} key={item.id} text={item.text} label={section.items.length > 1 ? item.label : undefined} look={paragraph} />
-                ),
-              )}
-            </div>
-            {photoEl}
-          </div>
+            </FlowItem>
+            {section.items.map((item) =>
+              item.kind === "row" ? (
+                <FlowItem key={item.id}>
+                  <Row lang={doc.lang} label={item.label} value={item.value} note={item.note} multiline={item.multiline} look={narrow} />
+                </FlowItem>
+              ) : (
+                <FlowItem key={item.id}>
+                  <Paragraph lang={doc.lang} text={item.text} label={section.items.length > 1 ? item.label : undefined} look={paragraph} />
+                </FlowItem>
+              ),
+            )}
+          </BesideLead>
         );
       }
     }
@@ -140,5 +145,5 @@ export function classicSkeleton(look: ClassicLook): Pick<TemplateDef, "skeleton"
   return { skeleton: "classic", pageBox: classicPageBoxFor(look), blocks: classicBlocks, BlockView: ClassicView, photoRadius: look.photoRadius };
 }
 
-/** Classic Gold's photo sizes: 3:4 → 200 × 267, tall 2:3 → 186 × 279. */
-export const CLASSIC_PHOTO = { "3:4": 200, "2:3": 186 } as const;
+/** Classic's photo sizes: 3:4 → 224 × 299, tall 2:3 → 208 × 312 (the owner's request, 2026-11-22). */
+export const CLASSIC_PHOTO = { "3:4": 224, "2:3": 208 } as const;

@@ -1,4 +1,5 @@
 import type { DocModel, DocRow } from "@/biodata/document";
+import { BesideLead, FlowItem } from "../../blocks/BesideLead";
 import { HeadingBar, type HeadingLook } from "../../blocks/HeadingBar";
 import { Paragraph, type ParagraphLook } from "../../blocks/Paragraph";
 import { Photo, secondPhotoWidth } from "../../blocks/Photo";
@@ -14,8 +15,8 @@ import type { BlockViewProps } from "../types";
 // top-right beside the first section with soft corners, and an optional centred top element. Sizes are in em
 // of the body size (tokens.ts), so the Auto text size scales everything but the frame, motif and photo.
 
-/** Photo width in px: 3:4 → 200 × 267; tall 2:3 → 186 × 279. */
-const PHOTO_WIDTH = { "3:4": 200, "2:3": 186 } as const;
+/** Photo width in px: 3:4 → 224 × 299; tall 2:3 → 208 × 312 (owner, 2026-11-22: a little larger than the original, smaller than the first try). */
+const PHOTO_WIDTH = { "3:4": 224, "2:3": 208 } as const;
 /** The second photo (Step 4.4, D40), beside a later section: tall 2:3, a little smaller (149 × 224). */
 const SECOND_WIDTH = secondPhotoWidth(PHOTO_WIDTH["2:3"]);
 const PHOTO_GAP = 24;
@@ -126,28 +127,34 @@ export function ClassicBlockView({ block, doc, palette, photo, mainFrame, text, 
     case "lead": {
       const { section } = block;
       const width = block.second ? SECOND_WIDTH : photo ? PHOTO_WIDTH[photo.frame] : 0;
-      return (
-        <div style={{ display: "flex", alignItems: "flex-start", gap: PHOTO_GAP }}>
-          <div style={{ flex: "1 1 0", minWidth: 0 }}>
-            <HeadingBar lang={doc.lang} title={section.title} look={heading(doc, palette)} />
-            {section.items.map((item) =>
-              item.kind === "row" ? (
-                <Rows key={item.id} rows={[item]} doc={doc} palette={palette} />
-              ) : (
-                <Paragraph lang={doc.lang} key={item.id} text={item.text} label={section.items.length > 1 ? item.label : undefined} look={paragraph(doc, palette)} />
-              ),
-            )}
-          </div>
-          {photo && block.second ? (
+      // The photo floats at the top right; the heading and rows narrow beside it and take the full width below it.
+      const picture =
+          photo && block.second ? (
             // The second photo's column is as wide as the main photo's, so the heading bars beside both end in line.
-            <div style={{ width: PHOTO_WIDTH[mainFrame ?? "3:4"], display: "flex", justifyContent: "flex-end", flex: "none" }}>
+            <div style={{ width: PHOTO_WIDTH[mainFrame ?? "3:4"], display: "flex", justifyContent: "flex-end" }}>
               <Photo photo={photo} width={width} radius={10} />
             </div>
           ) : photo ? (
             <Photo photo={photo} width={width} radius={10} />
-          ) : null}
-        </div>
-      );
+          ) : null;
+        return (
+          <BesideLead photo={picture} gap={PHOTO_GAP}>
+            <FlowItem>
+              <HeadingBar lang={doc.lang} title={section.title} look={heading(doc, palette)} />
+            </FlowItem>
+            {section.items.map((item) =>
+              item.kind === "row" ? (
+                <FlowItem key={item.id}>
+                  <Rows rows={[item]} doc={doc} palette={palette} />
+                </FlowItem>
+              ) : (
+                <FlowItem key={item.id}>
+                  <Paragraph lang={doc.lang} text={item.text} label={section.items.length > 1 ? item.label : undefined} look={paragraph(doc, palette)} />
+                </FlowItem>
+              ),
+            )}
+          </BesideLead>
+        );
     }
   }
 }
