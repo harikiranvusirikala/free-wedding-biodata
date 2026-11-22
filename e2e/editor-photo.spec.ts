@@ -136,3 +136,13 @@ test("the stored photo, cropped, is printed on page 1", async ({ page, isMobile 
   await expect(page.locator("body[data-doc-ready]")).toHaveCount(1);
   await expect(page.locator("[data-page] img")).toHaveCount(0);
 });
+
+test("a newly added photo shows in the live preview at once, without changing the frame (desktop)", async ({ page, isMobile }) => {
+  test.skip(isMobile, "the preview column is a desktop layout");
+  // The picture is written with the next save, a moment after Done; the preview must not wait for that (or for a
+  // frame change, the bug this guards against) to draw it.
+  await newDraftWithPhoto(page);
+  const printed = page.locator('[data-testid="preview-pages"] [data-page="1"] img[src^="data:image/jpeg"]');
+  await expect(printed).toHaveCount(1);
+  await expect(printed).toHaveJSProperty("complete", true);
+});

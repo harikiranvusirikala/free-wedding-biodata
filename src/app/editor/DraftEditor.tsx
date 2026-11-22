@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { setPhoto } from "@/biodata/edits";
 import type { BiodataProfile } from "@/biodata/types";
 import type { PhotoChange } from "@/components/photo/PhotoField";
@@ -50,16 +50,25 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
 
   // The photo (Step 3.1): its picture is read from the database, and a new or removed picture is written in the
   // same transaction as the profile that points at it (D9), through autosave.
+  // A picture just picked is only written with the next save (autosave waits a moment), so the pictures handed
+  // over in this session are kept here too: the preview can draw a new photo at once instead of finding nothing in
+  // the database and waiting for the next frame or crop change. Pictures are ids that never change content.
+  const given = useRef(new Map<string, Blob>());
   const loadBlob = useCallback(async (id: string) => {
+    const blob = given.current.get(id);
+    if (blob) return blob;
     const result = await repo.getPhoto(id);
     return result.ok ? result.value?.blob : undefined;
   }, [repo]);
   const onPhotoChange = useCallback(
-    (change: PhotoChange) =>
+    (change: PhotoChange) => {
+      if (change.put) given.current.set(change.put.id, change.put.blob);
+      if (change.delete) given.current.delete(change.delete);
       controller.update(setPhoto(controller.getSnapshot().profile, change.photo), {
         put: change.put ? [change.put] : undefined,
         delete: change.delete ? [change.delete] : undefined,
-      }),
+      });
+    },
     [controller],
   );
 
