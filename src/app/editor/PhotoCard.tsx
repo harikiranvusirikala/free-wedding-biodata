@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import type { MainPhoto } from "@/biodata/types";
-import { card, cardTitle } from "@/components/ui/card";
+import { accentCard, accentTile, cardTitle } from "@/components/ui/card";
 import { PhotoField, type PhotoChange } from "@/components/photo/PhotoField";
 import { PhotoIcon } from "@/components/photo/icons";
 import { t } from "@/lib/i18n";
@@ -28,9 +28,9 @@ export const PhotoCard = memo(function PhotoCard({
   const titleId = `section-${PHOTO_ID}-title`;
   const frame = photo ? t(photo.frame === "2:3" ? "photo.frame.tall" : "photo.frame.portrait") : "";
   return (
-    <section id={`section-${PHOTO_ID}`} aria-labelledby={titleId} data-section={PHOTO_ID} className={`${card} scroll-mt-20 max-lg:scroll-mt-[7.5rem]`}>
+    <section id={`section-${PHOTO_ID}`} aria-labelledby={titleId} data-section={PHOTO_ID} className={`${accentCard} scroll-mt-20 max-lg:scroll-mt-[7.5rem]`}>
       <div className="flex items-center gap-3 border-b border-line px-4 py-3 sm:px-5">
-        <span aria-hidden className={`flex size-11 shrink-0 items-center justify-center rounded-[10px] ${photo ? "bg-good-soft text-good" : "border border-dashed border-line-strong text-ink-3"}`}>
+        <span aria-hidden className={`flex size-11 shrink-0 items-center justify-center rounded-[10px] ${photo ? "bg-good-soft text-good" : accentTile}`}>
           <PhotoIcon name="camera" className="size-5" />
         </span>
         <div className="min-w-0 flex-1">

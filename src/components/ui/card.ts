@@ -28,3 +28,12 @@ export const noteCard = "rounded-xl border border-gold/25 bg-gold-soft px-4 py-3
 
 /** A square tile holding a card's icon. */
 export const iconTile = "flex size-9 shrink-0 items-center justify-center rounded-[10px]";
+
+/**
+ * An editor card (Top of your biodata, Photo, each section): a card with a thin maroon → gold strip along its top
+ * (Step 2.5, D51). Only these carry it; small cards, notes and dialogs stay plain.
+ */
+export const accentCard = `${card} accent-strip`;
+
+/** The colours of a card-header icon tile (with iconTile, or a larger tile's own size): the soft brand → gold wash. */
+export const accentTile = "bg-tile text-brand-ink ring-1 ring-brand/10 ring-inset";

@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/Switch";
 import { Toast, toastAction } from "@/components/ui/Toast";
 import { BADGE_TONES, badgeTone, type BadgeTone } from "@/components/ui/badge";
 import { BUTTON_SIZES, BUTTON_VARIANTS, button, iconButton, outlineIconButton, textLink } from "@/components/ui/button";
-import { card, cardBody, cardHeader, cardRow, cardRows, cardText, cardTitle, dangerCard, iconTile, noteCard } from "@/components/ui/card";
+import { accentCard, accentTile, card, cardBody, cardHeader, cardRow, cardRows, cardText, cardTitle, dangerCard, iconTile, noteCard } from "@/components/ui/card";
 import { choice, choiceLabel, compactField, field, fieldError, fieldHint, fieldLabel, fieldSuccess, formError, formSuccess, textArea } from "@/components/ui/field";
 import { GitHubMark, ICON_NAMES, Icon } from "@/components/ui/icons";
 import { contentTitle, eyebrow, lead, pageTitle, pageWidth, prose, sectionTitle } from "@/components/ui/page";
@@ -146,9 +146,12 @@ export function Gallery() {
           </Block>
 
           <Block title="Cards">
-            <div className={card}>
+            <div className={accentCard}>
               <div className={cardHeader}>
-                <h3 className={cardTitle}>Card with a header</h3>
+                <span aria-hidden className={`${iconTile} ${accentTile}`}>
+                  <Icon name="user" className="size-[18px]" />
+                </span>
+                <h3 className={cardTitle}>Editor card: accent strip and icon tile</h3>
                 <span className={`ml-auto ${badgeTone("brand")}`}>3 rows</span>
               </div>
               <ul className={cardRows}>
@@ -178,6 +181,9 @@ export function Gallery() {
               </div>
             </div>
             <p className={`${noteCard} text-sm text-ink-2`}>A note card: warm gold, for something worth knowing.</p>
+            <p className="text-2xl font-bold tracking-tight text-ink">
+              Headline with an <span className="text-accent-gradient">accent phrase</span>
+            </p>
           </Block>
 
           <Block title="Fields">

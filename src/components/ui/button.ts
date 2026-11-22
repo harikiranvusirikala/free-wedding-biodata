@@ -8,8 +8,12 @@ export const focusRing = "outline-none focus-visible:ring-[3px] focus-visible:ri
 const BASE = `inline-flex shrink-0 items-center justify-center gap-2 rounded-lg font-semibold whitespace-nowrap transition-colors select-none disabled:pointer-events-none disabled:opacity-55 aria-disabled:pointer-events-none aria-disabled:opacity-55 pointer-coarse:min-h-11 ${focusRing}`;
 
 const VARIANTS = {
-  /** The one main action on a screen (Create my biodata, Download). */
-  primary: "bg-brand text-on-brand shadow-brand hover:bg-brand-hover",
+  /**
+   * The one main action on a screen (Create my biodata, Download): the brand gradient, a shade deeper on hover
+   * (Step 2.5, D51); disabled it goes flat, without the gradient or shadow, as well as faded.
+   */
+  primary:
+    "bg-brand bg-brand-gradient text-on-brand shadow-brand hover:bg-brand-hover hover:bg-brand-gradient-hover disabled:bg-none disabled:shadow-none aria-disabled:bg-none aria-disabled:shadow-none",
   /** Everything else that matters: outlined. */
   secondary: "border border-line-strong bg-surface text-ink shadow-card hover:bg-sunken",
   /** Quiet: in toolbars and beside a primary button. */

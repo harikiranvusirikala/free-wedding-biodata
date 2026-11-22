@@ -4,11 +4,11 @@ import { memo } from "react";
 import { sectionCompletion } from "@/biodata/completion";
 import type { DateFormat, HeightFormat, Section } from "@/biodata/types";
 import { button } from "@/components/ui/button";
-import { card, cardRows, cardTitle } from "@/components/ui/card";
+import { accentCard, accentTile, card, cardRows, cardTitle, iconTile } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icons";
 import { t } from "@/lib/i18n";
 import { FieldRow, MemberRow, type Edit } from "./FieldRow";
-import { sectionTitle } from "./labels";
+import { SECTION_ICONS, sectionTitle } from "./labels";
 import { SectionMenu } from "./ManageMenus";
 import { useManage } from "./ManageProvider";
 import { TraditionChips } from "./TraditionChips";
@@ -50,9 +50,12 @@ export const SectionCard = memo(function SectionCard({
       aria-labelledby={titleId}
       data-section={section.key ?? section.id}
       data-hidden={section.visible ? undefined : ""}
-      className={`${card} scroll-mt-20 max-lg:scroll-mt-[7.5rem]`}
+      className={`${section.visible ? accentCard : card} scroll-mt-20 max-lg:scroll-mt-[7.5rem]`}
     >
       <div className="flex items-center gap-2 border-b border-line py-2 pr-2 pl-4 sm:gap-3 sm:pr-3 sm:pl-5">
+        <span aria-hidden className={`${iconTile} ${accentTile} ${section.visible ? "" : "opacity-60 grayscale"}`}>
+          <Icon name={(section.key && SECTION_ICONS[section.key]) || "list"} className="size-[18px]" />
+        </span>
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1 py-1.5">
           <h2 id={titleId} tabIndex={-1} className={`${cardTitle} min-w-0 break-words outline-none ${section.visible ? "" : "text-ink-3!"}`}>
             {sectionTitle(section)}

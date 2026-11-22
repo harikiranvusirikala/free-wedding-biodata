@@ -5,7 +5,7 @@ import { setInvocation, setMotif, setTitle, titleChoice } from "@/biodata/edits"
 import { INVOCATIONS, INVOCATION_GROUPS, TITLE_KEYS, findInvocation } from "@/biodata/invocations";
 import type { LangCode, ProfileOptions } from "@/biodata/types";
 import { button, focusRing, iconButton, textLink } from "@/components/ui/button";
-import { card, cardTitle } from "@/components/ui/card";
+import { accentCard, accentTile, cardTitle } from "@/components/ui/card";
 import { Dialog, DialogActions } from "@/components/ui/Dialog";
 import { field as fieldClass, fieldHint } from "@/components/ui/field";
 import { Icon } from "@/components/ui/icons";
@@ -366,11 +366,11 @@ export const TopCard = memo(function TopCard({
   const palette = getPalette(getTemplate(templateId), colorId);
   const titleId = `section-${TOP_ID}-title`;
   return (
-    <section id={`section-${TOP_ID}`} aria-labelledby={titleId} data-section={TOP_ID} className={`${card} scroll-mt-20 max-lg:scroll-mt-[7.5rem]`}>
+    <section id={`section-${TOP_ID}`} aria-labelledby={titleId} data-section={TOP_ID} className={`${accentCard} scroll-mt-20 max-lg:scroll-mt-[7.5rem]`}>
       <div className="flex items-center gap-3 border-b border-line px-4 py-3 sm:px-5">
         <span
           aria-hidden
-          className={`flex size-11 shrink-0 items-center justify-center rounded-[10px] ${options.motif ? "" : "border border-dashed border-line-strong text-ink-3"}`}
+          className={`flex size-11 shrink-0 items-center justify-center rounded-[10px] ${options.motif ? "" : accentTile}`}
           style={options.motif ? { background: palette.paper } : undefined}
           data-testid="top-preview"
         >

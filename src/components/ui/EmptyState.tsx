@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { accentTile } from "./card";
 import { Icon, type IconName } from "./icons";
 
 /**
@@ -16,7 +17,7 @@ export function EmptyState(props: {
   className?: string;
 }) {
   const { icon, tone = "brand", eyebrow, title, children, actions, as: Heading = "h2", className = "" } = props;
-  const tile = tone === "danger" ? "bg-danger-soft text-danger" : "bg-brand-soft text-brand-ink";
+  const tile = tone === "danger" ? "bg-danger-soft text-danger" : accentTile;
   return (
     <div className={`flex flex-col items-center px-2 text-center ${className}`}>
       <span className={`flex size-12 items-center justify-center rounded-2xl ${tile}`}>

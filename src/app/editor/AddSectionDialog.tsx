@@ -6,6 +6,7 @@ import type { SectionDef } from "@/biodata/defaults";
 import { addCustomSection, addPresetSection, availablePresetSections, presetFieldKeys } from "@/biodata/edits";
 import type { BiodataProfile } from "@/biodata/types";
 import { button } from "@/components/ui/button";
+import { accentTile, iconTile } from "@/components/ui/card";
 import { Dialog, DialogActions } from "@/components/ui/Dialog";
 import { field as fieldClass, fieldLabel as fieldLabelClass } from "@/components/ui/field";
 import { Icon, type IconName } from "@/components/ui/icons";
@@ -82,7 +83,7 @@ export function AddSectionDialog({
                     className="flex w-full items-center gap-3 rounded-xl border border-line-strong bg-surface px-3.5 py-3 text-left shadow-card transition-colors outline-none hover:border-brand/40 hover:bg-brand-soft focus-visible:ring-[3px] focus-visible:ring-ring"
                     onClick={() => add((id) => (p) => addPresetSection(p, def.key, idFirst(id)))}
                   >
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-[10px] bg-gold-soft text-gold">
+                    <span className={`${iconTile} ${accentTile}`}>
                       <Icon name={icon} className="size-[18px]" />
                     </span>
                     <span className="min-w-0 flex-1">

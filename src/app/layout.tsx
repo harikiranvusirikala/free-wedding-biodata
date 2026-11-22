@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Day, Night or Follow device, on <html> before the first paint so nothing flashes (theme-script.ts). */}
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
-      <body className="min-h-dvh bg-page font-sans text-ink antialiased">{children}</body>
+      <body className="min-h-dvh bg-page bg-page-wash font-sans text-ink antialiased">{children}</body>
     </html>
   );
 }

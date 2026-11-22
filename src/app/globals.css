@@ -38,6 +38,17 @@
   --card-shadow: 0 1px 2px rgb(28 25 23 / 0.04);
   --brand-shadow: 0 1px 2px rgb(0 0 0 / 0.08), 0 4px 12px rgb(138 28 43 / 0.22);
   --pop-shadow: 0 12px 32px -8px rgb(28 25 23 / 0.18), 0 2px 6px rgb(28 25 23 / 0.06);
+  /* Colour polish (Step 2.5, VISION D51): restrained brand gradients, never a new brand colour. White on both
+     ends of the button gradient is ≥ 6.7:1 (hover ≥ 8.5:1); the headline accent is ≥ 4:1 on the page at its
+     lightest (gold) end, and it is only ever large text (AA needs 3:1). src/app/theme-colours.test.ts checks them. */
+  --brand-gradient: linear-gradient(135deg, #8a1c2b 0%, #ad2449 100%);
+  --brand-gradient-hover: linear-gradient(135deg, #74151f 0%, #94193d 100%);
+  --accent-text: linear-gradient(100deg, #8a1c2b 0%, #a8234a 45%, #a86f1c 100%);
+  --accent-strip: linear-gradient(90deg, #8a1c2b 0%, #a8234a 40%, #c4913a 100%);
+  --tile-gradient: linear-gradient(135deg, #fbeff0 0%, #fcf3e2 100%);
+  --page-wash:
+    radial-gradient(70rem 34rem at 0% -8rem, rgb(183 121 31 / 0.07), transparent 70%),
+    radial-gradient(60rem 30rem at 100% -8rem, rgb(138 28 43 / 0.045), transparent 70%);
 }
 
 .dark {
@@ -69,6 +80,15 @@
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
   --brand-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 12px rgb(224 166 74 / 0.14);
   --pop-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.3);
+  /* Night's matching amber → gold versions; the dark button text is ≥ 7.3:1 on both ends. */
+  --brand-gradient: linear-gradient(135deg, #d9963c 0%, #ebb85e 100%);
+  --brand-gradient-hover: linear-gradient(135deg, #e5a650 0%, #f2c56f 100%);
+  --accent-text: linear-gradient(100deg, #f5cf7f 0%, #e0a64a 55%, #d48a3a 100%);
+  --accent-strip: linear-gradient(90deg, #b8652f 0%, #e0a64a 55%, #f1cd85 100%);
+  --tile-gradient: linear-gradient(135deg, #33240f 0%, #2a1a16 100%);
+  --page-wash:
+    radial-gradient(70rem 34rem at 0% -8rem, rgb(224 166 74 / 0.06), transparent 70%),
+    radial-gradient(60rem 30rem at 100% -8rem, rgb(184 101 47 / 0.05), transparent 70%);
 }
 
 @theme inline {
@@ -99,6 +119,44 @@
   --shadow-card: var(--card-shadow);
   --shadow-brand: var(--brand-shadow);
   --shadow-pop: var(--pop-shadow);
+}
+
+/* The gradients as utilities (Step 2.5), each over its flat colour, so a browser without the image still shows
+   the brand: `bg-brand bg-brand-gradient` (primary buttons), `accent-strip` (a 3 px maroon → gold line along an
+   editor card's top, inside its border and rounded with it), `bg-tile` (card-header icon tiles), `bg-page-wash`
+   (the page behind everything) and `text-accent-gradient` (one phrase of the landing headline). */
+@utility bg-brand-gradient {
+  background-image: var(--brand-gradient);
+}
+@utility bg-brand-gradient-hover {
+  background-image: var(--brand-gradient-hover);
+}
+@utility bg-tile {
+  background-image: var(--tile-gradient);
+}
+@utility bg-page-wash {
+  background-image: var(--page-wash);
+  background-repeat: no-repeat;
+}
+@utility accent-strip {
+  background-image: var(--accent-strip);
+  background-repeat: no-repeat;
+  background-size: 100% 3px;
+}
+@utility text-accent-gradient {
+  color: var(--brand-ink);
+  @supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    background-image: var(--accent-text);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
+  @media (forced-colors: active) {
+    background-image: none;
+    color: CanvasText;
+    -webkit-text-fill-color: CanvasText;
+  }
 }
 
 /* Menus and toasts open with a short fade and drop, dialogs with a small rise (as in the sibling apps); none

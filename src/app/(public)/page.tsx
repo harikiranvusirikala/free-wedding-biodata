@@ -30,7 +30,7 @@ export default function Home() {
           </p>
           <h1 className="mt-6 max-w-4xl text-[34px] leading-[1.1] font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
             {first}{" "}
-            <span className="bg-[linear-gradient(100deg,#8a1c2b,#be123c_45%,#ea580c)] bg-clip-text text-transparent dark:bg-[linear-gradient(100deg,#f5c66b,#fb7185,#fda4af)]">
+            <span className="text-accent-gradient">
               {highlighted}
             </span>{" "}
             {tail}
