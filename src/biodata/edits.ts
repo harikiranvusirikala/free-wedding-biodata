@@ -24,7 +24,6 @@ import {
   type BiodataProfile,
   type FamilyMember,
   type FamilySection,
-  type DateFormat,
   type Field,
   type FieldType,
   type FieldsSection,
@@ -819,37 +818,11 @@ export function setLabelCase(profile: BiodataProfile, labelCase: LabelCase, now:
 }
 
 /**
- * The wording of English labels: standard, or Telugu families' spellings (Birth Star, Swagothram, Salary…). The
- * choice is kept even when the page is in another language (it just has no effect there).
+ * The wording of English labels: standard, or Telugu families' four words (Star, Raasi, Swagothram, Maternal
+ * Gothram). The choice is kept even when the page is in another language (it just has no effect there).
  */
 export function setLabelStyle(profile: BiodataProfile, labelStyle: LabelStyle, now: Clock = systemClock) {
   return updateOptions(profile, (o) => ((o.labelStyle ?? "standard") === labelStyle ? o : { ...o, labelStyle }), now);
-}
-
-export const STYLE_PRESETS = {
-  standard: { labelStyle: "standard", dateFormat: "dd-mm-yyyy" },
-  telugu: { labelStyle: "telugu", dateFormat: "d-month-yyyy" },
-} as const satisfies Record<string, { labelStyle: LabelStyle; dateFormat: DateFormat }>;
-
-export type StylePreset = keyof typeof STYLE_PRESETS;
-
-/**
- * The preview's one-tap "Style" line: the label wording and the date style that go together (Telugu families print
- * "Birth Star" and "13-January-1998"). Each can still be changed on its own afterwards.
- */
-export function setStylePreset(profile: BiodataProfile, preset: StylePreset, now: Clock = systemClock) {
-  const { labelStyle, dateFormat } = STYLE_PRESETS[preset];
-  return setDateFormat(setLabelStyle(profile, labelStyle, now), dateFormat, now);
-}
-
-/** The preset the draft's wording and date style match exactly, or undefined once either was changed on its own. */
-export function activeStylePreset(options: Pick<ProfileOptions, "labelStyle" | "dateFormat">): StylePreset | undefined {
-  return (Object.keys(STYLE_PRESETS) as StylePreset[]).find((key) => STYLE_PRESETS[key].labelStyle === (options.labelStyle ?? "standard") && STYLE_PRESETS[key].dateFormat === options.dateFormat);
-}
-
-/** How dates print: 13-01-1998, 13 January 1998 or 13-January-1998 (D14, D28); month names follow the document language. */
-export function setDateFormat(profile: BiodataProfile, dateFormat: DateFormat, now: Clock = systemClock) {
-  return updateOptions(profile, (o) => (o.dateFormat === dateFormat ? o : { ...o, dateFormat }), now);
 }
 
 /**

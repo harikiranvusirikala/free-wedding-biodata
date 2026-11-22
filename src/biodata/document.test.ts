@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getDocDictionary } from "@/i18n/doc";
 import { createProfile, SAMPLE_PROFILE } from "./defaults";
 import { docTexts, toDocument, type DocParagraph, type DocRow } from "./document";
+import { profileSchema } from "./schema";
 import type { BiodataProfile, FieldsSection } from "./types";
 
 const en = getDocDictionary("en");
@@ -83,14 +84,26 @@ describe("toDocument", () => {
     expect(rows(toDocument(p, en, TODAY), "horoscope").find((r) => r.key === "nakshatra")!.value).toBe("Magha");
   });
 
-  it("formats dates, time and height per the options", () => {
+  it("formats dates (always dd-mm-yyyy), time and height per the options", () => {
     const p = sample();
-    p.options.dateFormat = "d-month-yyyy";
     p.options.heightFormat = "ft-in-cm";
     const personal = rows(toDocument(p, en, TODAY), "personal");
-    expect(personal.find((r) => r.key === "dateOfBirth")!.value).toBe("14-August-1996");
+    expect(personal.find((r) => r.key === "dateOfBirth")!.value).toBe("14-08-1996");
     expect(personal.find((r) => r.key === "height")!.value).toBe(`5' 10" (178 cm)`);
     expect(rows(toDocument(p, en, TODAY), "horoscope").find((r) => r.key === "birthTime")!.value).toBe("6:45 AM");
+  });
+
+  it("prints dd-mm-yyyy even for a draft that stored another date style (kept for compatibility, ignored)", () => {
+    for (const dateFormat of ["d month yyyy", "d-month-yyyy"] as const) {
+      const p = sample();
+      p.options.dateFormat = dateFormat;
+      for (const section of p.sections) if (section.kind === "fields") for (const f of section.fields) if (f.key === "dateOfBirth") f.value = "1998-01-13";
+      expect(profileSchema.safeParse(p).success).toBe(true);
+      for (const lang of ["en", "te", "hi"] as const) {
+        const value = rows(toDocument(p, getDocDictionary(lang), TODAY), "personal").find((r) => r.key === "dateOfBirth")!.value;
+        expect(value, `${dateFormat} ${lang}`).toBe("13-01-1998");
+      }
+    }
   });
 
   it("adds the age after the date of birth only when Show age is on (D13)", () => {

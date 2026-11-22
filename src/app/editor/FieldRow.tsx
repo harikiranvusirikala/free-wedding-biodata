@@ -3,7 +3,7 @@
 import { memo, useCallback } from "react";
 import { pickFieldOption, setFieldValue, setFieldVisible, setMemberDetails, setMemberVisible } from "@/biodata/edits";
 import type { Choice } from "@/biodata/inputs";
-import type { BiodataProfile, DateFormat, FamilyMember, Field, HeightFormat } from "@/biodata/types";
+import type { BiodataProfile, FamilyMember, Field, HeightFormat } from "@/biodata/types";
 import { iconButton } from "@/components/ui/button";
 import { fieldHint } from "@/components/ui/field";
 import { Icon } from "@/components/ui/icons";
@@ -112,11 +112,10 @@ interface FieldRowProps {
   field: Field;
   edit: Edit;
   readOnly: boolean;
-  dateFormat: DateFormat;
   heightFormat: HeightFormat;
 }
 
-export const FieldRow = memo(function FieldRow({ field, edit, readOnly, dateFormat, heightFormat }: FieldRowProps) {
+export const FieldRow = memo(function FieldRow({ field, edit, readOnly, heightFormat }: FieldRowProps) {
   const id = `field-${field.id}`;
   const labelStyle = useLabelStyle();
   const label = fieldLabel(field, labelStyle);
@@ -144,7 +143,7 @@ export const FieldRow = memo(function FieldRow({ field, edit, readOnly, dateForm
       input = <ParagraphValue {...value} placeholder={placeholder} maxChars={field.key ? CHAR_GUIDE[field.key] : undefined} />;
       break;
     case "date":
-      input = <DateValue {...value} label={label} dateFormat={dateFormat} placeholder={placeholder} />;
+      input = <DateValue {...value} label={label} placeholder={placeholder} />;
       break;
     case "time":
       input = <TimeValue {...value} label={label} placeholder={placeholder} />;

@@ -1,8 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { getDocDictionary } from "@/i18n/doc";
-import { formatDate } from "@/biodata/format";
 import {
   HEIGHT_INCHES,
   capitalizeFirst,
@@ -14,7 +12,7 @@ import {
   splitInches,
   timeToText,
 } from "@/biodata/inputs";
-import type { DateFormat, HeightFormat } from "@/biodata/types";
+import type { HeightFormat } from "@/biodata/types";
 import { focusRing } from "@/components/ui/button";
 import { field as fieldClass, fieldHint, textArea } from "@/components/ui/field";
 import { Icon } from "@/components/ui/icons";
@@ -177,7 +175,6 @@ function PickerText({
   pickLabel,
   icon,
   placeholder,
-  trailing,
   asTyped,
   ...props
 }: ValueProps & {
@@ -189,8 +186,6 @@ function PickerText({
   pickLabel: string;
   icon: "calendar" | "clock";
   placeholder?: string;
-  /** Muted words at the end of the box when it isn't being typed in: how the date prints, when that differs. */
-  trailing?: string;
   /** The hint under the box when a value doesn't read as a date or time. */
   asTyped: string;
 }) {
@@ -236,11 +231,6 @@ function PickerText({
             onCommit(parse(event.target.value) ?? event.target.value);
           }}
         />
-        {trailing && draft === null && (
-          <span aria-hidden className="pointer-events-none absolute inset-y-0 right-10 flex items-center pr-1 text-[12.5px] text-ink-3 pointer-coarse:right-12 max-[380px]:hidden">
-            {trailing}
-          </span>
-        )}
         <button
           type="button"
           aria-label={pickLabel}
@@ -274,12 +264,8 @@ function PickerText({
   );
 }
 
-const english = getDocDictionary("en");
-
-/** A date: typed dd-mm-yyyy (or picked), stored "YYYY-MM-DD"; the muted end of the box shows how it prints. */
-export function DateValue({ label, dateFormat, placeholder, ...props }: ValueProps & { label: string; dateFormat: DateFormat; placeholder?: string }) {
-  const iso = parseDateText(props.value);
-  const printed = iso && dateFormat !== "dd-mm-yyyy" ? formatDate(iso, dateFormat, english) : undefined;
+/** A date: typed dd-mm-yyyy (or picked), stored "YYYY-MM-DD", printed dd-mm-yyyy (D14). */
+export function DateValue({ label, placeholder, ...props }: ValueProps & { label: string; placeholder?: string }) {
   return (
     <PickerText
       {...props}
@@ -289,7 +275,6 @@ export function DateValue({ label, dateFormat, placeholder, ...props }: ValuePro
       icon="calendar"
       pickLabel={t("editor.date.pick", { label })}
       placeholder={placeholder}
-      trailing={printed}
       asTyped={t("editor.date.asTyped")}
     />
   );

@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { PDFDocument, PDFName, PDFRawStream } from "pdf-lib";
 import { expect, test, type Download, type Locator, type Page } from "@playwright/test";
 import type { BiodataProfile } from "../src/biodata/types";
-import { SAVED, drawnPhoto, openStoredDraft, readStored, sampleDraft } from "./editor-helpers";
+import { SAVED, drawnPhoto, openStoredDraft, readStored, sampleDraft, switchToDetailed } from "./editor-helpers";
 
 // Step 4.2b: photo pages and the attached horoscope page (VISION D40, D41). The "More photos" card adds up to 8 extra
 // photos and a horoscope chart picture; the preview, the PDF, the page images and print all show them after the
@@ -677,4 +677,50 @@ test("the card works on a phone: add, reorder and remove with Undo; a chip reach
     expect(Math.min(box.width, box.height), await button.innerText() || (await button.getAttribute("aria-label")) || "").toBeGreaterThanOrEqual(43.5);
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+// The owner's refinement after Step 4.5: More photos comes last, after every section (its pages print at the end of
+// the PDF): the last card of the form (after Add a section, before the notes on where the draft is kept), the last
+// entry of the rail and the last chip, in the Simple and the Detailed form, and after a section of your own.
+test("More photos is the last card, the last rail entry and the last chip, in Simple and Detailed", async ({ page, isMobile }) => {
+  await newDraft(page);
+  const nav = isMobile ? page.getByTestId("section-jump") : page.getByTestId("section-rail");
+  const cards = () => page.getByTestId("editor-form").locator("section[data-section]").evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.section));
+  const follows = async (first: Locator, second: Locator) => first.evaluate((a, b) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING), await second.elementHandle());
+  const check = async (lastSection: string) => {
+    const order = await cards();
+    expect(order.slice(0, 2)).toEqual(["top", "photo"]);
+    expect(order.at(-2)).toBe(lastSection);
+    expect(order.at(-1)).toBe("photoPages");
+    expect(await follows(page.locator("#add-section"), card(page))).toBe(true);
+    expect(await follows(card(page), page.getByTestId("kept-cards"))).toBe(true);
+    const names = (await nav.getByRole("link").allTextContents()).map((n) => n.trim());
+    expect(names[0]).toMatch(/^Top/);
+    expect(names.at(-1)).toMatch(/^More photos/);
+    expect(names.filter((n) => n.startsWith("More photos"))).toHaveLength(1);
+  };
+
+  await check("partnerPreferences");
+  // At the end of the page the last entry is the one shown as current.
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect(nav.getByRole("link").last()).toHaveAttribute("aria-current", "location");
+  await nav.getByRole("link", { name: /^More photos/ }).click();
+  await expect(card(page).getByRole("heading", { name: "More photos" })).toBeInViewport();
+
+  await switchToDetailed(page);
+  const detailed = await cards();
+  expect(detailed.at(-1)).toBe("photoPages");
+  await check(detailed.at(-2)!);
+  expect(detailed).toContain("horoscope");
+
+  // A section of your own goes after the last section, still before More photos.
+  await page.locator("#add-section").click();
+  const dialog = page.getByRole("dialog", { name: "Add a section" });
+  await dialog.getByLabel("Section title").fill("Hobbies and interests");
+  await dialog.getByRole("button", { name: "Add section" }).click();
+  const heading = page.getByRole("heading", { name: "Hobbies and interests" });
+  await expect(heading).toBeVisible();
+  const own = (await page.locator("section[data-section]", { has: heading }).getAttribute("data-section"))!;
+  await check(own);
+  expect((await nav.getByRole("link").allTextContents()).map((n) => n.trim()).at(-2)).toMatch(/^Hobbies/);
 });

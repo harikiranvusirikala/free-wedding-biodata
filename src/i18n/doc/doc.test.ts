@@ -152,34 +152,36 @@ describe("document dictionaries", () => {
     const en = getDocDictionary("en");
     const overlay = en.labelVariants.telugu;
 
-    it("re-words only keys English already has, with no empty value, and is marked not yet reviewed", () => {
-      expect(Object.keys(overlay.fields).filter((k) => !(k in en.fields))).toEqual([]);
-      expect(Object.keys(overlay.sections).filter((k) => !(k in en.sections))).toEqual([]);
-      expect([...Object.values(overlay.fields), ...Object.values(overlay.sections)].filter((v) => !v.trim())).toEqual([]);
-      expect(overlay.meta.reviewed).toBe(false);
+    it("re-words only keys English already has, with no empty value, and is marked confirmed (by the owner)", () => {
+      const sections: Record<string, string> = overlay.sections;
+      const fields: Record<string, string> = overlay.fields;
+      expect(Object.keys(fields).filter((k) => !(k in en.fields))).toEqual([]);
+      expect(Object.keys(sections).filter((k) => !(k in en.sections))).toEqual([]);
+      expect([...Object.values(fields), ...Object.values(sections)].filter((v) => !v.trim())).toEqual([]);
+      expect(overlay.meta.reviewed).toBe(true);
       const notes = Object.keys(overlay.meta.reviewNotes ?? {});
       expect(notes.length).toBeGreaterThan(0);
-      expect(notes.filter((n) => n !== "all" && !(n.startsWith("fields.") ? n.slice(7) in overlay.fields : n.startsWith("sections.") && n.slice(9) in overlay.sections))).toEqual([]);
+      expect(notes.filter((n) => n !== "all" && !(n.startsWith("fields.") ? n.slice(7) in fields : n.startsWith("sections.") && n.slice(9) in sections))).toEqual([]);
     });
 
-    it("prints the owner's wording on English pages and leaves the standard labels as they are", () => {
+    it("changes exactly four labels on English pages and leaves every other label standard", () => {
       const tables = labelTables(en, "en", "telugu");
+      expect(overlay.fields).toEqual({ nakshatra: "Star", rashi: "Raasi", gotra: "Swagothram", maternalGotra: "Maternal Gothram" });
+      expect(overlay.sections).toEqual({});
+      const changed = Object.keys(tables.fields).filter((k) => tables.fields[k] !== (en.fields as Record<string, string>)[k]);
+      expect(changed.sort()).toEqual(["gotra", "maternalGotra", "nakshatra", "rashi"]);
+      expect(tables.sections).toEqual(en.sections);
+      // What the earlier, longer overlay re-worded now prints the standard way.
       expect(tables.fields).toMatchObject({
-        nakshatra: "Birth Star",
-        rashi: "Raasi",
-        gotra: "Swagothram",
-        maternalGotra: "Maternal Gothram",
-        highestQualification: "Education",
-        occupation: "Profession",
-        annualIncome: "Salary",
-        birthPlace: "Place Of Birth",
-        birthTime: "Time Of Birth",
-        dateOfBirth: "Date Of Birth",
+        dateOfBirth: "Date of Birth",
+        birthTime: "Time of Birth",
+        birthPlace: "Place of Birth",
+        highestQualification: en.fields.highestQualification,
+        occupation: "Occupation",
+        annualIncome: "Annual Income",
       });
-      expect(tables.sections.contact).toBe("Contact Information");
-      // Everything the overlay doesn't mention falls back to the standard label.
+      expect(tables.sections.contact).toBe("Contact Details");
       expect(tables.fields.fullName).toBe("Name");
-      expect(tables.sections.personal).toBe("Personal Details");
       expect(labelTables(en, "en", "standard")).toBe(en);
       expect(labelTables(en, "en").fields.nakshatra).toBe("Nakshatra");
       expect(en.fields.gotra).toBe("Gotra");

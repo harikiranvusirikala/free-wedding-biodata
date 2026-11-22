@@ -2,9 +2,8 @@
 
 import { memo, useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { DocModel } from "@/biodata/document";
-import { activeStylePreset, setColor, setDateFormat, setDesign, setDocLanguage, setLabelCase, setLabelStyle, setStylePreset, setTextSize } from "@/biodata/edits";
-import { EXAMPLE_DATE, formatDate, parseIsoDate } from "@/biodata/format";
-import type { DateFormat, LabelStyle, LangCode, ProfileOptions, TextSize } from "@/biodata/types";
+import { setColor, setDesign, setDocLanguage, setLabelCase, setLabelStyle, setTextSize } from "@/biodata/edits";
+import type { LabelStyle, LangCode, ProfileOptions, TextSize } from "@/biodata/types";
 import { getPalette, getTemplate, TEMPLATES, type TemplateDef } from "@/document/templates";
 import type { Palette } from "@/document/tokens";
 import { getDocDictionary } from "@/i18n/doc";
@@ -13,7 +12,7 @@ import { Dialog, DialogActions } from "@/components/ui/Dialog";
 import { Icon } from "@/components/ui/icons";
 import { Popover } from "@/components/ui/Popover";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { t, type AppKey } from "@/lib/i18n";
+import { t } from "@/lib/i18n";
 import type { Edit } from "../FieldRow";
 import { LanguageDialog, languageName } from "../LanguageNotice";
 import { PAGE_HEIGHT, PAGE_WIDTH, SIZE_LABELS, sizeHint, type SizeStep } from "./layout-math";
@@ -236,47 +235,16 @@ const heading = "mb-2 px-0.5 text-[11px] font-semibold tracking-[0.08em] text-in
 const note = "mt-2 px-0.5 text-[12.5px] text-pretty text-ink-3";
 
 /**
- * "Style: Standard | Telugu families": one tap sets the label wording and the date style that go together (D14,
- * D28). Two toggle buttons rather than a radio group, because a draft whose wording and dates were set one by one
- * matches neither (neither is pressed then, and both stay reachable by keyboard).
+ * Label wording (Standard | Telugu families): changes English headings only, so other languages can't pick it.
+ * `titled` = false in the sheet's dialog, whose title already says "Label wording".
  */
-export function StylePreset({ options, edit, disabled }: { options: Pick<ProfileOptions, "labelStyle" | "dateFormat">; edit: Edit; disabled?: boolean }) {
-  const active = activeStylePreset(options);
-  return (
-    <div>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2" role="group" aria-label={t("preview.style")}>
-        <span className="px-0.5 text-[13px] font-semibold text-ink">{t("preview.style")}:</span>
-        <div className="inline-grid auto-cols-fr grid-flow-col gap-0.5 rounded-lg bg-sunken p-0.5 ring-1 ring-line ring-inset" data-testid="style-preset">
-          {(["standard", "telugu"] as const).map((preset) => (
-            <button
-              key={preset}
-              type="button"
-              aria-pressed={active === preset}
-              disabled={disabled}
-              data-preset={preset}
-              onClick={() => edit((p) => setStylePreset(p, preset))}
-              className={`h-8 rounded-md px-3 text-[13px] font-medium whitespace-nowrap transition-[background-color,color,box-shadow] duration-150 outline-none focus-visible:ring-[3px] focus-visible:ring-ring disabled:opacity-45 motion-reduce:transition-none pointer-coarse:min-h-11 ${
-                active === preset ? "bg-surface text-ink shadow-card ring-1 ring-line" : "text-ink-3 hover:text-ink"
-              }`}
-            >
-              {t(`preview.style.${preset}` as const)}
-            </button>
-          ))}
-        </div>
-      </div>
-      <p className={note}>{t("preview.style.hint")}</p>
-    </div>
-  );
-}
-
-/** Label wording (Standard | Telugu families): changes English headings only, so other languages can't pick it. */
-export function WordingControl({ doc, labelStyle, edit, disabled }: { doc: DocModel; labelStyle: LabelStyle; edit: Edit; disabled?: boolean }) {
+export function WordingControl({ doc, labelStyle, edit, disabled, titled = true }: { doc: DocModel; labelStyle: LabelStyle; edit: Edit; disabled?: boolean; titled?: boolean }) {
   const latin = doc.lang === "en";
   const noteId = useId();
   const options = (["standard", "telugu"] as const).map((value) => ({ value, label: t(`preview.wording.${value}` as const), disabled: disabled || !latin }));
   return (
     <div>
-      <p className={heading}>{t("preview.wording")}</p>
+      {titled && <p className={heading}>{t("preview.wording")}</p>}
       <SegmentedControl label={t("preview.wording")} value={labelStyle} options={options} onChange={(v) => edit((p) => setLabelStyle(p, v))} className="w-full" describedBy={noteId} />
       <p id={noteId} className={note}>
         {latin ? t("preview.wording.hint") : t("preview.wording.englishOnly", { language: languageName(doc.lang) })}
@@ -285,65 +253,12 @@ export function WordingControl({ doc, labelStyle, edit, disabled }: { doc: DocMo
   );
 }
 
-const DATE_OPTIONS: readonly { value: DateFormat; caption: AppKey }[] = [
-  { value: "dd-mm-yyyy", caption: "preview.dates.dd-mm-yyyy" },
-  { value: "d month yyyy", caption: "preview.dates.d month yyyy" },
-  { value: "d-month-yyyy", caption: "preview.dates.d-month-yyyy" },
-];
-
-/**
- * How dates print: three choices, each shown as the date would look (the draft's own date of birth when it has
- * one, else 13 January 1998), with the month in the printing language. Applies to every date in the biodata.
- */
-export function DatesControl({ doc, dateFormat, exampleDate, edit, disabled }: { doc: DocModel; dateFormat: DateFormat; exampleDate?: string; edit: Edit; disabled?: boolean }) {
-  const dict = getDocDictionary(doc.lang);
-  const noteId = useId();
-  const iso = exampleDate && parseIsoDate(exampleDate) ? exampleDate : EXAMPLE_DATE;
-  return (
-    <div>
-      <p className={heading}>{t("preview.dates")}</p>
-      <div role="radiogroup" aria-label={t("preview.dates")} aria-describedby={noteId} onKeyDown={radioKeys} className="space-y-1.5" data-testid="date-formats">
-        {DATE_OPTIONS.map(({ value, caption }) => {
-          const checked = value === dateFormat;
-          const example = formatDate(iso, value, dict);
-          return (
-            <button
-              key={value}
-              type="button"
-              role="radio"
-              aria-checked={checked}
-              aria-label={t("preview.dates.option", { example, name: t(caption) })}
-              tabIndex={checked ? 0 : -1}
-              disabled={disabled}
-              data-date-format={value}
-              onClick={() => edit((p) => setDateFormat(p, value))}
-              className={`flex min-h-9 w-full items-center justify-between gap-3 rounded-lg border px-3 py-1 text-left pointer-coarse:min-h-11 ${focusRing} disabled:opacity-55 ${
-                checked ? "border-brand bg-brand-soft text-brand-ink" : "border-line-strong text-ink-2 hover:bg-sunken"
-              }`}
-            >
-              <span lang={doc.lang} className={`min-w-0 text-[14px] ${checked ? "font-semibold" : "font-medium text-ink"}`}>
-                {example}
-              </span>
-              <span className="shrink-0 text-[12px] text-ink-3">{t(caption)}</span>
-            </button>
-          );
-        })}
-      </div>
-      <p id={noteId} className={note}>
-        {t("preview.dates.hint")}
-      </p>
-    </div>
-  );
-}
-
 /** What the text controls read from the draft. */
-export type StyleOptions = Pick<ProfileOptions, "textSize" | "labelCase" | "labelStyle" | "dateFormat">;
+export type StyleOptions = Pick<ProfileOptions, "textSize" | "labelCase" | "labelStyle">;
 
 interface TextControlsProps {
   doc: DocModel;
   options: StyleOptions;
-  /** The draft's own date, for the date examples. */
-  exampleDate?: string;
   layout: LayoutInfo | null;
   edit: Edit;
   disabled?: boolean;
@@ -352,11 +267,11 @@ interface TextControlsProps {
 }
 
 /**
- * Text size (Auto, XS–XL), the label case (D31), the label wording and the date style. Desktop: one panel, with the
- * one-tap Style line first. The sheet keeps size and case on one row and opens the rest in a dialog, "Labels and
- * dates" (the sheet has no room for them beside the pages).
+ * Text size (Auto, XS–XL), the label case (D31) and the label wording (D53). Desktop: one panel, "Text and labels".
+ * The sheet keeps size and case on one row and opens the wording in a dialog, "Label wording" (the sheet has no room
+ * for it beside the pages).
  */
-export function TextControls({ doc, options, exampleDate, layout, edit, disabled, sheet = false }: TextControlsProps) {
+export function TextControls({ doc, options, layout, edit, disabled, sheet = false }: TextControlsProps) {
   const [more, setMore] = useState(false);
   const latin = doc.lang === "en";
   const sizes = SIZE_OPTIONS.map((o) => ({ ...o, disabled }));
@@ -366,9 +281,7 @@ export function TextControls({ doc, options, exampleDate, layout, edit, disabled
   ];
   const sizeControl = <SegmentedControl label={t("preview.textSize")} value={options.textSize} options={sizes} onChange={(v) => edit((p) => setTextSize(p, v))} className="w-full" />;
   const caseControl = <SegmentedControl label={t("preview.labels")} value={options.labelCase} options={cases} onChange={(v) => edit((p) => setLabelCase(p, v))} className={sheet ? "" : "w-full"} />;
-  const style = <StylePreset options={options} edit={edit} disabled={disabled} />;
-  const wording = <WordingControl doc={doc} labelStyle={options.labelStyle ?? "standard"} edit={edit} disabled={disabled} />;
-  const dates = <DatesControl doc={doc} dateFormat={options.dateFormat} exampleDate={exampleDate} edit={edit} disabled={disabled} />;
+  const labelStyle = options.labelStyle ?? "standard";
   if (sheet) {
     return (
       <div className="flex flex-col gap-2.5">
@@ -379,20 +292,20 @@ export function TextControls({ doc, options, exampleDate, layout, edit, disabled
             {caseControl}
           </div>
         </div>
+        {/* "Label wording", not "Labels": the row above is already labelled "Labels" (the case). Shows the choice. */}
         <button
           type="button"
           aria-haspopup="dialog"
           onClick={() => setMore(true)}
-          className={`-mx-1 inline-flex h-10 items-center justify-between gap-2 rounded-lg px-1 text-[14px] font-medium text-ink-2 hover:text-ink pointer-coarse:min-h-11 ${focusRing}`}
+          className={`-mx-1 inline-flex h-10 items-center gap-2 rounded-lg px-1 text-[14px] font-medium text-ink-2 hover:text-ink pointer-coarse:min-h-11 ${focusRing}`}
         >
-          {t("preview.moreStyle")}
-          <Icon name="chevronRight" className="size-4 text-ink-3" />
+          <span className="min-w-0 flex-1 text-left">{t("preview.wording")}</span>
+          {latin && <span className="truncate text-[13px] font-normal text-ink-3">{t(`preview.wording.${labelStyle}` as const)}</span>}
+          <Icon name="chevronRight" className="size-4 shrink-0 text-ink-3" />
         </button>
-        <Dialog open={more} onClose={() => setMore(false)} title={t("preview.moreStyle")} description={t("preview.moreStyle.text")}>
-          <div className="space-y-4" data-testid="sheet-more-style">
-            {style}
-            <div className="border-t border-line pt-4">{wording}</div>
-            <div className="border-t border-line pt-4">{dates}</div>
+        <Dialog open={more} onClose={() => setMore(false)} title={t("preview.wording")} description={t("preview.wording.dialogText")}>
+          <div data-testid="sheet-more-style">
+            <WordingControl doc={doc} labelStyle={labelStyle} edit={edit} disabled={disabled} titled={false} />
           </div>
           <DialogActions>
             <button type="button" className={button("primary")} onClick={() => setMore(false)}>
@@ -405,8 +318,7 @@ export function TextControls({ doc, options, exampleDate, layout, edit, disabled
   }
   return (
     <div className="space-y-2.5">
-      {style}
-      <div className="border-t border-line pt-2.5">
+      <div>
         <p className={heading}>{t("preview.textSize")}</p>
         {sizeControl}
         <div className="mt-2 px-0.5">
@@ -419,8 +331,9 @@ export function TextControls({ doc, options, exampleDate, layout, edit, disabled
         {caseControl}
         {!latin && <p className={note}>{t("preview.labels.latinOnly")}</p>}
       </div>
-      <div className="border-t border-line pt-2.5">{wording}</div>
-      <div className="border-t border-line pt-2.5">{dates}</div>
+      <div className="border-t border-line pt-2.5">
+        <WordingControl doc={doc} labelStyle={labelStyle} edit={edit} disabled={disabled} />
+      </div>
     </div>
   );
 }
@@ -431,7 +344,7 @@ export function textSizeValue(textSize: TextSize, layout: LayoutInfo | null): st
   return layout ? t("preview.textSize.autoChosen", { size: SIZE_LABELS[layout.step] }) : t("preview.textSize.auto");
 }
 
-/** Desktop: "T Auto · M ▾" opens the text size, label and date controls. */
+/** Desktop: "T Auto · M ▾" opens the text size and label controls. */
 export function TextSizePopover(props: Omit<TextControlsProps, "sheet">) {
   const value = textSizeValue(props.options.textSize, props.layout);
   return (

@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { sectionCompletion } from "@/biodata/completion";
-import type { DateFormat, HeightFormat, Section } from "@/biodata/types";
+import type { HeightFormat, Section } from "@/biodata/types";
 import { button } from "@/components/ui/button";
 import { accentCard, accentTile, card, cardRows, cardTitle, iconTile } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icons";
@@ -25,14 +25,12 @@ export const SectionCard = memo(function SectionCard({
   section,
   edit,
   readOnly,
-  dateFormat,
   heightFormat,
   traditions,
 }: {
   section: Section;
   edit: Edit;
   readOnly: boolean;
-  dateFormat: DateFormat;
   heightFormat: HeightFormat;
   /** Step 2.0: this card holds the tradition chips; the chips already fully added (doneTraditions). */
   traditions?: string;
@@ -87,7 +85,7 @@ export const SectionCard = memo(function SectionCard({
         <div className={cardRows}>
           {section.kind === "fields"
             ? section.fields.map((field) => (
-                <FieldRow key={field.id} field={field} edit={edit} readOnly={readOnly} dateFormat={dateFormat} heightFormat={heightFormat} />
+                <FieldRow key={field.id} field={field} edit={edit} readOnly={readOnly} heightFormat={heightFormat} />
               ))
             : section.members.map((member) => (
                 <MemberRow

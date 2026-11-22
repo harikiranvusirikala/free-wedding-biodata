@@ -70,6 +70,7 @@ export const sectionSchema = z
 
 export const optionsSchema = z.object({
   showAge: z.boolean(),
+  // Kept for compatibility (drafts and backups that stored another date style still validate); ignored when printing.
   dateFormat: z.enum(DATE_FORMATS),
   heightFormat: z.enum(HEIGHT_FORMATS),
   textSize: z.enum(TEXT_SIZES),

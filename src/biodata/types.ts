@@ -80,7 +80,11 @@ export interface FamilySection extends SectionBase {
 export type Section = FieldsSection | FamilySection;
 
 export const DATE_FORMATS = ["dd-mm-yyyy", "d month yyyy", "d-month-yyyy"] as const;
-/** "15-03-1998" (the default, D14), "15 March 1998" and "15-March-1998" (D28). */
+/**
+ * A stored date style. Kept for compatibility only, and ignored: every biodata prints dates as dd-mm-yyyy (D14; the
+ * Dates choice of D53 was withdrawn). Drafts and backups saved with another value still validate and open, with no
+ * format bump and no rewrite.
+ */
 export type DateFormat = (typeof DATE_FORMATS)[number];
 
 export const HEIGHT_FORMATS = ["ft-in", "cm", "ft-in-cm"] as const;
@@ -96,9 +100,10 @@ export type LabelCase = (typeof LABEL_CASES)[number];
 
 export const LABEL_STYLES = ["standard", "telugu"] as const;
 /**
- * The wording of the printed English labels: "standard" (Nakshatra, Gotra, Annual Income) or "telugu", the spellings
- * Telugu families use in English (Birth Star, Swagothram, Salary, Date Of Birth). Only English pages use it; every
- * other document language prints its own dictionary whatever the style is. Absent = standard.
+ * The wording of the printed English labels: "standard" (Nakshatra, Rashi, Gotra, Maternal Gotra) or "telugu", the
+ * four words Telugu families use in English (Star, Raasi, Swagothram, Maternal Gothram); every other label stays
+ * standard. Only English pages use it; every other document language prints its own dictionary whatever the style
+ * is. Absent = standard.
  */
 export type LabelStyle = (typeof LABEL_STYLES)[number];
 
@@ -113,6 +118,7 @@ export type FormLayout = (typeof FORM_LAYOUTS)[number];
 export interface ProfileOptions {
   /** Print the age computed from the date of birth on the day the document is made (opt-in, D13). */
   showAge: boolean;
+  /** Kept for compatibility and ignored: dates always print dd-mm-yyyy (see DateFormat). */
   dateFormat: DateFormat;
   heightFormat: HeightFormat;
   textSize: TextSize;

@@ -211,30 +211,21 @@
   "labelVariants": {
     "telugu": {
       "meta": {
-        "reviewed": false,
+        "reviewed": true,
         "reviewNotes": {
-          "all": "English spellings Telugu families use on their biodatas, taken from the owner's own biodata, not yet confirmed by a second Telugu speaker. Please confirm every spelling and capital letter below.",
-          "fields.nakshatra": "Birth Star: the plain-English name for the nakshatra.",
+          "all": "The four English words Telugu families use on their biodatas, confirmed by the owner, 2026-11-22. Every other label stays standard.",
+          "fields.nakshatra": "Star: the plain-English name for the nakshatra.",
           "fields.rashi": "Raasi (double a), as families spell it in English.",
           "fields.gotra": "Swagothram: the usual Telugu spelling; Gotra on a standard page.",
-          "fields.maternalGotra": "Maternal Gothram: note the spelling differs from Swagothram (gothram, not gotram).",
-          "sections.contact": "Contact Information instead of Contact Details."
+          "fields.maternalGotra": "Maternal Gothram: note the spelling differs from Swagothram (gothram, not gotram)."
         }
       },
-      "sections": {
-        "contact": "Contact Information"
-      },
+      "sections": {},
       "fields": {
-        "dateOfBirth": "Date Of Birth",
-        "birthTime": "Time Of Birth",
-        "birthPlace": "Place Of Birth",
-        "nakshatra": "Birth Star",
+        "nakshatra": "Star",
         "rashi": "Raasi",
         "gotra": "Swagothram",
-        "maternalGotra": "Maternal Gothram",
-        "highestQualification": "Education",
-        "occupation": "Profession",
-        "annualIncome": "Salary"
+        "maternalGotra": "Maternal Gothram"
       }
     }
   },

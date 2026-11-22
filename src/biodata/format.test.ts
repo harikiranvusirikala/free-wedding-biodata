@@ -1,41 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { getDocDictionary } from "@/i18n/doc";
-import { LANG_CODES } from "./types";
-import { SAMPLE_PROFILE } from "./defaults";
-import { ageOn, draftExampleDate, EXAMPLE_DATE, formatAge, formatDate, formatHeight, formatTime, parseIsoDate } from "./format";
+import { ageOn, formatAge, formatDate, formatHeight, formatTime, parseIsoDate } from "./format";
 
 const en = getDocDictionary("en");
 const te = getDocDictionary("te");
 
 describe("formatDate", () => {
-  it("prints DD-MM-YYYY by default and the two month-name styles (D14, D28)", () => {
-    expect(formatDate("1997-08-22", "dd-mm-yyyy", en)).toBe("22-08-1997");
-    expect(formatDate("1997-08-22", "d month yyyy", en)).toBe("22 August 1997");
-    expect(formatDate("1997-08-22", "d-month-yyyy", en)).toBe("22-August-1997");
-    expect(formatDate("1998-03-05", "d month yyyy", en)).toBe("5 March 1998");
-  });
-
-  it("uses the document language's month names", () => {
-    expect(formatDate("1997-08-22", "d-month-yyyy", te)).toBe("22-ఆగస్టు-1997");
-  });
-
-  it("names the month in every document language, in both month-name styles (D33)", () => {
-    for (const lang of LANG_CODES) {
-      const dict = getDocDictionary(lang);
-      for (let month = 1; month <= 12; month++) {
-        const iso = `1998-${String(month).padStart(2, "0")}-13`;
-        expect(formatDate(iso, "d month yyyy", dict), `${lang} ${month}`).toBe(`13 ${dict.months[month - 1]} 1998`);
-        expect(formatDate(iso, "d-month-yyyy", dict), `${lang} ${month}`).toBe(`13-${dict.months[month - 1]}-1998`);
-        expect(dict.months[month - 1].trim()).not.toBe("");
-      }
-    }
-    // Only English months are Latin letters: the other languages never print a half-English date.
-    expect(formatDate("1998-01-13", "d-month-yyyy", getDocDictionary("hi"))).not.toMatch(/January/);
+  it("prints DD-MM-YYYY (D14), the one date style", () => {
+    expect(formatDate("1997-08-22")).toBe("22-08-1997");
+    expect(formatDate("1998-03-05")).toBe("05-03-1998");
+    expect(formatDate(" 1998-01-13 ")).toBe("13-01-1998");
   });
 
   it("prints anything that isn't a real date exactly as typed (trimmed)", () => {
-    expect(formatDate(" Aug 1997 ", "d month yyyy", en)).toBe("Aug 1997");
-    expect(formatDate("1997-02-30", "dd-mm-yyyy", en)).toBe("1997-02-30");
+    expect(formatDate(" Aug 1997 ")).toBe("Aug 1997");
+    expect(formatDate("1997-02-30")).toBe("1997-02-30");
     expect(parseIsoDate("2000-02-29")).toEqual({ year: 2000, month: 2, day: 29 });
     expect(parseIsoDate("1900-02-29")).toBeNull();
   });
@@ -86,21 +65,5 @@ describe("ageOn", () => {
   it("prints years in the document language", () => {
     expect(formatAge(30, en)).toBe("30 years");
     expect(formatAge(30, te)).toBe("30 సంవత్సరాలు");
-  });
-});
-
-describe("draftExampleDate", () => {
-  it("is the draft's date of birth, else another real date, else nothing (the picker then shows the fixed example)", () => {
-    const profile = structuredClone(SAMPLE_PROFILE);
-    const dob = profile.sections.flatMap((s) => (s.kind === "fields" ? s.fields : [])).find((f) => f.key === "dateOfBirth")!;
-    expect(draftExampleDate(profile)).toBe(dob.value.trim());
-    expect(parseIsoDate(draftExampleDate(profile)!)).not.toBeNull();
-    dob.value = "sometime in March";
-    expect(draftExampleDate(profile)).toBeUndefined();
-    dob.value = "";
-    expect(draftExampleDate(profile)).toBeUndefined();
-    expect(formatDate(EXAMPLE_DATE, "d-month-yyyy", en)).toBe("13-January-1998");
-    expect(formatDate(EXAMPLE_DATE, "d month yyyy", en)).toBe("13 January 1998");
-    expect(formatDate(EXAMPLE_DATE, "dd-mm-yyyy", en)).toBe("13-01-1998");
   });
 });

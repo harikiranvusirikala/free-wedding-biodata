@@ -452,7 +452,7 @@ export const DEFAULT_COLOR_ID = "gold";
  */
 export const DEFAULT_OPTIONS: Readonly<ProfileOptions> = {
   showAge: false,
-  dateFormat: "dd-mm-yyyy",
+  dateFormat: "dd-mm-yyyy", // kept for compatibility; dates always print dd-mm-yyyy
   heightFormat: "ft-in",
   textSize: "auto",
   labelCase: "normal",

@@ -4,24 +4,25 @@ import { getDocDictionary } from "../src/i18n/doc";
 import { SAVED, openStoredDraft, readStored, sampleDraft, storedField } from "./editor-helpers";
 import { meanPixelDifference, openOwnerStyleDraft, ownerStyleDraft } from "./style-helpers";
 
-// Step 4.5 (owner's M1 polish): the date format, the Telugu families' label wording and the one-tap Style line in the
-// preview's controls; the Save as image note; relaxed spacing on a one-page biodata; and the A7 screenshots of all of
-// it. Desktop opens the "Text size" panel, the phone sheet opens the "Labels and dates" dialog; both hold the same controls.
+// Step 4.5 (owner's M1 polish, refined after M1): the Telugu families' label wording in the preview's "Text and labels"
+// controls; dates always dd-mm-yyyy (the Dates choice and the one-tap Style line were withdrawn); the Save as image
+// note; relaxed spacing on a one-page biodata; and the A7 screenshots of all of it. Desktop opens the "Text size"
+// panel, the phone sheet opens the "Label wording" dialog; both hold the same wording control.
 
 const fresh = (page: Page) => page.locator('[data-testid="preview-pages"] [data-doc-ready="1"]');
 const preview = (page: Page) => page.getByTestId("preview-pages");
 
-/** Opens the controls for the date format and the label wording, and returns the part that holds them. */
+/** Opens the controls that hold the label wording, and returns the part that holds them. */
 async function openStyle(page: Page, isMobile: boolean): Promise<Locator> {
   if (isMobile) {
-    const dialog = page.getByRole("dialog", { name: "Labels and dates" });
+    const dialog = page.getByRole("dialog", { name: "Label wording", exact: true });
     if (!(await dialog.isVisible())) {
       const sheet = page.getByRole("dialog", { name: "Preview" });
       if (!(await sheet.isVisible())) {
         await page.getByTestId("preview-pill").click();
         await expect(sheet).toBeVisible();
       }
-      await sheet.getByRole("button", { name: "Labels and dates" }).click();
+      await sheet.getByRole("button", { name: /^Label wording/ }).click();
     }
     await expect(dialog).toBeVisible();
     return dialog;
@@ -35,8 +36,14 @@ async function openStyle(page: Page, isMobile: boolean): Promise<Locator> {
 /** A form input by its label: a combobox (Nakshatra, Rashi) or a text box, whichever the field is. */
 const formInput = (scope: Locator, label: string) => scope.getByRole("combobox", { name: label, exact: true }).or(scope.getByRole("textbox", { name: label, exact: true }));
 
-const dateRadio = (controls: Locator, example: string | RegExp) => controls.getByRole("radiogroup", { name: "Dates" }).getByRole("radio", { name: example });
 const wordingRadio = (controls: Locator, name: "Standard" | "Telugu families") => controls.getByRole("radiogroup", { name: "Label wording" }).getByRole("radio", { name });
+
+/** The four words Telugu families' wording changes, and the standard words it leaves alone. */
+const TELUGU_WORDS = ["Star", "Raasi", "Swagothram", "Maternal Gothram"];
+const STANDARD_WORDS = ["Nakshatra", "Rashi", "Gotra", "Maternal Gotra"];
+const UNCHANGED = ["Date of Birth", "Time of Birth", "Place of Birth", "Qualification", "Occupation", "Annual Income", "Contact Details"];
+/** Words of the earlier, longer Telugu wording (withdrawn): they must never print now. */
+const WITHDRAWN = ["Birth Star", "Date Of Birth", "Time Of Birth", "Place Of Birth", "Education", "Profession", "Salary", "Contact Information"];
 
 async function ready(page: Page, id: string, draft = ownerStyleDraft(id)) {
   await openStoredDraft(page, draft);
@@ -45,114 +52,97 @@ async function ready(page: Page, id: string, draft = ownerStyleDraft(id)) {
 
 const stored = (page: Page, id: string) => readStored(page, id);
 
-test.describe("date format", () => {
-  test("each choice changes every date in the preview and is stored, and survives a reload", async ({ page, isMobile }) => {
+test.describe("dates", () => {
+  test("print dd-mm-yyyy, and the controls offer no date style or Style line", async ({ page, isMobile }) => {
     const id = "style-dates";
     await ready(page, id);
     await expect(preview(page)).toContainText("13-01-1998");
     const controls = await openStyle(page, isMobile);
-
-    // The choices show the draft's own date.
-    await expect(dateRadio(controls, "13-01-1998, Numbers")).toBeChecked();
-    await expect(dateRadio(controls, "13 January 1998, Month in words")).toBeVisible();
-    await expect(dateRadio(controls, "13-January-1998, Month with dashes")).toBeVisible();
-
-    await dateRadio(controls, /^13 January 1998/).click();
-    await expect(dateRadio(controls, /^13 January 1998/)).toBeChecked();
-    await expect(preview(page)).toContainText("13 January 1998");
-    await expect.poll(async () => (await stored(page, id)).options.dateFormat).toBe("d month yyyy");
-
-    await dateRadio(controls, /^13-January-1998/).click();
-    await expect(preview(page)).toContainText("13-January-1998");
-    await expect.poll(async () => (await stored(page, id)).options.dateFormat).toBe("d-month-yyyy");
-
-    await dateRadio(controls, /^13-01-1998/).click();
-    await expect(preview(page)).toContainText("13-01-1998");
-    await expect.poll(async () => (await stored(page, id)).options.dateFormat).toBe("dd-mm-yyyy");
-
-    // Chosen again, then a reload: still chosen, in the controls and in the preview.
-    await dateRadio(controls, /^13-January-1998/).click();
-    await expect.poll(async () => (await stored(page, id)).options.dateFormat).toBe("d-month-yyyy");
-    await expect(page.getByTestId("save-status")).toHaveText(SAVED);
-    await page.reload();
-    await expect(fresh(page)).toHaveAttribute("data-doc-pages", "1");
-    await expect(preview(page)).toContainText("13-January-1998");
-    const again = await openStyle(page, isMobile);
-    await expect(dateRadio(again, /^13-January-1998/)).toBeChecked();
+    await expect(controls.getByRole("radiogroup", { name: "Label wording" })).toBeVisible();
+    await expect(controls.getByRole("radiogroup", { name: "Dates" })).toHaveCount(0);
+    await expect(controls.getByTestId("date-formats")).toHaveCount(0);
+    await expect(controls.getByTestId("style-preset")).toHaveCount(0);
+    await expect(controls.getByText(/Month in words|Month with dashes|13 January 1998|13-January-1998/)).toHaveCount(0);
+    await expect(controls.getByText("Style:", { exact: true })).toHaveCount(0);
+    if (!isMobile) {
+      // Desktop: one panel, "Text and labels": text size, labels, then the wording.
+      await expect(page.getByRole("dialog", { name: "Text and labels", exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: /^Text size: .*\. Change the text size or labels$/ })).toBeVisible();
+      await expect(controls.getByRole("radiogroup", { name: "Text size" })).toBeVisible();
+      await expect(controls.getByRole("radiogroup", { name: "Labels", exact: true })).toBeVisible();
+    }
   });
 
-  test("the examples use the draft's own date, else a fixed one, and the printing language's months", async ({ page, isMobile }) => {
-    const id = "style-example";
+  test("a draft saved with another date style still prints 13-01-1998, in any language, and keeps what it stored", async ({ page, isMobile }) => {
+    const id = "style-old-dates";
     await ready(page, id, ownerStyleDraft(id, (p) => {
-      storedField(p, "dateOfBirth")!.value = "1996-08-14";
+      p.options.dateFormat = "d month yyyy";
     }));
-    let controls = await openStyle(page, isMobile);
-    await expect(dateRadio(controls, "14 August 1996, Month in words")).toBeVisible();
+    await expect(preview(page)).toContainText("13-01-1998");
+    await expect(preview(page)).not.toContainText("January");
+    // The form shows the date the way it prints, with no "prints as" words beside it.
+    if (!isMobile) {
+      const dob = page.locator('[data-section="personal"]').getByRole("textbox", { name: "Date of Birth", exact: true });
+      await expect(dob).toHaveValue("13-01-1998");
+      await expect(page.locator('[data-section="personal"]')).not.toContainText("January");
+    }
+    // Opened and shown, never rewritten: the stored value is kept for compatibility (and ignored).
+    expect((await stored(page, id)).options.dateFormat).toBe("d month yyyy");
 
-    // Not a real date (typed as text): the fixed example, 13 January 1998.
-    await ready(page, "style-example-2", ownerStyleDraft("style-example-2", (p) => {
-      storedField(p, "dateOfBirth")!.value = "";
-    }));
-    controls = await openStyle(page, isMobile);
-    await expect(dateRadio(controls, "13 January 1998, Month in words")).toBeVisible();
-
-    // The month follows the printing language (D33): Telugu here.
-    const te = getDocDictionary("te").months;
-    await ready(page, "style-example-te", ownerStyleDraft("style-example-te", (p) => {
+    const te = "style-old-dates-te";
+    await ready(page, te, ownerStyleDraft(te, (p) => {
+      p.options.dateFormat = "d-month-yyyy";
       p.docLanguage = "te";
     }));
-    controls = await openStyle(page, isMobile);
-    await expect(dateRadio(controls, `13 ${te[0]} 1998, Month in words`)).toBeVisible();
-    await dateRadio(controls, `13-${te[0]}-1998, Month with dashes`).click();
-    await expect(dateRadio(controls, `13-${te[0]}-1998, Month with dashes`)).toBeChecked();
-    await expect(preview(page)).toContainText(`13-${te[0]}-1998`);
+    await expect(preview(page)).toContainText("13-01-1998");
+    await expect(preview(page)).not.toContainText(`13-${getDocDictionary("te").months[0]}-1998`);
   });
 });
 
 test.describe("label wording", () => {
-  test("Telugu families' wording changes the printed labels and the form's, and survives a reload", async ({ page, isMobile }) => {
+  test("Telugu families' wording changes four labels, printed and in the form, and survives a reload", async ({ page, isMobile }) => {
     const id = "style-telugu";
     await ready(page, id);
-    await expect(preview(page)).toContainText("Nakshatra");
+    for (const label of STANDARD_WORDS) await expect(preview(page), label).toContainText(label);
     await expect(formInput(page.locator('[data-section="personal"]'), "Nakshatra")).toBeVisible();
     const controls = await openStyle(page, isMobile);
     await expect(wordingRadio(controls, "Standard")).toBeChecked();
-    await expect(controls.getByText(/This changes English headings only/)).toBeVisible();
+    await expect(controls.getByText("Star, Raasi, Swagothram, Maternal Gothram. This changes English headings only; a label you renamed keeps your words.")).toBeVisible();
 
     await wordingRadio(controls, "Telugu families").click();
     await expect(wordingRadio(controls, "Telugu families")).toBeChecked();
-    const printed = ["Date Of Birth", "Time Of Birth", "Place Of Birth", "Birth Star", "Raasi", "Swagothram", "Maternal Gothram", "Education", "Profession", "Salary"];
-    for (const label of printed) await expect(preview(page), label).toContainText(label);
+    for (const label of TELUGU_WORDS) await expect(preview(page), label).toContainText(label);
     await expect(preview(page)).not.toContainText("Nakshatra");
-    await expect(preview(page)).not.toContainText("Annual Income");
-    // Wording only: what the family typed, and the headings the style doesn't rename, are as they were.
+    await expect(preview(page)).not.toContainText("Rashi");
+    // Every other label is the standard one, including the ones the earlier wording changed.
+    for (const label of UNCHANGED) await expect(preview(page), label).toContainText(label);
+    for (const label of WITHDRAWN) await expect(preview(page), label).not.toContainText(label);
+    // Wording only: what the family typed is as it was, and so are the dates.
     await expect(preview(page)).toContainText("Sai Teja Mandapati");
     await expect(preview(page)).toContainText("Personal Details");
-    await expect.poll(async () => (await stored(page, id)).options.labelStyle).toBe("telugu");
-    // Dates are untouched by the wording alone.
-    expect((await stored(page, id)).options.dateFormat).toBe("dd-mm-yyyy");
     await expect(preview(page)).toContainText("13-01-1998");
+    await expect.poll(async () => (await stored(page, id)).options.labelStyle).toBe("telugu");
 
     // What you see in the form is what prints.
     if (!isMobile) {
-      for (const label of ["Birth Star", "Raasi", "Swagothram", "Maternal Gothram", "Salary", "Profession", "Education"]) {
-        await expect(formInput(page.locator('[data-section="personal"]'), label), `form: ${label}`).toBeVisible();
-      }
-      await expect(page.locator('[data-section="contact"]').getByRole("heading", { name: "Contact Information" })).toBeVisible();
+      const personal = page.locator('[data-section="personal"]');
+      for (const label of TELUGU_WORDS) await expect(formInput(personal, label), `form: ${label}`).toBeVisible();
+      for (const label of ["Date of Birth", "Qualification", "Occupation", "Annual Income"]) await expect(formInput(personal, label), `form: ${label}`).toBeVisible();
+      await expect(page.locator('[data-section="contact"]').getByRole("heading", { name: "Contact Details" })).toBeVisible();
     }
 
     await expect(page.getByTestId("save-status")).toHaveText(SAVED);
     await page.reload();
     await expect(fresh(page)).toHaveAttribute("data-doc-pages", "1");
-    await expect(preview(page)).toContainText("Birth Star");
-    await expect(preview(page)).toContainText("Contact Information");
+    await expect(preview(page)).toContainText("Swagothram");
+    await expect(preview(page)).toContainText("Contact Details");
     const again = await openStyle(page, isMobile);
     await expect(wordingRadio(again, "Telugu families")).toBeChecked();
 
     // And back.
     await wordingRadio(again, "Standard").click();
     await expect(preview(page)).toContainText("Nakshatra");
-    await expect(preview(page)).not.toContainText("Birth Star");
+    await expect(preview(page)).not.toContainText("Swagothram");
     await expect.poll(async () => (await stored(page, id)).options.labelStyle).toBe("standard");
   });
 
@@ -176,44 +166,13 @@ test.describe("label wording", () => {
     }));
     const hi = getDocDictionary("hi").fields;
     await expect(preview(page)).toContainText(hi.nakshatra);
-    await expect(preview(page)).not.toContainText("Birth Star");
     await expect(preview(page)).not.toContainText("Swagothram");
-    await expect(preview(page)).not.toContainText("Contact Information");
+    await expect(preview(page)).not.toContainText("Raasi");
     const controls = await openStyle(page, isMobile);
     await expect(wordingRadio(controls, "Telugu families")).toBeDisabled();
     await expect(controls.getByText(/applies to English headings only/)).toBeVisible();
-    // The date style still applies in every language.
-    await expect(dateRadio(controls, /^13-01-1998/)).toBeEnabled();
     // The stored choice is kept for when the page is English again.
     expect((await stored(page, id)).options.labelStyle).toBe("telugu");
-  });
-
-  test("the Style line sets the wording and the date style together, and each can still be changed", async ({ page, isMobile }) => {
-    const id = "style-preset";
-    await ready(page, id);
-    const controls = await openStyle(page, isMobile);
-    const preset = controls.getByTestId("style-preset");
-    await expect(preset.getByRole("button", { name: "Standard" })).toHaveAttribute("aria-pressed", "true");
-
-    await preset.getByRole("button", { name: "Telugu families" }).click();
-    await expect(preset.getByRole("button", { name: "Telugu families" })).toHaveAttribute("aria-pressed", "true");
-    await expect(preview(page)).toContainText("13-January-1998");
-    await expect(preview(page)).toContainText("Birth Star");
-    await expect.poll(async () => (await stored(page, id)).options).toMatchObject({ labelStyle: "telugu", dateFormat: "d-month-yyyy" });
-    await expect(wordingRadio(controls, "Telugu families")).toBeChecked();
-    await expect(dateRadio(controls, /^13-January-1998/)).toBeChecked();
-
-    // The date control overrides; the wording stays, and the preset no longer shows as chosen.
-    await dateRadio(controls, /^13-01-1998/).click();
-    await expect(preview(page)).toContainText("13-01-1998");
-    await expect(preview(page)).toContainText("Birth Star");
-    await expect(preset.getByRole("button", { name: "Telugu families" })).toHaveAttribute("aria-pressed", "false");
-    await expect(preset.getByRole("button", { name: "Standard" })).toHaveAttribute("aria-pressed", "false");
-
-    await preset.getByRole("button", { name: "Standard" }).click();
-    await expect(preview(page)).toContainText("Nakshatra");
-    await expect(preview(page)).toContainText("13-01-1998");
-    await expect.poll(async () => (await stored(page, id)).options).toMatchObject({ labelStyle: "standard", dateFormat: "dd-mm-yyyy" });
   });
 
   test("a new draft starts Standard", async ({ page }) => {
@@ -452,8 +411,9 @@ test.describe("relaxed spacing", () => {
   });
 });
 
-// The A7 quality gate for this step (BUILD_PLAN A7): the preview's controls panel at desktop, 1180 px and as the phone
-// sheet, Day and Night, a Telugu-style page and a relaxed page; saved in test-results/screenshots/ to be looked at.
+// The A7 quality gate for this step (BUILD_PLAN A7): the preview's "Text and labels" panel at desktop, 1180 px and as
+// the phone/tablet sheet with its "Label wording" dialog, Day and Night, a Telugu-style page, the end of the form
+// with More photos last, and a relaxed page; saved in test-results/screenshots/ to be looked at.
 test("style controls and pages at every size, Day and Night", async ({ page, isMobile }) => {
   test.skip(isMobile, "sizes are set here, so one project is enough");
   test.setTimeout(240_000);
@@ -479,12 +439,10 @@ test("style controls and pages at every size, Day and Night", async ({ page, isM
   await page.getByRole("button", { name: /^Text size: / }).click();
   await expect(page.getByTestId("text-size-panel")).toBeVisible();
   await shoot("style-panel-desktop");
-  await page.keyboard.press("Escape");
 
-  // Telugu families' wording: the page and the form.
-  await page.getByRole("button", { name: /^Text size: / }).click();
-  await page.getByTestId("text-size-panel").getByTestId("style-preset").getByRole("button", { name: "Telugu families" }).click();
-  await expect(preview(page)).toContainText("Birth Star");
+  // Telugu families' wording: the panel, the page and the form.
+  await wordingRadio(page.getByTestId("text-size-panel"), "Telugu families").click();
+  await expect(preview(page)).toContainText("Swagothram");
   await shoot("style-panel-telugu-desktop");
   await page.keyboard.press("Escape");
   await expect(fresh(page)).toHaveAttribute("data-doc-pages", "1");
@@ -500,8 +458,8 @@ test("style controls and pages at every size, Day and Night", async ({ page, isM
   const sheet = page.getByRole("dialog", { name: "Preview" });
   await expect(sheet).toBeVisible();
   await shoot("style-sheet-tablet");
-  await sheet.getByRole("button", { name: "Labels and dates" }).click();
-  const more = page.getByRole("dialog", { name: "Labels and dates" });
+  await sheet.getByRole("button", { name: /^Label wording/ }).click();
+  const more = page.getByRole("dialog", { name: "Label wording", exact: true });
   await expect(more).toBeVisible();
   await shoot("style-dialog-tablet");
   await more.getByRole("button", { name: "Done" }).click();
@@ -513,14 +471,29 @@ test("style controls and pages at every size, Day and Night", async ({ page, isM
   await page.getByTestId("preview-pill").click();
   await expect(sheet).toBeVisible();
   await shoot("style-sheet-phone");
-  await sheet.getByRole("button", { name: "Labels and dates" }).click();
+  // The opener names the control and shows the choice; the row above stays "Labels" (Normal / ALL CAPS).
+  await expect(sheet.getByRole("button", { name: /^Label wording/ })).toContainText("Telugu families");
+  await expect(sheet.getByRole("radiogroup", { name: "Labels", exact: true })).toBeVisible();
+  await sheet.getByRole("button", { name: /^Label wording/ }).click();
   await expect(more).toBeVisible();
   await shoot("style-dialog-phone");
-  await more.evaluate((el) => el.scrollTo(0, el.scrollHeight));
-  await shoot("style-dialog-phone-end");
   await more.getByRole("button", { name: "Done" }).click();
   await page.keyboard.press("Escape");
+  await expect(sheet).toBeHidden();
 
+  // The end of the form: the last section, Add a section, then More photos (last, as its pages print last), with the
+  // rail (desktop) or the chips (phone, tablet) showing it as the last entry.
+  for (const [name, width, height] of [["phone", 390, 844], ["tablet", 810, 1080], ["desktop", 1440, 900]] as const) {
+    await page.setViewportSize({ width, height });
+    // The card's top under the header and chips, with Add a section just above it.
+    await page.locator('[data-section="photoPages"]').evaluate((el) => {
+      el.scrollIntoView({ block: "start" });
+      window.scrollBy(0, -90);
+    });
+    await expect(page.locator('[data-section="photoPages"]')).toBeInViewport();
+    await page.waitForTimeout(400);
+    await shoot(`form-end-${name}`);
+  }
   // The image menu, with its note.
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole("button", { name: "Save as image" }).click();

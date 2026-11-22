@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createProfile } from "./defaults";
 import { toDocument } from "./document";
-import { activeStylePreset, setColor, setDateFormat, setDesign, setLabelCase, setLabelStyle, setStylePreset, setTextSize } from "./edits";
+import { setColor, setDesign, setLabelCase, setLabelStyle, setTextSize } from "./edits";
 import { profileSchema } from "./schema";
 import type { BiodataProfile } from "./types";
 import { getDocDictionary } from "@/i18n/doc";
@@ -94,31 +94,6 @@ describe("setLabelCase", () => {
   });
 });
 
-describe("setDateFormat", () => {
-  it("changes how every date prints, in the document language (D14, D28)", () => {
-    const profile = freeze(structuredClone(SAMPLE_PROFILE) as BiodataProfile);
-    const dob = (p: BiodataProfile) => doc(p).sections.flatMap((s) => s.items).find((i) => i.kind === "row" && i.key === "dateOfBirth");
-    const original = dob(profile);
-    const next = setDateFormat(profile, "d-month-yyyy", later);
-    expect(next.options.dateFormat).toBe("d-month-yyyy");
-    expect(next.updatedAt).toBe(LATER.toISOString());
-    expect(next.sections).toBe(profile.sections);
-    valid(next);
-    const printed = dob(next);
-    expect(printed).toMatchObject({ value: expect.stringMatching(/^\d{1,2}-[A-Za-z]+-\d{4}$/) });
-    expect(printed).not.toEqual(original);
-    expect(dob(setDateFormat(next, "d month yyyy", later))).toMatchObject({ value: expect.stringMatching(/^\d{1,2} [A-Za-z]+ \d{4}$/) });
-    expect(dob(setDateFormat(next, "dd-mm-yyyy", later))).toEqual(original);
-  });
-
-  it("is a no-op for the format already set", () => {
-    const profile = setup();
-    expect(setDateFormat(profile, "dd-mm-yyyy", later)).toBe(profile);
-    const other = setDateFormat(profile, "d month yyyy", later);
-    expect(setDateFormat(other, "d month yyyy", later)).toBe(other);
-  });
-});
-
 describe("setLabelStyle", () => {
   it("is Standard until chosen, switches to the Telugu families' wording and back", () => {
     const profile = setup();
@@ -147,10 +122,17 @@ describe("setLabelStyle", () => {
     expect(before.get("nakshatra")).toBe("Nakshatra");
     const telugu = setLabelStyle(profile, "telugu", later);
     const after = labels(telugu);
-    expect(after.get("nakshatra")).toBe("Birth Star");
+    // Exactly four words change (confirmed by the owner); every other label stays standard.
+    expect(after.get("nakshatra")).toBe("Star");
+    expect(after.get("rashi")).toBe("Raasi");
     expect(after.get("gotra")).toBe("Swagothram");
-    expect(after.get("fullName")).toBe(before.get("fullName"));
-    expect(doc(telugu).sections.find((s) => s.key === "contact")?.title).toBe("Contact Information");
+    expect(after.get("maternalGotra")).toBe("Maternal Gothram");
+    const changed = [...after].filter(([key, label]) => label !== before.get(key)).map(([key]) => key);
+    expect(changed.sort()).toEqual(["gotra", "maternalGotra", "nakshatra", "rashi"]);
+    expect(after.get("dateOfBirth")).toBe("Date of Birth");
+    expect(after.get("highestQualification")).toBe("Qualification");
+    expect(after.get("occupation")).toBe("Occupation");
+    expect(doc(telugu).sections.find((s) => s.key === "contact")?.title).toBe(doc(profile).sections.find((s) => s.key === "contact")?.title);
 
     const renamed = structuredClone(telugu);
     for (const section of renamed.sections) if (section.kind === "fields") for (const f of section.fields) if (f.key === "nakshatra") f.label = "Janma Nakshatram";
@@ -160,34 +142,5 @@ describe("setLabelStyle", () => {
     const hindi = { ...telugu, docLanguage: "hi" as const };
     expect(labels(hindi).get("nakshatra")).toBe(labels({ ...profile, docLanguage: "hi" }).get("nakshatra"));
     expect(labels(hindi).get("gotra")).not.toBe("Swagothram");
-  });
-});
-
-describe("setStylePreset", () => {
-  it("sets the label wording and the date style together, and each can be changed on its own afterwards", () => {
-    const profile = setup();
-    expect(activeStylePreset(profile.options)).toBe("standard");
-    const telugu = setStylePreset(profile, "telugu", later);
-    expect(telugu.options).toMatchObject({ labelStyle: "telugu", dateFormat: "d-month-yyyy" });
-    expect(telugu.updatedAt).toBe(LATER.toISOString());
-    expect(telugu.sections).toBe(profile.sections);
-    valid(telugu);
-    expect(activeStylePreset(telugu.options)).toBe("telugu");
-
-    // The date control still overrides: the preset no longer matches, and the choice is kept.
-    const dated = setDateFormat(telugu, "dd-mm-yyyy", later);
-    expect(dated.options.labelStyle).toBe("telugu");
-    expect(activeStylePreset(dated.options)).toBeUndefined();
-
-    const back = setStylePreset(dated, "standard", later);
-    expect(back.options).toMatchObject({ labelStyle: "standard", dateFormat: "dd-mm-yyyy" });
-    expect(activeStylePreset(back.options)).toBe("standard");
-  });
-
-  it("is a no-op when the draft already matches the preset", () => {
-    const profile = setup();
-    expect(setStylePreset(profile, "standard", later)).toBe(profile);
-    const telugu = setStylePreset(profile, "telugu", later);
-    expect(setStylePreset(telugu, "telugu", later)).toBe(telugu);
   });
 });

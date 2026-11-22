@@ -1,4 +1,4 @@
-import type { BiodataProfile, DateFormat, HeightFormat } from "./types";
+import type { HeightFormat } from "./types";
 import { fill, type DocDictionary } from "@/i18n/doc";
 
 // How values are printed (VISION §6, D13, D14): dates, birth time, height and age. Pure functions of the stored
@@ -18,31 +18,13 @@ export function parseIsoDate(value: string): { year: number; month: number; day:
   return { year, month, day };
 }
 
-/** The date the format picker shows its examples with when a draft has no date yet (13 January 1998). */
-export const EXAMPLE_DATE = "1998-01-13";
-
-/** The draft's own date for the date-format examples: the date of birth, else any other real date it holds. */
-export function draftExampleDate(profile: Pick<BiodataProfile, "sections">): string | undefined {
-  const dates = profile.sections.flatMap((s) => (s.kind === "fields" ? s.fields : [])).filter((f) => f.type === "date" && parseIsoDate(f.value));
-  return (dates.find((f) => f.key === "dateOfBirth") ?? dates[0])?.value.trim();
-}
-
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
-/** "14-08-1996" (default), "14 August 1996" or "14-August-1996", month names in the document language. */
-export function formatDate(value: string, format: DateFormat, dict: DocDictionary): string {
+/** A stored "YYYY-MM-DD" as "14-08-1996" (D14), the one way every biodata prints a date. */
+export function formatDate(value: string): string {
   const date = parseIsoDate(value);
   if (!date) return value.trim();
-  const { year, month, day } = date;
-  const monthName = dict.months[month - 1];
-  switch (format) {
-    case "d month yyyy":
-      return `${day} ${monthName} ${year}`;
-    case "d-month-yyyy":
-      return `${day}-${monthName}-${year}`;
-    default:
-      return `${pad2(day)}-${pad2(month)}-${year}`;
-  }
+  return `${pad2(date.day)}-${pad2(date.month)}-${date.year}`;
 }
 
 /** A stored "HH:mm" (24 h) as 12-hour time with AM/PM (§6): "06:45" → "6:45 AM". */

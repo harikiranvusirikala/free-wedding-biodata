@@ -195,25 +195,6 @@ export function SectionRail({ sections, hasPhoto, hasMorePhotos, current, onJump
             )}
           </a>
         </li>
-        {/* Step 4.2b: more photos (extra pages and the horoscope chart), ticked once something is added. */}
-        <li>
-          <a
-            href={`#${sectionAnchor({ id: PHOTO_PAGES_ID })}`}
-            aria-current={current === PHOTO_PAGES_ID ? "location" : undefined}
-            title={t("pages.card.title")}
-            onClick={(event) => onLink(event, PHOTO_PAGES_ID, onJump)}
-            className={`flex min-h-10 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm leading-snug transition-colors max-xl:justify-center ${current === PHOTO_PAGES_ID ? "bg-brand-soft font-semibold text-brand-ink" : "text-ink-2 hover:bg-sunken hover:text-ink"} ${focusRing}`}
-          >
-            <PhotoIcon name="gallery" className="size-4 shrink-0 max-xl:size-5" />
-            <span className="line-clamp-2 min-w-0 flex-1 break-words max-xl:sr-only">{t("pages.card.title")}</span>
-            {hasMorePhotos && (
-              <span className="shrink-0 max-xl:hidden" data-testid="rail-pages-done">
-                <Icon name="check" className="size-4 text-good" />
-                <span className="sr-only">, {t("pages.card.added")}</span>
-              </span>
-            )}
-          </a>
-        </li>
         {sections.map((section) => {
           const on = section.id === current;
           const title = sectionTitle(section, labelStyle);
@@ -250,6 +231,26 @@ export function SectionRail({ sections, hasPhoto, hasMorePhotos, current, onJump
             </li>
           );
         })}
+        {/* Step 4.2b: more photos (extra pages and the horoscope chart), ticked once something is added. Last, as in the
+            form: these pages print after the biodata. */}
+        <li>
+          <a
+            href={`#${sectionAnchor({ id: PHOTO_PAGES_ID })}`}
+            aria-current={current === PHOTO_PAGES_ID ? "location" : undefined}
+            title={t("pages.card.title")}
+            onClick={(event) => onLink(event, PHOTO_PAGES_ID, onJump)}
+            className={`flex min-h-10 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm leading-snug transition-colors max-xl:justify-center ${current === PHOTO_PAGES_ID ? "bg-brand-soft font-semibold text-brand-ink" : "text-ink-2 hover:bg-sunken hover:text-ink"} ${focusRing}`}
+          >
+            <PhotoIcon name="gallery" className="size-4 shrink-0 max-xl:size-5" />
+            <span className="line-clamp-2 min-w-0 flex-1 break-words max-xl:sr-only">{t("pages.card.title")}</span>
+            {hasMorePhotos && (
+              <span className="shrink-0 max-xl:hidden" data-testid="rail-pages-done">
+                <Icon name="check" className="size-4 text-good" />
+                <span className="sr-only">, {t("pages.card.added")}</span>
+              </span>
+            )}
+          </a>
+        </li>
       </ul>
       <RailAdd disabled={!canAdd} />
     </nav>
@@ -272,7 +273,13 @@ export function SectionJump({ sections, current, onJump }: NavProps) {
   return (
     <nav aria-label={t("editor.jump")} className="border-b border-line bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85" data-testid="section-jump">
       <ul ref={listRef} className="flex gap-2 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:px-6 [&::-webkit-scrollbar]:hidden">
-        {[{ id: TOP_ID, label: t("editor.chip.top") }, { id: PHOTO_ID, label: t("editor.chip.photo") }, { id: PHOTO_PAGES_ID, label: t("editor.chip.photoPages") }, ...sections.map((section) => ({ id: section.id, label: chipLabel(section, labelStyle) }))].map(({ id, label }) => {
+        {[
+          { id: TOP_ID, label: t("editor.chip.top") },
+          { id: PHOTO_ID, label: t("editor.chip.photo") },
+          ...sections.map((section) => ({ id: section.id, label: chipLabel(section, labelStyle) })),
+          // More photos last, as in the form: those pages print after the biodata.
+          { id: PHOTO_PAGES_ID, label: t("editor.chip.photoPages") },
+        ].map(({ id, label }) => {
           const on = id === current;
           return (
             <li key={id} className="shrink-0">

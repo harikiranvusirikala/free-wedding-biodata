@@ -86,7 +86,8 @@ function fieldValue(field: Field, profile: BiodataProfile, dict: DocDictionary):
   if (!value.trim()) return "";
   switch (field.type) {
     case "date":
-      return formatDate(value, profile.options.dateFormat, dict);
+      // Always dd-mm-yyyy: `options.dateFormat` is kept in stored drafts for compatibility and ignored.
+      return formatDate(value);
     case "time":
       return formatTime(value, dict);
     case "height":
@@ -135,7 +136,7 @@ function sectionItems(section: Section, profile: BiodataProfile, dict: DocDictio
 /** The document model for a profile in its document language, as of `today` (for the age). */
 export function toDocument(profile: BiodataProfile, dict: DocDictionary, today: Date): DocModel {
   const { options } = profile;
-  // English pages may use the Telugu families' wording (Birth Star, Swagothram…); other languages ignore the style.
+  // English pages may use the Telugu families' wording (Star, Swagothram…); other languages ignore the style.
   const tables = labelTables(dict, profile.docLanguage, options.labelStyle);
   const sections: DocSection[] = [];
   let name: string | undefined;

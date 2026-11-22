@@ -66,7 +66,6 @@ export function PreviewSheet({
   onOpenChange,
   doc,
   options,
-  exampleDate,
   layout,
   edit,
   readOnly,
@@ -77,7 +76,6 @@ export function PreviewSheet({
   onOpenChange: (open: boolean) => void;
   doc: DocModel;
   options: ProfileOptions;
-  exampleDate?: string;
   layout: LayoutInfo | null;
   edit: Edit;
   readOnly: boolean;
@@ -199,7 +197,7 @@ export function PreviewSheet({
                 <ColourPicker doc={doc} edit={edit} disabled={readOnly} />
                 <FitHint textSize={options.textSize} layout={layout} />
               </div>
-              <TextControls doc={doc} options={options} exampleDate={exampleDate} layout={layout} edit={edit} disabled={readOnly} sheet />
+              <TextControls doc={doc} options={options} layout={layout} edit={edit} disabled={readOnly} sheet />
             </div>
           )}
           <div className="relative flex min-h-0 flex-1 flex-col bg-sunken">{children}</div>

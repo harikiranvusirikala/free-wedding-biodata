@@ -38,8 +38,9 @@ import { LivePreview } from "./preview/LivePreview";
 export function DraftEditor({ controller, repo, db }: { controller: AutosaveController; repo: ProfileRepo; db: BiodataDb }) {
   const { profile, status } = useAutosave(controller);
   const conflict = status.state === "error" && status.kind === "conflict";
-  // The top card comes first in the form and the rail (Step 2.0), then the photo (Step 3.1), more photos (Step 4.2b), then the sections.
-  const ids = useMemo(() => [TOP_ID, PHOTO_ID, PHOTO_PAGES_ID, ...profile.sections.map((s) => s.id)], [profile.sections]);
+  // The form's order, also the rail's and the chips': the top card (Step 2.0), the photo (Step 3.1), the sections,
+  // then more photos (Step 4.2b), whose pages print after the biodata.
+  const ids = useMemo(() => [TOP_ID, PHOTO_ID, ...profile.sections.map((s) => s.id), PHOTO_PAGES_ID], [profile.sections]);
   const traditionsDone = useMemo(() => doneTraditions({ sections: profile.sections, options: profile.options }), [profile.sections, profile.options]);
   const { current: currentSection, jump } = useCurrentSection(ids);
 
@@ -175,6 +176,18 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
                   onSecondChange={onPagesChange}
                   readOnly={conflict}
                 />
+                {profile.sections.map((section) => (
+                  <SectionCard
+                    key={section.id}
+                    section={section}
+                    edit={edit}
+                    readOnly={conflict}
+                    heightFormat={profile.options.heightFormat}
+                    traditions={showsTraditions(profile, section.id) ? traditionsDone : undefined}
+                  />
+                ))}
+                <AddSectionButton disabled={conflict} />
+                {/* More photos and the horoscope chart last: their pages print after the biodata (owner, D53 refinement). */}
                 <PhotoPagesCard
                   photoPages={profile.photoPages}
                   chart={profile.horoscopeChart}
@@ -183,18 +196,6 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
                   onChange={onPagesChange}
                   readOnly={conflict}
                 />
-                {profile.sections.map((section) => (
-                  <SectionCard
-                    key={section.id}
-                    section={section}
-                    edit={edit}
-                    readOnly={conflict}
-                    dateFormat={profile.options.dateFormat}
-                    heightFormat={profile.options.heightFormat}
-                    traditions={showsTraditions(profile, section.id) ? traditionsDone : undefined}
-                  />
-                ))}
-                <AddSectionButton disabled={conflict} />
                 {/* Where the draft is kept, after the last section (the right column is the preview since Step 3.3). */}
                 <aside aria-label={t("editor.keptLabel")} className="grid gap-4 pt-4 sm:grid-cols-2 lg:grid-cols-1" data-testid="kept-cards">
                   <div className={`${noteCard} flex gap-3`}>

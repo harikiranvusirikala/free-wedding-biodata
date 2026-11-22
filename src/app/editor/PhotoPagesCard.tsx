@@ -33,10 +33,11 @@ import type { PhotoInput } from "@/lib/profile-repo";
 import { usePictures } from "@/lib/use-pictures";
 import { useManage } from "./ManageProvider";
 
-// The "More photos" card (Step 4.2b, VISION D40, D41; Photo's sibling in the form): extra photos printed on pages
-// after the biodata, 1, 2 or 4 to a page, and a photo or scan of the horoscope chart on its own page. Optional, and
-// built for frequent swapping (families send new pictures with the biodata): a switch turns the pages off without
-// losing a photo, and each photo can be cropped, replaced, moved earlier or later, or removed (with Undo).
+// The "More photos" card (Step 4.2b, VISION D40, D41; the last card of the form, as its pages print last): extra
+// photos printed on pages after the biodata, 1, 2 or 4 to a page, and a photo or scan of the horoscope chart on its
+// own page. Optional, and built for frequent swapping (families send new pictures with the biodata): a switch turns
+// the pages off without losing a photo, and each photo can be cropped, replaced, moved earlier or later, or removed
+// (with Undo).
 // Like the Photo card it holds no storage: it gets the profile's references and a way to read a stored picture, and
 // hands every change to the editor as { edit, put, delete }, which the editor writes in one transaction with the
 // profile (autosave). Memoised on the references, so typing elsewhere never re-renders it.

@@ -89,9 +89,9 @@ export interface LabelTables {
 const tableCache = new Map<DocDictionary, Map<LabelStyle, LabelTables>>();
 
 /**
- * The section and field labels for a document language and label style. "telugu" re-words some English labels
- * (Birth Star, Swagothram, Salary…; the overlay in en.json's `labelVariants`) and, like the dictionaries themselves,
- * falls back to the standard label key by key. Any other language ignores the style: Telugu families print their
+ * The section and field labels for a document language and label style. "telugu" re-words four English labels
+ * (Star, Raasi, Swagothram, Maternal Gothram; the overlay in en.json's `labelVariants`) and, like the dictionaries
+ * themselves, falls back to the standard label key by key. Any other language ignores the style: Telugu families print their
  * own language's words there. A label the user renamed always wins; that is the caller's rule, not this table's.
  */
 export function labelTables(dict: DocDictionary, lang: LangCode, style: LabelStyle = "standard"): LabelTables {
