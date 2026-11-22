@@ -1,5 +1,7 @@
-import { cropPlacement, frameHeight } from "@/biodata/photo-crop";
+import { clampCrop, cropPlacement, frameHeight } from "@/biodata/photo-crop";
 import type { PhotoCrop, PhotoFrame } from "@/biodata/types";
+import type { DrawnPicture, PictureSpec } from "./picture-store";
+import { pictureUrl } from "./picture-urls";
 
 // Photos in the browser (VISION §10, D12, D40): check a picked file, decode it upright (the camera's EXIF
 // orientation applied), shrink it to at most 3000 px on the long edge and store it as a JPEG ≈ 0.9; later draw
@@ -189,4 +191,47 @@ export async function renderCropDataUrl(blob: Blob, crop: PhotoCrop, frame: Phot
 /** The pixels a frame printed `printWidthMm` wide needs at `dpi` (300 by default). */
 export function printPixels(printWidthMm: number, dpi = 300): number {
   return Math.round((printWidthMm / 25.4) * dpi);
+}
+
+/**
+ * A picture drawn for the pages after the biodata or the editor's thumbnails (Step 4.2b), as a blob: URL
+ * (picture-urls.ts). A crop is kept covering the frame it is drawn into (`clampCrop`), because the frame depends on
+ * the layout and a crop made for 2:3 may not cover 3:4: the user's centre and zoom are kept, only pulled inside. A
+ * fit is the whole picture turned by quarter turns: the stored image itself when it needs no turn.
+ */
+export async function drawPicture(blob: Blob, spec: PictureSpec): Promise<DrawnPicture> {
+  const image = await decode(blob);
+  try {
+    const { width, height } = sizeOf(image);
+    if (spec.kind === "crop") {
+      const canvas = renderCrop(image, clampCrop(spec.crop, width, height, spec.frame), spec.frame, spec.outWidth);
+      const out = await toBlob(canvas, "image/jpeg", spec.quality);
+      const size = { width: canvas.width, height: canvas.height };
+      canvas.width = canvas.height = 0;
+      if (!out) throw new Error("Could not encode the picture");
+      return { src: pictureUrl(out), ...size };
+    }
+    const scale = spec.maxSide ? Math.min(1, spec.maxSide / Math.max(width, height)) : 1;
+    if (spec.rotation === 0 && scale === 1) return { src: pictureUrl(blob), width, height };
+    const turned = spec.rotation === 90 || spec.rotation === 270;
+    const drawn = { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
+    const canvas = document.createElement("canvas");
+    canvas.width = turned ? drawn.height : drawn.width;
+    canvas.height = turned ? drawn.width : drawn.height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("No canvas");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.imageSmoothingQuality = "high";
+    context.translate(canvas.width / 2, canvas.height / 2);
+    context.rotate((spec.rotation * Math.PI) / 180);
+    context.drawImage(image, -drawn.width / 2, -drawn.height / 2, drawn.width, drawn.height);
+    const out = await toBlob(canvas, "image/jpeg", JPEG_QUALITY);
+    const size = { width: canvas.width, height: canvas.height };
+    canvas.width = canvas.height = 0;
+    if (!out) throw new Error("Could not encode the picture");
+    return { src: pictureUrl(out), ...size };
+  } finally {
+    if ("close" in image) image.close();
+  }
 }

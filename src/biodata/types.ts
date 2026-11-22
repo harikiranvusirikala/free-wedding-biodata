@@ -166,8 +166,27 @@ export interface MainPhoto extends PhotoRef {
 }
 
 export const PHOTOS_PER_PAGE = [1, 2, 4] as const;
-/** Photo pages hold at most this many extra photos (D40). */
-export const MAX_EXTRA_PHOTOS = 4;
+/**
+ * Photo pages hold at most this many extra photos. VISION D40 said 4; the owner agreed to 8 (Step 4.2b), since
+ * families send frequently changing pictures. Relaxing a maximum needs no format bump: older drafts hold fewer.
+ */
+export const MAX_EXTRA_PHOTOS = 8;
+
+/** The extra photos printed on pages after the biodata (D40), 1, 2 or 4 to a page. */
+export interface PhotoPages {
+  perPage: (typeof PHOTOS_PER_PAGE)[number];
+  photos: PhotoRef[];
+  /**
+   * False: the photos stay in the draft but print nothing (Step 4.2b: switch the pages off without deleting the
+   * pictures). Absent = true, so drafts saved before the switch print their pages as they did.
+   */
+  include?: boolean;
+}
+
+/** A photo or scan of the horoscope chart (D41), printed as its own framed page; `include` works as for PhotoPages. */
+export interface HoroscopeChart extends PhotoRef {
+  include?: boolean;
+}
 
 /** The saved format's version this code reads and writes. migrate() upgrades older ones and refuses newer ones. */
 export const CURRENT_SCHEMA_VERSION = 1;
@@ -195,7 +214,7 @@ export interface BiodataProfile {
   /** An optional second photo on page 1 (D40). */
   secondPhoto?: PhotoRef;
   /** Up to MAX_EXTRA_PHOTOS photos on their own pages, 1, 2 or 4 to a page (D40). */
-  photoPages?: { perPage: (typeof PHOTOS_PER_PAGE)[number]; photos: PhotoRef[] };
+  photoPages?: PhotoPages;
   /** A photo or scan of the horoscope chart, printed as its own framed page (D41). */
-  horoscopeChart?: PhotoRef;
+  horoscopeChart?: HoroscopeChart;
 }

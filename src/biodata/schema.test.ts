@@ -51,6 +51,19 @@ describe("profileSchema", () => {
     expect(issuesOf(profile)).toEqual([]);
   });
 
+  it("reads the on/off switches of photo pages and the chart (Step 4.2b) without a format bump", () => {
+    const crop = { x: 0.5, y: 0.5, zoom: 1, rotation: 0 };
+    const off = { ...fresh(), photoPages: { perPage: 4, include: false, photos: Array.from({ length: 8 }, (_, i) => ({ id: `p${i}`, crop })) }, horoscopeChart: { id: "c", crop, include: false } };
+    expect(issuesOf(off)).toEqual([]);
+    expect(profileSchema.parse(off).photoPages?.include).toBe(false);
+    // A draft saved before the switches has neither key and stays as it is.
+    const before = profileSchema.parse({ ...fresh(), photoPages: { perPage: 2, photos: [{ id: "p", crop }] }, horoscopeChart: { id: "c", crop } });
+    expect(before.photoPages).not.toHaveProperty("include");
+    expect(before.horoscopeChart).not.toHaveProperty("include");
+    expect(issuesOf({ ...fresh(), photoPages: { perPage: 2, include: "no", photos: [] } })).toContain("photoPages.include");
+    expect(issuesOf({ ...fresh(), horoscopeChart: { id: "c", crop, include: 1 } })).toContain("horoscopeChart.include");
+  });
+
   it("drops unknown keys at every level instead of rejecting them (VISION §9)", () => {
     const profile = fresh();
     const withExtras = {
@@ -90,10 +103,10 @@ describe("profileSchema", () => {
       "photo.crop.rotation",
     ],
     [
-      "more than four extra photos",
+      "more than eight extra photos",
       (p: BiodataProfile) => ({
         ...p,
-        photoPages: { perPage: 4, photos: [1, 2, 3, 4, 5].map((i) => ({ id: `p${i}`, crop: { x: 0, y: 0, zoom: 1, rotation: 0 } })) },
+        photoPages: { perPage: 4, photos: [1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => ({ id: `p${i}`, crop: { x: 0, y: 0, zoom: 1, rotation: 0 } })) },
       }),
       "photoPages.photos",
     ],

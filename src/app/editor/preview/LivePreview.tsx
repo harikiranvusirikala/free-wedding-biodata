@@ -3,18 +3,21 @@
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 import { toDocument, type DocModel } from "@/biodata/document";
 import { draftExampleDate } from "@/biodata/format";
+import { chartTitle } from "@/biodata/photo-pages";
 import type { BiodataProfile } from "@/biodata/types";
 import { DocumentView, type DocumentLayoutInfo } from "@/document/DocumentView";
-import type { PhotoInput } from "@/document/blocks/types";
+import type { PhotoInput, PhotoPagesInput } from "@/document/blocks/types";
+import { inputPageCounts } from "@/document/photo-pages";
 import { getDocDictionary } from "@/i18n/doc";
 import { button, iconButton } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
-import { useDocumentPhoto, type LoadBlob } from "@/lib/document-photo";
+import { useDocumentPhoto, useDocumentPhotos, type LoadBlob } from "@/lib/document-photo";
 import { t } from "@/lib/i18n";
 import type { Edit } from "../FieldRow";
 import { ExportToast, ToolbarActions, useExport, type ExportSource } from "./ExportActions";
 import { printFromBrowserMenu } from "./export-files";
 import { fitScale, pageInView, pageTop, percent, resolveScale, stackHeight, stepZoom, PAGE_WIDTH, type Zoom } from "./layout-math";
+import { pageStatus } from "./page-status";
 import { DesignPopover, LanguageButton, TextSizePopover, type LayoutInfo } from "./PreviewControls";
 import { PreviewSheet } from "./PreviewSheet";
 
@@ -114,22 +117,31 @@ export function LivePreview({ profile, edit, loadBlob, readOnly }: LivePreviewPr
   const exampleDate = useMemo(() => draftExampleDate(profile), [profile]);
 
   const photo = useDocumentPhoto(profile.photo, loadBlob);
-  // The first layout waits for the photo, so the page doesn't reflow when it arrives; later ones keep the old one.
+  // The pages after the biodata (Step 4.2b): extra photos and the horoscope chart, drawn as the settled draft says.
+  const chartHeading = useMemo(() => chartTitle(shown, getDocDictionary(shown.docLanguage)), [shown]);
+  const extra = useDocumentPhotos(shown, chartHeading, loadBlob);
+  const extraCounts = inputPageCounts(extra.input);
+  // The first layout waits for the photos, so the page doesn't reflow when they arrive; later ones keep the old ones.
   const [started, setStarted] = useState(false);
-  if (!started && photo.ready) setStarted(true);
+  if (!started && photo.ready && extra.ready) setStarted(true);
 
-  const [layout, setLayout] = useState<LayoutInfo | null>(null);
-  const onLayout = useCallback((info: DocumentLayoutInfo) => setLayout({ pages: info.pages, step: info.step }), []);
+  const [details, setDetails] = useState<{ pages: number; step: LayoutInfo["step"] } | null>(null);
+  const onLayout = useCallback((info: DocumentLayoutInfo) => setDetails({ pages: info.pages, step: info.step }), []);
+  // `pages` stays the biodata's own pages (the text-size hint is about them); the photo pages are counted beside it.
+  const layout = useMemo<LayoutInfo | null>(
+    () => (details ? { ...details, photoPages: extraCounts.photos, chartPages: extraCounts.chart } : null),
+    [details, extraCounts.photos, extraCounts.chart],
+  );
 
   // For downloads: the latest draft, what the pages show, and whether the photo is drawn.
   const latest = useRef(profile);
   const shownRef = useRef(shown);
-  const photoReady = useRef(photo.ready);
+  const photoReady = useRef(photo.ready && extra.ready);
   const host = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     latest.current = profile;
     shownRef.current = shown;
-    photoReady.current = photo.ready;
+    photoReady.current = photo.ready && extra.ready;
   });
 
   const source = useMemo<ExportSource>(
@@ -155,6 +167,7 @@ export function LivePreview({ profile, edit, loadBlob, readOnly }: LivePreviewPr
       hostRef={host}
       doc={started ? doc : null}
       photo={photo.photo}
+      photoPages={extra.input}
       layout={layout}
       onLayout={onLayout}
       fit={desktop ? "page" : "width"}
@@ -217,6 +230,7 @@ function PagesPane({
   hostRef,
   doc,
   photo,
+  photoPages,
   layout,
   onLayout,
   fit,
@@ -225,6 +239,7 @@ function PagesPane({
   hostRef: RefObject<HTMLDivElement | null>;
   doc: DocModel | null;
   photo?: PhotoInput;
+  photoPages?: PhotoPagesInput;
   layout: LayoutInfo | null;
   onLayout: (info: DocumentLayoutInfo) => void;
   fit: "page" | "width";
@@ -236,7 +251,8 @@ function PagesPane({
   const fitted = fitScale({ width: size.width - 2 * pad, height: size.height - 2 * pad }, fit, fit === "page" ? 1.25 : 1);
   const [zoom, setZoom] = useState<Zoom>("fit");
   const scale = zoomable ? resolveScale(zoom, fitted) : fitted;
-  const pageCount = layout?.pages ?? 1;
+  const detailPages = layout?.pages ?? 1;
+  const pageCount = detailPages + (layout?.photoPages ?? 0) + (layout?.chartPages ?? 0);
   const [current, setCurrent] = useState(0);
   const shownPage = Math.min(current, pageCount - 1);
 
@@ -275,6 +291,7 @@ function PagesPane({
               <DocumentView
                 doc={doc}
                 photo={photo}
+                photoPages={photoPages}
                 onLayout={onLayout}
                 className="relative h-full w-full overflow-clip [overflow-clip-margin:2rem] [&_.doc-pages]:w-[794px] [&_.doc-pages]:origin-top-left [&_.doc-pages]:[transform:scale(var(--preview-scale))]"
               />
@@ -287,7 +304,7 @@ function PagesPane({
         <div className="flex min-h-12 flex-wrap items-center gap-x-3 gap-y-1 border-t border-line bg-surface/80 px-4 py-1.5 text-[13px] xl:px-5" data-testid="preview-footer">
           <p className="flex items-center gap-2 text-ink-2" data-testid="preview-status">
             <span aria-hidden className={`size-2 rounded-full ${pageCount <= 1 ? "bg-good" : "bg-gold"}`} />
-            {layout ? (pageCount <= 1 ? t("preview.status.one") : t("preview.status.many", { pages: pageCount })) : t("preview.loading")}
+            {layout ? pageStatus(layout) : t("preview.loading")}
           </p>
           {pageCount > 1 && (
             <div className="flex items-center gap-0.5" data-testid="page-nav">

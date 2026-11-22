@@ -42,6 +42,8 @@ export interface TemplateDef {
   asideTexts?: (doc: DocModel, options: { photo: boolean }) => string[];
   /** The photo frame the design is drawn for (D40): the cropper's default for this design (Step 3.3). */
   photoFrame?: PhotoInput["frame"];
+  /** Corner radius in px of the design's photos, on page 1 and on the photo pages (Step 4.2b); default 10. */
+  photoRadius?: number;
 }
 
 export interface AsideProps {

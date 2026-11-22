@@ -180,6 +180,29 @@ describe("build, then parse", () => {
     expect(await bytesFromBlob(result.drafts[0].photos[3].blob)).toEqual(PNG);
   });
 
+  it("round-trips eight photo pages and a horoscope chart with their on/off switches (Step 4.2b)", async () => {
+    const extras = Array.from({ length: 8 }, (_, i) => `extra-${i + 1}`);
+    const profile = draft("Photo pages", (p) => {
+      p.photoPages = { perPage: 4, include: false, photos: extras.map((id) => ({ id, crop: { ...crop, zoom: 1.5, rotation: 90 } })) };
+      p.horoscopeChart = { id: "chart", crop, include: false };
+    });
+    const ids = [...extras, "chart"];
+    const file = await buildBackup([{ profile, photos: ids.map((id) => photoOf(id, JPEG)) }], NOW);
+    const result = await parseBackup(JSON.stringify(file));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.warnings).toEqual([]);
+    expect(result.drafts[0].profile).toEqual(profile);
+    expect(result.drafts[0].profile.photoPages).toMatchObject({ perPage: 4, include: false });
+    expect(result.drafts[0].photos.map((p) => p.id)).toEqual(ids);
+    // The ninth extra photo is not a draft this app makes: refused, not trimmed.
+    const nine = draft("Nine", (p) => {
+      p.photoPages = { perPage: 1, photos: [...extras, "extra-9"].map((id) => ({ id, crop })) };
+    });
+    const refused = await parseBackup(await fileOf([{ profile: nine, photos: [] }]));
+    expect(refused.ok).toBe(false);
+  });
+
   it("takes the parsed object as well as the text", async () => {
     const file = await buildBackup([withPhoto("A")], NOW);
     const result = await parseBackup(JSON.parse(JSON.stringify(file)));

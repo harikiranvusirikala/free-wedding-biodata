@@ -8,6 +8,7 @@
 //
 // Filenames: pdfFileName / pageImageFileName in src/biodata/filename.ts (pure, no PDF code).
 
+import { pictureBlob } from "@/lib/picture-urls";
 import { readDisplayList, type DisplayList, type ImageItem } from "./display-list";
 import type { RunMeasure } from "./write-pdf";
 
@@ -61,10 +62,14 @@ const blobToDataUrl = (blob: Blob) =>
     reader.readAsDataURL(blob);
   });
 
-/** Any picture the PDF can't take as it is (a blob: URL, WebP, …) becomes a JPEG or PNG data URL. */
+/**
+ * Any picture the PDF can't take as it is (a blob: URL, WebP, …) becomes a JPEG or PNG data URL. The photo pages'
+ * blob: URLs are read from the registry that made them (src/lib/picture-urls.ts): the editor's CSP doesn't allow
+ * fetching a blob: address, and the bytes are already in hand. A JPEG is embedded as it is, never decoded again.
+ */
 async function asEmbeddable(src: string): Promise<string> {
   if (DATA_URL.test(src)) return src;
-  const blob = await (await fetch(src)).blob();
+  const blob = pictureBlob(src) ?? (await (await fetch(src)).blob());
   if (blob.type === "image/jpeg" || blob.type === "image/png") return blobToDataUrl(blob);
   const bitmap = await createImageBitmap(blob);
   const canvas = document.createElement("canvas");

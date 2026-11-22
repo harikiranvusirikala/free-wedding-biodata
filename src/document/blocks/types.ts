@@ -30,3 +30,21 @@ export interface PhotoInput {
   src: string;
   frame: "3:4" | "2:3";
 }
+
+/** A picture drawn for a photo page: a JPEG (or the stored image) as a blob: URL, and its size in pixels. */
+export interface PagePicture {
+  src: string;
+  width: number;
+  height: number;
+}
+
+/**
+ * What the pages after the biodata print (Step 4.2b, D40, D41): the extra photos in order, `perPage` to a page, and
+ * the horoscope chart on its own page with its heading. A photo whose picture isn't drawn yet leaves its cell empty
+ * (so the page count doesn't flicker while a new crop is drawn); a picture that can't be read is left out by the caller.
+ */
+export interface PhotoPagesInput {
+  perPage: 1 | 2 | 4;
+  photos: { id: string; picture?: PagePicture }[];
+  chart?: { title: string; picture?: PagePicture };
+}

@@ -17,7 +17,7 @@ const toast = (page: Page) => page.getByTestId("manage-toast");
 const rowsOf = (card: Locator) => card.locator("[data-testid^='row-'] label, [data-testid^='member-'] label").allTextContents();
 /** The biodata's sections, without the top card and the photo card. */
 const sectionOrder = (page: Page) =>
-  page.locator("section[data-section]:not([data-section='top']):not([data-section='photo'])").evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.section));
+  page.locator("section[data-section]:not([data-section='top']):not([data-section='photo']):not([data-section='photoPages'])").evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.section));
 
 const SIMPLE_PERSONAL = [
   "Name",

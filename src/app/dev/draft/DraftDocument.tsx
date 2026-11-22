@@ -6,7 +6,8 @@ import type { BiodataProfile } from "@/biodata/types";
 import { DocumentView, type DocumentLayoutInfo } from "@/document/DocumentView";
 import { getDocDictionary } from "@/i18n/doc";
 import { openDb } from "@/lib/db";
-import { useDocumentPhoto } from "@/lib/document-photo";
+import { chartTitle } from "@/biodata/photo-pages";
+import { useDocumentPhoto, useDocumentPhotos } from "@/lib/document-photo";
 import { createProfileRepo } from "@/lib/profile-repo";
 import { pdfHarness, type PdfHarness } from "../pdf/harness";
 
@@ -50,18 +51,22 @@ export function DraftDocument() {
     return result.ok ? result.value?.blob : undefined;
   }, []);
   const photo = useDocumentPhoto(profile?.photo, loadBlob);
+  // The pages after the biodata (Step 4.2b): extra photos and the horoscope chart.
+  const heading = profile ? chartTitle(profile, getDocDictionary(profile.docLanguage)) : "";
+  const extra = useDocumentPhotos({ photoPages: profile?.photoPages, horoscopeChart: profile?.horoscopeChart }, heading, loadBlob);
+  const ready = photo.ready && extra.ready;
 
   useEffect(() => {
-    if (!layout || !photo.ready) return;
+    if (!layout || !ready) return;
     window.__draft = pdfHarness(() => document.querySelector("[data-testid=draft-document]")!);
     document.body.dataset.docReady = "1";
-  }, [layout, photo.ready]);
+  }, [layout, ready]);
 
   if (problem) return <p style={{ padding: 24, font: "14px system-ui, sans-serif" }}>{problem}</p>;
   if (!doc) return null;
   return (
     <div style={{ background: "#d6d3d1", padding: "24px 0", minHeight: "100vh" }} data-testid="draft-document">
-      {photo.ready && <DocumentView doc={doc} photo={photo.photo} onLayout={setLayout} relaxSpacing={relax} />}
+      {ready && <DocumentView doc={doc} photo={photo.photo} photoPages={extra.input} onLayout={setLayout} relaxSpacing={relax} />}
     </div>
   );
 }

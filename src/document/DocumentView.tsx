@@ -2,9 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DocModel } from "@/biodata/document";
-import type { PhotoInput } from "./blocks/types";
+import type { PhotoInput, PhotoPagesInput } from "./blocks/types";
 import { layoutDocument, loadDocumentFonts, loadElementFonts, type DocumentLayout } from "./measure";
 import { Page } from "./Page";
+import { inputPageCounts } from "./photo-pages";
+import { PhotoPageSet } from "./PhotoPages";
 import { getPalette, getTemplate } from "./templates";
 import { BODY_PX, fontStack, LINE_HEIGHT, PAGE, type TextStep } from "./tokens";
 import "./document.css";
@@ -27,13 +29,18 @@ export interface DocumentViewProps {
   doc: DocModel;
   /** The main photo's picture; without it no photo frame is drawn. */
   photo?: PhotoInput;
+  /**
+   * The pages after the biodata: extra photos and the horoscope chart (Step 4.2b). They are not part of the layout:
+   * the biodata's pages, Auto text size and relaxed spacing are decided without them.
+   */
+  photoPages?: PhotoPagesInput;
   onLayout?: (info: DocumentLayoutInfo) => void;
   className?: string;
   /** Relaxed spacing for a one-page biodata with room to spare (default on); only the dev page turns it off. */
   relaxSpacing?: boolean;
 }
 
-export function DocumentView({ doc, photo, onLayout, className, relaxSpacing = true }: DocumentViewProps) {
+export function DocumentView({ doc, photo, photoPages, onLayout, className, relaxSpacing = true }: DocumentViewProps) {
   const template = getTemplate(doc.templateId);
   const palette = getPalette(template, doc.colorId);
   const specs = useMemo(() => template.blocks(doc, { photo: !!photo }), [template, doc, photo]);
@@ -74,9 +81,10 @@ export function DocumentView({ doc, photo, onLayout, className, relaxSpacing = t
 
   const shown = state;
   const { BlockView } = template;
+  const extra = inputPageCounts(photoPages);
 
   return (
-    <div className={className} data-doc-ready={fresh ? "1" : undefined} data-doc-pages={fresh ? state.layout.pages.length : undefined} data-doc-step={fresh ? state.layout.step : undefined} data-doc-relax={fresh ? state.layout.relax : undefined}>
+    <div className={className} data-doc-ready={fresh ? "1" : undefined} data-doc-pages={fresh ? state.layout.pages.length : undefined} data-doc-step={fresh ? state.layout.step : undefined} data-doc-relax={fresh ? state.layout.relax : undefined} data-doc-photo-pages={fresh ? extra.photos : undefined} data-doc-chart-page={fresh ? extra.chart : undefined}>
       {!fresh ? (
         // Off-screen measuring columns, one per text size to try. Never marked data-page, so never printed or exported.
         <div ref={measureRef} aria-hidden lang={doc.lang} style={{ position: "absolute", left: -20000, top: 0, visibility: "hidden", pointerEvents: "none" }}>
@@ -130,6 +138,7 @@ export function DocumentView({ doc, photo, onLayout, className, relaxSpacing = t
               </Page>
             );
           })}
+          {photoPages && extra.total ? <PhotoPageSet input={photoPages} doc={shown.doc} firstNumber={shown.layout.pages.length + 1} bodyPx={shown.layout.bodyPx} /> : null}
         </div>
       ) : null}
     </div>

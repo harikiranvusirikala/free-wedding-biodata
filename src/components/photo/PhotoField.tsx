@@ -51,7 +51,8 @@ const TIPS: { key: AppKey; icon: PhotoIconName }[] = [
   { key: "photo.tip.face", icon: "face" },
 ];
 
-const ERRORS: Record<PhotoError, AppKey> = {
+/** The app string that explains each way picking a photo can fail. */
+export const PHOTO_ERRORS: Record<PhotoError, AppKey> = {
   type: "photo.error.type",
   size: "photo.error.size",
   empty: "photo.error.empty",
@@ -61,7 +62,7 @@ const ERRORS: Record<PhotoError, AppKey> = {
 };
 
 /** Reads a Blob into a picture the page can show, with its natural size. The caller owns (revokes) the URL. */
-async function toLoaded(id: string, blob: Blob): Promise<LoadedPhoto> {
+export async function toLoaded(id: string, blob: Blob): Promise<LoadedPhoto> {
   const url = URL.createObjectURL(blob);
   const image = new Image();
   image.src = url;
@@ -300,7 +301,7 @@ export function PhotoField({ photo, loadBlob, onChange, printWidthMm, disabled =
 
       {error && (
         <p role="alert" className={`mt-4 ${formError}`}>
-          {t(ERRORS[error])}
+          {t(PHOTO_ERRORS[error])}
         </p>
       )}
 

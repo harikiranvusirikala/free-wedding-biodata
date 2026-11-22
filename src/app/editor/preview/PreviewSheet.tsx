@@ -141,7 +141,7 @@ export function PreviewSheet({
     if (distance > 110 || (distance > 30 && speed > 0.6)) onOpenChange(false);
   };
 
-  const pages = layout?.pages;
+  const pages = layout ? layout.pages + layout.photoPages + layout.chartPages : undefined;
   return (
     <>
       <button

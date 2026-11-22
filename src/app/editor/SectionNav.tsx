@@ -12,6 +12,7 @@ import { useManage } from "./ManageProvider";
 import { sectionAnchor } from "./SectionCard";
 import { PhotoIcon } from "@/components/photo/icons";
 import { PHOTO_ID } from "./PhotoCard";
+import { PHOTO_PAGES_ID } from "./PhotoPagesCard";
 import { TOP_ID } from "./TopCard";
 
 // Moving around the form (BUILD_PLAN A7 Editor rule, mockups: editor, editor-phone). Desktop: the section rail,
@@ -155,7 +156,7 @@ function OverallCompletion({ sections }: { sections: readonly Section[] }) {
 }
 
 /** The rail beside the form: names with dots and counts at 1280 px and up, icons with dots at 1024–1279. */
-export function SectionRail({ sections, hasPhoto, current, onJump, canAdd = true }: NavProps & { hasPhoto: boolean; canAdd?: boolean }) {
+export function SectionRail({ sections, hasPhoto, hasMorePhotos, current, onJump, canAdd = true }: NavProps & { hasPhoto: boolean; hasMorePhotos: boolean; canAdd?: boolean }) {
   const labelStyle = useLabelStyle();
   return (
     <nav aria-label={t("editor.sections")} className="sticky top-14 max-h-[calc(100dvh-3.5rem)] overflow-y-auto px-2 py-4 xl:px-3" data-testid="section-rail">
@@ -190,6 +191,25 @@ export function SectionRail({ sections, hasPhoto, current, onJump, canAdd = true
               <span className="shrink-0 max-xl:hidden" data-testid="rail-photo-done">
                 <Icon name="check" className="size-4 text-good" />
                 <span className="sr-only">, {t("photo.card.added")}</span>
+              </span>
+            )}
+          </a>
+        </li>
+        {/* Step 4.2b: more photos (extra pages and the horoscope chart), ticked once something is added. */}
+        <li>
+          <a
+            href={`#${sectionAnchor({ id: PHOTO_PAGES_ID })}`}
+            aria-current={current === PHOTO_PAGES_ID ? "location" : undefined}
+            title={t("pages.card.title")}
+            onClick={(event) => onLink(event, PHOTO_PAGES_ID, onJump)}
+            className={`flex min-h-10 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm leading-snug transition-colors max-xl:justify-center ${current === PHOTO_PAGES_ID ? "bg-brand-soft font-semibold text-brand-ink" : "text-ink-2 hover:bg-sunken hover:text-ink"} ${focusRing}`}
+          >
+            <PhotoIcon name="gallery" className="size-4 shrink-0 max-xl:size-5" />
+            <span className="line-clamp-2 min-w-0 flex-1 break-words max-xl:sr-only">{t("pages.card.title")}</span>
+            {hasMorePhotos && (
+              <span className="shrink-0 max-xl:hidden" data-testid="rail-pages-done">
+                <Icon name="check" className="size-4 text-good" />
+                <span className="sr-only">, {t("pages.card.added")}</span>
               </span>
             )}
           </a>
@@ -252,7 +272,7 @@ export function SectionJump({ sections, current, onJump }: NavProps) {
   return (
     <nav aria-label={t("editor.jump")} className="border-b border-line bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85" data-testid="section-jump">
       <ul ref={listRef} className="flex gap-2 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:px-6 [&::-webkit-scrollbar]:hidden">
-        {[{ id: TOP_ID, label: t("editor.chip.top") }, { id: PHOTO_ID, label: t("editor.chip.photo") }, ...sections.map((section) => ({ id: section.id, label: chipLabel(section, labelStyle) }))].map(({ id, label }) => {
+        {[{ id: TOP_ID, label: t("editor.chip.top") }, { id: PHOTO_ID, label: t("editor.chip.photo") }, { id: PHOTO_PAGES_ID, label: t("editor.chip.photoPages") }, ...sections.map((section) => ({ id: section.id, label: chipLabel(section, labelStyle) }))].map(({ id, label }) => {
           const on = id === current;
           return (
             <li key={id} className="shrink-0">

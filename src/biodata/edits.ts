@@ -15,9 +15,12 @@ import {
   TRADITION_FIELD_SETS,
   type Tradition,
 } from "./defaults";
+import { photoIdsOf } from "./photo-refs";
 import { dateToText, heightToInches, parseDateText, parseTimeText, splitInches, timeToText } from "./inputs";
 import {
   FORM_LAYOUTS,
+  MAX_EXTRA_PHOTOS,
+  PHOTOS_PER_PAGE,
   type BiodataProfile,
   type FamilyMember,
   type FamilySection,
@@ -29,7 +32,10 @@ import {
   type LabelCase,
   type LabelStyle,
   type LangCode,
+  type HoroscopeChart,
   type MainPhoto,
+  type PhotoPages,
+  type PhotoRef,
   type ProfileOptions,
   type Section,
   type TextSize,
@@ -1073,4 +1079,126 @@ export function setPhoto(profile: BiodataProfile, photo: MainPhoto | undefined, 
     return { ...next, updatedAt: now().toISOString() };
   }
   return { ...profile, photo, updatedAt: now().toISOString() };
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Photo pages and the horoscope chart (Step 4.2b, D40, D41). Like the main photo, only references and crops live in
+// the profile; the editor stores each picture with the same save. A picture id is used once per draft (the schema
+// refuses a duplicate), so an edit that would reuse one is refused. Removing the last extra photo removes the group
+// (its "photos per page" and on/off choices go with it; Undo hands them back).
+
+const sameRef = (a: PhotoRef, b: PhotoRef) =>
+  a.id === b.id && a.crop.x === b.crop.x && a.crop.y === b.crop.y && a.crop.zoom === b.crop.zoom && a.crop.rotation === b.crop.rotation;
+
+/** The settings of a photo-pages group that Undo restores along with its last photo. */
+export type PhotoPagesSettings = Pick<PhotoPages, "perPage" | "include">;
+
+const clampIndex = (index: number, length: number) => Math.max(0, Math.min(Number.isFinite(index) ? Math.trunc(index) : length, length));
+
+/**
+ * Adds an extra photo at `index` (the end by default). Refused (same profile) at MAX_EXTRA_PHOTOS or when the id is
+ * already used by this draft. The first photo starts a group with 1 photo per page, printed (or with `settings`).
+ */
+export function insertPhotoPagePhoto(
+  profile: BiodataProfile,
+  index: number,
+  photo: PhotoRef,
+  settings?: PhotoPagesSettings,
+  now: Clock = systemClock,
+): BiodataProfile {
+  const group = profile.photoPages;
+  if (photoIdsOf(profile).includes(photo.id)) return profile;
+  if ((group?.photos.length ?? 0) >= MAX_EXTRA_PHOTOS) return profile;
+  let next: PhotoPages;
+  if (group && group.photos.length > 0) {
+    const photos = [...group.photos];
+    photos.splice(clampIndex(index, photos.length), 0, photo);
+    next = { ...group, photos };
+  } else {
+    next = { perPage: settings?.perPage ?? group?.perPage ?? 1, photos: [photo] };
+    if (settings?.include === false) next.include = false;
+  }
+  return { ...profile, photoPages: next, updatedAt: now().toISOString() };
+}
+
+/** Adds an extra photo after the others. */
+export function addPhotoPagePhoto(profile: BiodataProfile, photo: PhotoRef, now: Clock = systemClock): BiodataProfile {
+  return insertPhotoPagePhoto(profile, profile.photoPages?.photos.length ?? 0, photo, undefined, now);
+}
+
+/**
+ * Replaces the extra photo `id` with `photo` (a new picture, or the same id with a new crop), keeping its place.
+ * Refused when `id` isn't there, or the new id belongs to another picture of this draft.
+ */
+export function replacePhotoPagePhoto(profile: BiodataProfile, id: string, photo: PhotoRef, now: Clock = systemClock): BiodataProfile {
+  const group = profile.photoPages;
+  const at = group?.photos.findIndex((p) => p.id === id) ?? -1;
+  if (!group || at < 0) return profile;
+  if (photo.id !== id && photoIdsOf(profile).includes(photo.id)) return profile;
+  if (sameRef(group.photos[at], photo)) return profile;
+  const photos = group.photos.map((p, i) => (i === at ? photo : p));
+  return { ...profile, photoPages: { ...group, photos }, updatedAt: now().toISOString() };
+}
+
+/** Removes the extra photo `id`; the last one takes the group with it. */
+export function removePhotoPagePhoto(profile: BiodataProfile, id: string, now: Clock = systemClock): BiodataProfile {
+  const group = profile.photoPages;
+  if (!group || !group.photos.some((p) => p.id === id)) return profile;
+  const photos = group.photos.filter((p) => p.id !== id);
+  const next = photos.length ? { ...profile, photoPages: { ...group, photos } } : without(profile, "photoPages");
+  return { ...next, updatedAt: now().toISOString() };
+}
+
+/** Moves the extra photo `id` to position `to` (0-based, clamped); the others keep their order. */
+export function movePhotoPagePhoto(profile: BiodataProfile, id: string, to: number, now: Clock = systemClock): BiodataProfile {
+  const group = profile.photoPages;
+  const from = group?.photos.findIndex((p) => p.id === id) ?? -1;
+  if (!group || from < 0) return profile;
+  const target = clampIndex(to, group.photos.length - 1);
+  if (target === from) return profile;
+  const photos = [...group.photos];
+  const [moved] = photos.splice(from, 1);
+  photos.splice(target, 0, moved);
+  return { ...profile, photoPages: { ...group, photos }, updatedAt: now().toISOString() };
+}
+
+/** 1, 2 or 4 photos to a page (anything else is refused). Without extra photos there is nothing to arrange. */
+export function setPhotosPerPage(profile: BiodataProfile, perPage: number, now: Clock = systemClock): BiodataProfile {
+  const group = profile.photoPages;
+  if (!group || group.perPage === perPage || !PHOTOS_PER_PAGE.some((n) => n === perPage)) return profile;
+  return { ...profile, photoPages: { ...group, perPage: perPage as PhotoPages["perPage"] }, updatedAt: now().toISOString() };
+}
+
+/** Switches the extra photo pages on or off; the photos stay either way. On is stored as no value (the default). */
+export function setPhotoPagesIncluded(profile: BiodataProfile, include: boolean, now: Clock = systemClock): BiodataProfile {
+  const group = profile.photoPages;
+  if (!group || (group.include !== false) === include) return profile;
+  const next = include ? without(group, "include") : { ...group, include: false };
+  return { ...profile, photoPages: next, updatedAt: now().toISOString() };
+}
+
+/**
+ * Sets (or, with undefined, removes) the horoscope chart picture. A chart that replaces another keeps its on/off
+ * choice unless the new one carries its own (Undo hands back the removed chart whole).
+ */
+export function setHoroscopeChart(profile: BiodataProfile, chart: HoroscopeChart | undefined, now: Clock = systemClock): BiodataProfile {
+  const current = profile.horoscopeChart;
+  if (!chart) {
+    if (!current) return profile;
+    return { ...without(profile, "horoscopeChart"), updatedAt: now().toISOString() };
+  }
+  if (chart.id !== current?.id && photoIdsOf(profile).includes(chart.id)) return profile;
+  const off = ("include" in chart ? chart.include : current?.include) === false;
+  const next: HoroscopeChart = { id: chart.id, crop: chart.crop };
+  if (off) next.include = false;
+  if (current && sameRef(current, next) && (current.include === false) === off) return profile;
+  return { ...profile, horoscopeChart: next, updatedAt: now().toISOString() };
+}
+
+/** Switches the horoscope chart page on or off; the picture stays either way. */
+export function setHoroscopeIncluded(profile: BiodataProfile, include: boolean, now: Clock = systemClock): BiodataProfile {
+  const chart = profile.horoscopeChart;
+  if (!chart || (chart.include !== false) === include) return profile;
+  const next = include ? without(chart, "include") : { ...chart, include: false };
+  return { ...profile, horoscopeChart: next, updatedAt: now().toISOString() };
 }

@@ -1,7 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import type { MainPhoto, PhotoFrame } from "@/biodata/types";
-import type { PhotoInput } from "@/document/blocks/types";
-import { printPixels, renderCropDataUrl } from "./photos";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { PHOTO_PAGE_FRAME, printedChart, printedPhotoPages } from "@/biodata/photo-pages";
+import type { BiodataProfile, MainPhoto, PhotoFrame } from "@/biodata/types";
+import type { PhotoInput, PhotoPagesInput } from "@/document/blocks/types";
+import { photoPagePixels } from "@/document/photo-pages";
+import { drawPicture, printPixels, renderCropDataUrl } from "./photos";
+import { cropKey, fitKey, resolvePicture, type DrawPicture, type PictureRequest, type PictureSnapshot } from "./picture-store";
+import { usePictures } from "./use-pictures";
 
 // The cropped photo for the document (Step 3.1, D12): the stored source picture drawn through the profile's crop
 // into a JPEG data URL, which DocumentView's `photo` prop takes and the PDF writer embeds (Step 3.2 note). The
@@ -87,4 +91,82 @@ export function useDocumentPhoto(
 
   if (!key) return { photo: undefined, ready: true };
   return { photo: drawn?.photo, ready: drawn?.key === key };
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The pages after the biodata (Step 4.2b, D40, D41): the extra photos, each drawn into its cell's frame at the
+// pixels the cell needs at 300 dpi, and the horoscope chart picture, as blob: URLs (picture-urls.ts) so eight photos
+// don't fill the page with megabytes of text. The cell size depends on the layout only (never the design), so a new
+// design or colour redraws nothing.
+
+/** JPEG quality of a photo drawn for a photo page: 300 dpi is the resolution, this keeps eight of them a sane size. */
+export const PAGE_PHOTO_QUALITY = 0.88;
+
+/** What has to be drawn for the pages after the biodata; empty when they are switched off. */
+export function photoPageRequests(profile: Pick<BiodataProfile, "photoPages" | "horoscopeChart">): PictureRequest[] {
+  const out: PictureRequest[] = [];
+  const printed = printedPhotoPages(profile);
+  if (printed) {
+    const frame = PHOTO_PAGE_FRAME[printed.perPage];
+    const outWidth = photoPagePixels(printed.perPage);
+    for (const photo of printed.photos) {
+      out.push({
+        key: cropKey(photo.id, photo.crop, frame, outWidth, PAGE_PHOTO_QUALITY),
+        id: photo.id,
+        spec: { kind: "crop", crop: photo.crop, frame, outWidth, quality: PAGE_PHOTO_QUALITY },
+      });
+    }
+  }
+  const chart = printedChart(profile);
+  if (chart) out.push({ key: fitKey(chart.id, chart.crop.rotation), id: chart.id, spec: { kind: "fit", rotation: chart.crop.rotation } });
+  return out;
+}
+
+/**
+ * The document's pages after the biodata for a profile: `title` is the chart page's heading. A photo not drawn yet
+ * leaves an empty cell; one that can't be read is left out (the editor's card says it is missing). Undefined when
+ * nothing prints after the biodata.
+ */
+export function photoPagesInput(
+  profile: Pick<BiodataProfile, "photoPages" | "horoscopeChart">,
+  title: string,
+  requests: readonly PictureRequest[],
+  snapshot: PictureSnapshot,
+): PhotoPagesInput | undefined {
+  const printed = printedPhotoPages(profile);
+  const chart = printedChart(profile);
+  const byId = new Map(requests.map((r) => [r.id, r]));
+  const photos: PhotoPagesInput["photos"] = [];
+  for (const photo of printed?.photos ?? []) {
+    const request = byId.get(photo.id);
+    const picture = request ? resolvePicture(snapshot, request) : undefined;
+    if (picture !== null) photos.push({ id: photo.id, picture });
+  }
+  const chartRequest = chart ? byId.get(chart.id) : undefined;
+  const chartPicture = chartRequest ? resolvePicture(snapshot, chartRequest) : undefined;
+  const input: PhotoPagesInput = { perPage: printed?.perPage ?? 1, photos };
+  if (chart && chartPicture !== null) input.chart = { title, picture: chartPicture };
+  return photos.length || input.chart ? input : undefined;
+}
+
+/**
+ * The pages after the biodata for React: redrawn when a photo, crop or layout changes, keeping a photo's previous
+ * picture while its new crop is drawn. `ready` is false until every picture has been drawn (or found unreadable).
+ */
+export function useDocumentPhotos(
+  profile: Pick<BiodataProfile, "photoPages" | "horoscopeChart">,
+  title: string,
+  loadBlob: LoadBlob,
+  draw: DrawPicture = drawPicture,
+): { input?: PhotoPagesInput; ready: boolean } {
+  const { photoPages, horoscopeChart } = profile;
+  const requestsKey = useMemo(() => JSON.stringify(photoPageRequests({ photoPages, horoscopeChart })), [photoPages, horoscopeChart]);
+  const requests = useMemo(() => JSON.parse(requestsKey) as PictureRequest[], [requestsKey]);
+  const pictures = usePictures(requests, loadBlob, draw);
+  const { snapshot } = pictures;
+  const input = useMemo(
+    () => photoPagesInput({ photoPages, horoscopeChart }, title, requests, snapshot),
+    [photoPages, horoscopeChart, title, requests, snapshot],
+  );
+  return { input, ready: pictures.ready };
 }

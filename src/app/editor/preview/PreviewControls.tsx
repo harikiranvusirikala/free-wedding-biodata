@@ -25,8 +25,12 @@ import { PAGE_HEIGHT, PAGE_WIDTH, SIZE_LABELS, sizeHint, type SizeStep } from ".
 // editor's one `edit()`, so it autosaves like typing.
 
 export interface LayoutInfo {
+  /** The biodata's own pages (what the text-size hint is about). */
   pages: number;
   step: SizeStep;
+  /** Pages after the biodata (Step 4.2b): extra photo pages and the horoscope chart's page. */
+  photoPages: number;
+  chartPages: number;
 }
 
 const tile = `rounded-xl outline-none transition-colors focus-visible:ring-[3px] focus-visible:ring-ring`;

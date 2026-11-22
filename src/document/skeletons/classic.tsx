@@ -85,7 +85,7 @@ const paragraphLook = (doc: DocModel, p: Palette, underline: boolean): Paragraph
 });
 
 /** Page margins, block list and drawings of a Classic design. */
-export function classicSkeleton(look: ClassicLook): Pick<TemplateDef, "skeleton" | "pageBox" | "blocks" | "BlockView"> {
+export function classicSkeleton(look: ClassicLook): Pick<TemplateDef, "skeleton" | "pageBox" | "blocks" | "BlockView" | "photoRadius"> {
   const underline = look.bar === "underline";
   function ClassicView({ block, doc, palette, photo, text, continued }: BlockViewProps) {
     const heading = headingLook(look, doc, palette);
@@ -123,7 +123,7 @@ export function classicSkeleton(look: ClassicLook): Pick<TemplateDef, "skeleton"
       }
     }
   }
-  return { skeleton: "classic", pageBox: classicPageBoxFor(look), blocks: classicBlocks, BlockView: ClassicView };
+  return { skeleton: "classic", pageBox: classicPageBoxFor(look), blocks: classicBlocks, BlockView: ClassicView, photoRadius: look.photoRadius };
 }
 
 /** Classic Gold's photo sizes: 3:4 → 200 × 267, tall 2:3 → 186 × 279. */

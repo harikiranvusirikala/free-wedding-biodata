@@ -15,4 +15,5 @@ export const classicGold: TemplateDef = {
   blocks: classicBlocks,
   Frame: FoliageFrame,
   BlockView: ClassicBlockView,
+  photoRadius: 10,
 };

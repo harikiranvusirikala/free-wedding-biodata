@@ -323,3 +323,61 @@ describe("profile repo: duplicate (Step 1.4)", () => {
     expect(listed.ok && listed.value[0]).toMatchObject({ ok: true, draftName: "", fullName: "Asha Rani" });
   });
 });
+
+describe("profile repo: a draft with photo pages and a horoscope chart (Step 4.2b)", () => {
+  const crop = { x: 0.5, y: 0.5, zoom: 1, rotation: 0 as const };
+  const extras = Array.from({ length: 8 }, (_, i) => `extra-${i + 1}`);
+
+  async function withEveryPicture(repo: ReturnType<typeof setup>["repo"]) {
+    const source: BiodataProfile = {
+      ...newProfile("Photo pages"),
+      photo: { id: "main", crop, frame: "3:4" },
+      photoPages: { perPage: 2, include: false, photos: extras.map((id) => ({ id, crop })) },
+      horoscopeChart: { id: "chart", crop, include: false },
+    };
+    await repo.create(source);
+    const saved = await repo.save(source, { expectedRevision: 0, photos: { put: ["main", "chart", ...extras].map((id) => photo(id, `bytes of ${id}`)) } });
+    expect(saved.ok).toBe(true);
+    return source;
+  }
+
+  it("duplicate copies all ten pictures under new ids and keeps the on/off switches and the order", async () => {
+    const { db, repo } = setup();
+    const source = await withEveryPicture(repo);
+    const result = await repo.duplicate(source.id, { draftName: "Copy" });
+    if (!result.ok) throw new Error("not copied");
+    const copy = result.profile;
+    expect(copy.photoPages).toMatchObject({ perPage: 2, include: false });
+    expect(copy.horoscopeChart).toMatchObject({ include: false });
+    const copyIds = [copy.photo!.id, ...copy.photoPages!.photos.map((p) => p.id), copy.horoscopeChart!.id];
+    expect(new Set(copyIds).size).toBe(10);
+    for (const id of copyIds) expect(["main", "chart", ...extras]).not.toContain(id);
+    // The same pictures, in the same places.
+    const texts = await Promise.all(copy.photoPages!.photos.map(async (p) => (await db.photos.get(p.id))!.blob.text()));
+    expect(texts).toEqual(extras.map((id) => `bytes of ${id}`));
+    expect(await (await db.photos.get(copy.horoscopeChart!.id))!.blob.text()).toBe("bytes of chart");
+    expect(await db.photos.where("profileId").equals(copy.id).count()).toBe(10);
+    expect(await db.photos.where("profileId").equals(source.id).count()).toBe(10);
+  });
+
+  it("deleting a draft deletes every one of its pictures and only those", async () => {
+    const { db, repo } = setup();
+    const source = await withEveryPicture(repo);
+    const other = newProfile("Other");
+    await repo.create(other);
+    await repo.save(other, { expectedRevision: 0, photos: { put: [photo("other-photo")] } });
+    await repo.remove(source.id);
+    expect((await db.photos.toArray()).map((p) => p.id)).toEqual(["other-photo"]);
+  });
+
+  it("a backup lists every picture the draft points at, switched off or not", async () => {
+    const { repo } = setup();
+    const source = await withEveryPicture(repo);
+    await repo.save({ ...source, revision: 1 }, { expectedRevision: 1, photos: { put: [photo("stray")] } }); // a picture nothing points at
+    const listed = await repo.listForBackup();
+    expect(listed.ok).toBe(true);
+    if (!listed.ok) return;
+    expect(listed.value.entries).toHaveLength(1);
+    expect(listed.value.entries[0].photos.map((p) => p.id).sort()).toEqual(["chart", "main", ...extras].sort());
+  });
+});

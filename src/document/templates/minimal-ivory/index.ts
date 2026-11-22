@@ -13,4 +13,5 @@ export const minimalIvory: TemplateDef = {
   pageBox: minimalPageBox,
   blocks: minimalBlocks,
   BlockView: MinimalBlockView,
+  photoRadius: 2,
 };

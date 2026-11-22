@@ -117,3 +117,59 @@ export async function drawnPng(page: Page, width: number, height: number): Promi
   );
   return Buffer.from(base64, "base64");
 }
+
+/**
+ * A distinguishable drawn picture (never a real person): a hue-shifted gradient with a number on it, so photos
+ * can be told apart in the preview, and optionally fine random "grain" so its JPEG is as heavy as a real photo's
+ * (a smooth drawing compresses to almost nothing, which would hide what a photo-heavy PDF really weighs).
+ */
+export async function drawnPhoto(page: Page, width: number, height: number, hue: number, label: string, { grain = false, jpeg = false }: { grain?: boolean; jpeg?: boolean } = {}): Promise<Buffer> {
+  const base64 = await page.evaluate(
+    ([w, h, hu, text, noisy, asJpeg]) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const c = canvas.getContext("2d")!;
+      const g = c.createLinearGradient(0, 0, w, h);
+      g.addColorStop(0, `hsl(${hu} 70% 82%)`);
+      g.addColorStop(1, `hsl(${(hu + 40) % 360} 55% 32%)`);
+      c.fillStyle = g;
+      c.fillRect(0, 0, w, h);
+      c.fillStyle = `hsl(${(hu + 180) % 360} 45% 40%)`;
+      c.beginPath();
+      c.arc(w / 2, h / 2.6, Math.min(w, h) / 6, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = "rgba(255,255,255,0.9)";
+      c.font = `bold ${Math.round(Math.min(w, h) / 5)}px sans-serif`;
+      c.textAlign = "center";
+      c.fillText(text, w / 2, h * 0.78);
+      c.strokeStyle = "#fff";
+      c.lineWidth = Math.max(4, Math.min(w, h) / 90);
+      c.strokeRect(c.lineWidth * 3, c.lineWidth * 3, w - c.lineWidth * 6, h - c.lineWidth * 6);
+      if (noisy) {
+        // Grain over the whole picture, in 4 × 4 blocks so it survives the 3000 px → cell downscale like real sensor noise.
+        const image = c.getImageData(0, 0, w, h);
+        const d = image.data;
+        let seed = 12345;
+        const rand = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296 - 0.5) * 60;
+        for (let y = 0; y < h; y += 2) {
+          for (let x = 0; x < w; x += 2) {
+            const n = rand();
+            for (let dy = 0; dy < 2 && y + dy < h; dy++) {
+              for (let dx = 0; dx < 2 && x + dx < w; dx++) {
+                const i = ((y + dy) * w + x + dx) * 4;
+                d[i] += n;
+                d[i + 1] += n;
+                d[i + 2] += n;
+              }
+            }
+          }
+        }
+        c.putImageData(image, 0, 0);
+      }
+      return (asJpeg ? canvas.toDataURL("image/jpeg", 0.9) : canvas.toDataURL("image/png")).split(",")[1];
+    },
+    [width, height, hue, label, grain, jpeg] as const,
+  );
+  return Buffer.from(base64, "base64");
+}

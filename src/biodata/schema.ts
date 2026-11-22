@@ -115,9 +115,11 @@ export const profileSchema = z
       .object({
         perPage: z.literal(PHOTOS_PER_PAGE),
         photos: z.array(photoRefSchema).max(MAX_EXTRA_PHOTOS),
+        // Added without a format bump (Step 4.2b): absent = true.
+        include: z.boolean().optional(),
       })
       .optional(),
-    horoscopeChart: photoRefSchema.optional(),
+    horoscopeChart: photoRefSchema.extend({ include: z.boolean().optional() }).optional(),
   })
   .superRefine((profile, ctx) => {
     // Edits find sections, fields, members and photos by id, so a duplicate would make them act on the wrong one.

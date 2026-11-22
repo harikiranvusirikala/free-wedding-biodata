@@ -51,3 +51,20 @@ describe("photo references", () => {
     expect(photoIdsOf(next)).toEqual(["new-main", "new-second", "new-chart"]);
   });
 });
+
+describe("photo references with the on/off switches (Step 4.2b)", () => {
+  it("keeps `include` on photo pages and the chart through a swap and a keep", () => {
+    const profile = withEveryPhoto();
+    profile.photoPages = { perPage: 4, include: false, photos: Array.from({ length: 8 }, (_, i) => ({ id: `extra-${i + 1}`, crop })) };
+    profile.horoscopeChart = { id: "chart", crop, include: false };
+    expect(photoIdsOf(profile)).toHaveLength(11);
+    const swapped = swapPhotoIds(profile, new Map([["extra-3", "x"], ["chart", "c2"]]));
+    expect(swapped.photoPages).toMatchObject({ perPage: 4, include: false });
+    expect(swapped.photoPages?.photos[2].id).toBe("x");
+    expect(swapped.horoscopeChart).toEqual({ id: "c2", crop, include: false });
+    const kept = keepPhotoRefs(profile, new Set(["extra-1", "extra-2"]));
+    expect(kept.photoPages).toMatchObject({ perPage: 4, include: false });
+    expect(kept.photoPages?.photos.map((p) => p.id)).toEqual(["extra-1", "extra-2"]);
+    expect(kept.horoscopeChart).toBeUndefined();
+  });
+});

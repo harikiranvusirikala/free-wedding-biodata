@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui/icons";
 import type { AutosaveController } from "@/lib/autosave";
 import { downloadBackup } from "@/lib/backup-file";
 import type { BiodataDb } from "@/lib/db";
-import type { ProfileRepo } from "@/lib/profile-repo";
+import type { PhotoInput, ProfileRepo } from "@/lib/profile-repo";
 import { t } from "@/lib/i18n";
 import { useAutosave } from "@/lib/use-autosave";
 import { BackupProvider } from "./BackupProvider";
@@ -24,6 +24,7 @@ import { StorageCard } from "./StorageCard";
 import { FormLayoutSwitch } from "./FormLayoutSwitch";
 import { LanguageNotice } from "./LanguageNotice";
 import { PHOTO_ID, PhotoCard } from "./PhotoCard";
+import { PHOTO_PAGES_ID, PhotoPagesCard, type PhotoPagesChange } from "./PhotoPagesCard";
 import { TOP_ID, TopCard } from "./TopCard";
 import { doneTraditions, showsTraditions } from "./TraditionChips";
 import { LivePreview } from "./preview/LivePreview";
@@ -37,8 +38,8 @@ import { LivePreview } from "./preview/LivePreview";
 export function DraftEditor({ controller, repo, db }: { controller: AutosaveController; repo: ProfileRepo; db: BiodataDb }) {
   const { profile, status } = useAutosave(controller);
   const conflict = status.state === "error" && status.kind === "conflict";
-  // The top card comes first in the form and the rail (Step 2.0), then the photo (Step 3.1), then the sections.
-  const ids = useMemo(() => [TOP_ID, PHOTO_ID, ...profile.sections.map((s) => s.id)], [profile.sections]);
+  // The top card comes first in the form and the rail (Step 2.0), then the photo (Step 3.1), more photos (Step 4.2b), then the sections.
+  const ids = useMemo(() => [TOP_ID, PHOTO_ID, PHOTO_PAGES_ID, ...profile.sections.map((s) => s.id)], [profile.sections]);
   const traditionsDone = useMemo(() => doneTraditions({ sections: profile.sections, options: profile.options }), [profile.sections, profile.options]);
   const { current: currentSection, jump } = useCurrentSection(ids);
 
@@ -55,21 +56,42 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
   // A picture just picked is only written with the next save (autosave waits a moment), so the pictures handed
   // over in this session are kept here too: the preview can draw a new photo at once instead of finding nothing in
   // the database and waiting for the next frame or crop change. Pictures are ids that never change content.
-  const given = useRef(new Map<string, Blob>());
+  const given = useRef(new Map<string, PhotoInput>());
   const loadBlob = useCallback(async (id: string) => {
-    const blob = given.current.get(id);
-    if (blob) return blob;
+    const picture = given.current.get(id);
+    if (picture) return picture.blob;
     const result = await repo.getPhoto(id);
     return result.ok ? result.value?.blob : undefined;
   }, [repo]);
+  /** The whole record of a picture (to put it back when a removal is undone). */
+  const readPicture = useCallback(
+    async (id: string): Promise<PhotoInput | undefined> => {
+      const picture = given.current.get(id);
+      if (picture) return picture;
+      const result = await repo.getPhoto(id);
+      if (!result.ok || !result.value) return undefined;
+      const { blob, mimeType, width, height } = result.value;
+      return { id, blob, mimeType, width, height };
+    },
+    [repo],
+  );
   const onPhotoChange = useCallback(
     (change: PhotoChange) => {
-      if (change.put) given.current.set(change.put.id, change.put.blob);
+      if (change.put) given.current.set(change.put.id, change.put);
       if (change.delete) given.current.delete(change.delete);
       controller.update(setPhoto(controller.getSnapshot().profile, change.photo), {
         put: change.put ? [change.put] : undefined,
         delete: change.delete ? [change.delete] : undefined,
       });
+    },
+    [controller],
+  );
+  // More photos (Step 4.2b): the card's pure edit runs on the latest profile, its pictures travel with the same save.
+  const onPagesChange = useCallback(
+    (change: PhotoPagesChange) => {
+      for (const put of change.put ?? []) given.current.set(put.id, put);
+      for (const id of change.delete ?? []) given.current.delete(id);
+      controller.update(change.edit(controller.getSnapshot().profile), { put: change.put, delete: change.delete });
     },
     [controller],
   );
@@ -124,7 +146,7 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
             <h1 className="sr-only">{t("editor.title")}</h1>
             <div className="flex-1 lg:grid lg:grid-cols-[4rem_minmax(27.5rem,36.25rem)_minmax(0,1fr)] xl:grid-cols-[14.5rem_minmax(27.5rem,36.25rem)_minmax(0,1fr)]">
               <div className="border-r border-line bg-surface max-lg:hidden" data-editor-pane>
-                <SectionRail sections={profile.sections} hasPhoto={!!profile.photo} current={currentSection} onJump={jump} canAdd={!conflict} />
+                <SectionRail sections={profile.sections} hasPhoto={!!profile.photo} hasMorePhotos={!!profile.photoPages || !!profile.horoscopeChart} current={currentSection} onJump={jump} canAdd={!conflict} />
               </div>
               {/* Sticky here, not inside: the chips stay under the header for the whole form. */}
               <div className="sticky top-14 z-20 lg:hidden" data-editor-pane>
@@ -144,6 +166,14 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
                 />
                 <LanguageNotice lang={profile.docLanguage} edit={edit} readOnly={conflict} />
                 <PhotoCard photo={profile.photo} loadBlob={loadBlob} onChange={onPhotoChange} readOnly={conflict} />
+                <PhotoPagesCard
+                  photoPages={profile.photoPages}
+                  chart={profile.horoscopeChart}
+                  loadBlob={loadBlob}
+                  readPicture={readPicture}
+                  onChange={onPagesChange}
+                  readOnly={conflict}
+                />
                 {profile.sections.map((section) => (
                   <SectionCard
                     key={section.id}
