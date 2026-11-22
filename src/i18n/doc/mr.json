@@ -3,6 +3,7 @@
     "name": "मराठी",
     "reviewed": false,
     "reviewNotes": {
+      "fields.complexion": "Drafted as the usual word for skin tone / complexion (रंग); a native reader should confirm.",
       "sections.horoscope": "Drafted as कुंडली माहिती; पत्रिका / जन्मपत्रिका is also common.",
       "sections.career": "नोकरी व व्यवसाय, covering jobs and business.",
       "sections.references": "Drafted as संदर्भ (people who vouch for the family).",
@@ -54,6 +55,7 @@
     "gender": "लिंग",
     "dateOfBirth": "जन्मतारीख",
     "height": "उंची",
+    "complexion": "रंग",
     "maritalStatus": "वैवाहिक स्थिती",
     "nationality": "राष्ट्रीयत्व",
     "motherTongue": "मातृभाषा",

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { FieldsSection } from "./types";
 import {
   DEFAULT_OPTIONS,
   DEFAULT_SECTIONS,
@@ -50,6 +51,7 @@ describe("createProfile", () => {
           "gotra",
           "maternalGotra",
           "height",
+          "complexion",
           "highestQualification",
           "occupation",
           "annualIncome",
@@ -68,7 +70,7 @@ describe("createProfile", () => {
       ["aboutMe", ["aboutMe"]],
       [
         "personal",
-        ["fullName", "gender", "dateOfBirth", "height", "maritalStatus", "nationality", "motherTongue", "currentCity", "nativePlace"],
+        ["fullName", "gender", "dateOfBirth", "height", "complexion", "maritalStatus", "nationality", "motherTongue", "currentCity", "nativePlace"],
       ],
       ["religion", ["religion", "community", "caste", "subCaste"]],
       ["horoscope", ["birthTime", "birthPlace", "rashi", "nakshatra", "nakshatraPada", "gotra", "maternalGotra", "manglik"]],
@@ -84,10 +86,17 @@ describe("createProfile", () => {
     ]);
   });
 
-  it("never adds a complexion or stored age field", () => {
-    const keys = [...allFields(create()), ...allFields(createDetailed())].map((f) => f.key?.toLowerCase());
-    expect(keys.some((k) => k?.includes("complexion") || k === "age")).toBe(false);
-    expect(Object.keys(FIELD_CATALOG).some((k) => /complexion|^age$/i.test(k))).toBe(false);
+  it("never stores an age field; Complexion (owner's choice) is a plain typed field right below Height, never preselected", () => {
+    const profiles = [create(), createDetailed()];
+    for (const profile of profiles) {
+      const personal = profile.sections.find((s) => s.key === "personal") as FieldsSection;
+      const keys = personal.fields.map((f) => f.key);
+      expect(keys[keys.indexOf("height") + 1]).toBe("complexion");
+      expect(personal.fields.find((f) => f.key === "complexion")).toMatchObject({ type: "text", value: "", visible: true });
+      expect(personal.fields.find((f) => f.key === "complexion")?.optionKey).toBeUndefined();
+    }
+    expect(FIELD_CATALOG.complexion).toEqual({ type: "text" });
+    expect(Object.keys(FIELD_CATALOG).some((k) => /^age$/i.test(k))).toBe(false);
   });
 
   it("starts every field empty, visible and unlabelled, with nothing picked or inferred", () => {
@@ -216,12 +225,12 @@ describe("SIMPLE_SECTIONS (D50)", () => {
     for (const def of SIMPLE_SECTIONS) expect(DEFAULT_SECTIONS.find((d) => d.key === def.key)?.kind).toBe(def.kind);
   });
 
-  it("holds only Detailed default fields, each once, and no complexion", () => {
+  it("holds only Detailed default fields, each once, with Complexion right below Height", () => {
     const simple = keysOf(SIMPLE_SECTIONS);
     const detailed = new Set(keysOf(DEFAULT_SECTIONS));
     expect(new Set(simple).size).toBe(simple.length);
     for (const key of simple) expect(detailed.has(key), key).toBe(true);
-    expect(simple.some((key) => /complexion/i.test(key))).toBe(false);
+    expect(simple[simple.indexOf("height") + 1]).toBe("complexion");
   });
 
   it("keeps fields that share a section in both forms in the same relative order", () => {
@@ -268,7 +277,7 @@ describe("SAMPLE_PROFILE", () => {
     const empty = allFields(SAMPLE_PROFILE)
       .filter((f) => f.value === "")
       .map((f) => f.key);
-    expect(empty).toEqual(["community", "caste", "subCaste", "otherFamilyInfo"]);
+    expect(empty).toEqual(["complexion", "community", "caste", "subCaste", "otherFamilyInfo"]);
   });
 
   it("shows picked options, a renamed label, a custom field, a hidden field and references", () => {

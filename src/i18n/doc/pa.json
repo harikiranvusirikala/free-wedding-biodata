@@ -3,6 +3,7 @@
     "name": "ਪੰਜਾਬੀ",
     "reviewed": false,
     "reviewNotes": {
+      "fields.complexion": "Drafted as the usual word for skin tone / complexion (ਰੰਗ); a native reader should confirm.",
       "sections.career": "Drafted as ਕੰਮਕਾਜ ('work'); ਨੌਕਰੀ / ਕਾਰੋਬਾਰ is also common.",
       "sections.references": "Drafted as ਹਵਾਲੇ (people who vouch for the family).",
       "fields.nationality": "ਕੌਮੀਅਤ; ਨਾਗਰਿਕਤਾ (citizenship) is an alternative.",
@@ -52,6 +53,7 @@
     "gender": "ਲਿੰਗ",
     "dateOfBirth": "ਜਨਮ ਮਿਤੀ",
     "height": "ਕੱਦ",
+    "complexion": "ਰੰਗ",
     "maritalStatus": "ਵਿਆਹੁਤਾ ਸਥਿਤੀ",
     "nationality": "ਕੌਮੀਅਤ",
     "motherTongue": "ਮਾਂ-ਬੋਲੀ",

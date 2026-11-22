@@ -3,6 +3,7 @@
     "name": "தமிழ்",
     "reviewed": false,
     "reviewNotes": {
+      "fields.complexion": "Drafted as the usual word for skin tone / complexion (நிறம்); a native reader should confirm.",
       "sections.personal": "சுய விவரங்கள், as Tamil biodatas print it; தனிப்பட்ட விவரங்கள் is the literal phrase.",
       "sections.partnerPreferences": "Drafted as வரன் எதிர்பார்ப்புகள் (expectations of the match).",
       "sections.references": "Drafted as பரிந்துரையாளர்கள் (people who vouch for the family); தெரிந்தவர்கள் is an alternative.",
@@ -54,6 +55,7 @@
     "gender": "பாலினம்",
     "dateOfBirth": "பிறந்த தேதி",
     "height": "உயரம்",
+    "complexion": "நிறம்",
     "maritalStatus": "திருமண நிலை",
     "nationality": "தேசியம்",
     "motherTongue": "தாய்மொழி",

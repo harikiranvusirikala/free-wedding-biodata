@@ -6,19 +6,19 @@ import type { BiodataProfile, FamilySection, FieldsSection } from "./types";
 describe("section completion", () => {
   it("counts the visible rows and how many have something in them", () => {
     const personal = createProfile({ formLayout: "detailed" }).sections.find((s) => s.key === "personal") as FieldsSection;
-    expect(sectionCompletion(personal)).toEqual({ filled: 0, total: 9 });
+    expect(sectionCompletion(personal)).toEqual({ filled: 0, total: 10 });
     const some: FieldsSection = {
       ...personal,
       fields: personal.fields.map((f, i) => (i < 3 ? { ...f, value: "x" } : f)),
     };
-    expect(sectionCompletion(some)).toEqual({ filled: 3, total: 9 });
+    expect(sectionCompletion(some)).toEqual({ filled: 3, total: 10 });
   });
 
   it("leaves hidden rows out of both counts, and treats spaces as empty", () => {
     const personal = createProfile({ formLayout: "detailed" }).sections.find((s) => s.key === "personal") as FieldsSection;
     const [a, b, ...rest] = personal.fields;
     const section: FieldsSection = { ...personal, fields: [{ ...a, value: "x", visible: false }, { ...b, value: "   " }, ...rest] };
-    expect(sectionCompletion(section)).toEqual({ filled: 0, total: 8 });
+    expect(sectionCompletion(section)).toEqual({ filled: 0, total: 9 });
   });
 
   it("counts a picked option as filled", () => {

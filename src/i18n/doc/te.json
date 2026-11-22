@@ -3,6 +3,7 @@
     "name": "తెలుగు",
     "reviewed": false,
     "reviewNotes": {
+      "fields.complexion": "Drafted as the usual word for skin tone / complexion (శరీర ఛాయ); a native reader should confirm.",
       "sections.religion": "Drafted as 'religion and social details'; community is not always caste.",
       "sections.references": "Drafted as 'acquaintances'; people who vouch for the family. A better word may exist.",
       "fields.currentCity": "Literal 'current city'; some families write ప్రస్తుత నివాసం.",
@@ -50,6 +51,7 @@
     "gender": "లింగం",
     "dateOfBirth": "పుట్టిన తేదీ",
     "height": "ఎత్తు",
+    "complexion": "శరీర ఛాయ",
     "maritalStatus": "వైవాహిక స్థితి",
     "nationality": "జాతీయత",
     "motherTongue": "మాతృభాష",

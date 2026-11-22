@@ -3,6 +3,7 @@
     "name": "ಕನ್ನಡ",
     "reviewed": false,
     "reviewNotes": {
+      "fields.complexion": "Drafted as the usual word for skin tone / complexion (ಮೈಬಣ್ಣ); a native reader should confirm.",
       "sections.references": "Drafted as ಪರಿಚಯಸ್ಥರು ('acquaintances'), people who vouch for the family.",
       "sections.partnerPreferences": "Drafted as 'expectations about the partner'.",
       "fields.maternalGotra": "Drafted as ಸೋದರಮಾವನ ಗೋತ್ರ (maternal uncle's gotra), as in Telugu.",
@@ -51,6 +52,7 @@
     "gender": "ಲಿಂಗ",
     "dateOfBirth": "ಜನ್ಮ ದಿನಾಂಕ",
     "height": "ಎತ್ತರ",
+    "complexion": "ಮೈಬಣ್ಣ",
     "maritalStatus": "ವೈವಾಹಿಕ ಸ್ಥಿತಿ",
     "nationality": "ರಾಷ್ಟ್ರೀಯತೆ",
     "motherTongue": "ಮಾತೃಭಾಷೆ",

@@ -206,6 +206,7 @@ describe("setFormLayout: a filled draft", () => {
       "gender",
       "dateOfBirth",
       "height",
+      "complexion",
       "maritalStatus",
       "nationality",
       "motherTongue",
@@ -239,6 +240,7 @@ describe("setFormLayout: a filled draft", () => {
           "gotra",
           "maternalGotra",
           "height",
+          "complexion",
           "highestQualification",
           "occupation",
           "annualIncome",
@@ -471,12 +473,12 @@ describe("the editor's other edits in the Simple form (D50)", () => {
 });
 
 describe("completion in the Simple form", () => {
-  it("counts the fields the draft has: Simple's 18 lines, then Detailed's after a switch", () => {
+  it("counts the fields the draft has: Simple's 19 lines, then Detailed's after a switch", () => {
     const { profile, newId } = setup();
-    expect(profileCompletion(profile)).toEqual({ filled: 0, total: 18, percent: 0 });
+    expect(profileCompletion(profile)).toEqual({ filled: 0, total: 19, percent: 0 });
     let p = setFieldValue(profile, field(profile, "fullName").id, "Sai Teja Mandapati", later);
     p = setFieldValue(p, field(p, "phone").id, "+91 90000 00001", later);
-    expect(profileCompletion(p)).toEqual({ filled: 2, total: 18, percent: 11 });
-    expect(profileCompletion(setFormLayout(p, "detailed", newId, later))).toEqual({ filled: 2, total: 51, percent: 3 });
+    expect(profileCompletion(p)).toEqual({ filled: 2, total: 19, percent: 10 });
+    expect(profileCompletion(setFormLayout(p, "detailed", newId, later))).toEqual({ filled: 2, total: 52, percent: 3 });
   });
 });

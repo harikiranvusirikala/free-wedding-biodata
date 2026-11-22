@@ -30,6 +30,7 @@ const SIMPLE_PERSONAL = [
   "Gotra",
   "Maternal Gotra",
   "Height",
+  "Complexion",
   "Qualification",
   "Occupation",
   "Annual Income",
@@ -65,8 +66,8 @@ test("a new draft starts with the Simple form: four sections and the fields most
   expect(await rowsOf(section(page, "family"))).toEqual(["Father", "Mother"]);
   expect(await rowsOf(section(page, "contact"))).toEqual(["Phone", "Address"]);
   expect(await rowsOf(section(page, "partnerPreferences"))).toEqual(["Expectations"]);
-  // No complexion field (§6); the tradition chips sit in Personal details, since Simple has no Religion card.
-  await expect(page.getByText(/complexion/i)).toHaveCount(0);
+  // Complexion is a plain typed field below Height (owner's choice); the tradition chips sit in Personal details, since Simple has no Religion card.
+  await expect(page.locator('[data-section="personal"]').getByLabel("Complexion", { exact: true })).toBeVisible();
   await expect(section(page, "personal").getByTestId("tradition-chips")).toBeVisible();
   // The switch sits above the Top of your biodata card.
   const switchBox = (await page.getByTestId("form-layout").boundingBox())!;

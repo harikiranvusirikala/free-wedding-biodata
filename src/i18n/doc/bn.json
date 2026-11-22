@@ -3,6 +3,7 @@
     "name": "বাংলা",
     "reviewed": false,
     "reviewNotes": {
+      "fields.complexion": "Drafted as the usual word for skin tone / complexion (গায়ের রং); a native reader should confirm.",
       "sections.horoscope": "Drafted as কোষ্ঠী বিবরণ; কুষ্ঠি / জন্মছক are also used. Bengali biodatas often add গণ (দেব/নর/রাক্ষস); the Gan field (Step 2.0) covers it.",
       "sections.career": "কর্মজীবন ('working life').",
       "sections.partnerPreferences": "Gender-neutral জীবনসঙ্গী; families often write পাত্র / পাত্রীর কাছে প্রত্যাশা.",
@@ -51,6 +52,7 @@
     "gender": "লিঙ্গ",
     "dateOfBirth": "জন্ম তারিখ",
     "height": "উচ্চতা",
+    "complexion": "গায়ের রং",
     "maritalStatus": "বৈবাহিক অবস্থা",
     "nationality": "জাতীয়তা",
     "motherTongue": "মাতৃভাষা",

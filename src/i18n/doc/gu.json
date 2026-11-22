@@ -3,6 +3,7 @@
     "name": "ગુજરાતી",
     "reviewed": false,
     "reviewNotes": {
+      "fields.complexion": "Drafted as the usual word for skin tone / complexion (રંગ); a native reader should confirm.",
       "sections.horoscope": "Drafted as કુંડળી વિગત; જન્માક્ષર is also used.",
       "sections.education": "અભ્યાસ, as Gujarati biodatas print it; શિક્ષણ is the formal word.",
       "sections.references": "Drafted as સંદર્ભ (people who vouch for the family).",
@@ -51,6 +52,7 @@
     "gender": "લિંગ",
     "dateOfBirth": "જન્મ તારીખ",
     "height": "ઊંચાઈ",
+    "complexion": "રંગ",
     "maritalStatus": "વૈવાહિક સ્થિતિ",
     "nationality": "રાષ્ટ્રીયતા",
     "motherTongue": "માતૃભાષા",

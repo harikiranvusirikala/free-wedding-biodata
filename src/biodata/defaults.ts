@@ -127,6 +127,8 @@ export const FIELD_CATALOG = {
   gender: { type: "select", options: "gender" },
   dateOfBirth: { type: "date" },
   height: { type: "height" },
+  // Owner's choice (2026-11-22): a plain typed field, never a list or a preselected value (VISION §6).
+  complexion: { type: "text" },
   maritalStatus: { type: "select", options: "maritalStatus" },
   nationality: { type: "text" },
   motherTongue: { type: "select", options: "motherTongue" },
@@ -243,8 +245,8 @@ export type SectionDef =
 /**
  * The Detailed form's sections (D50; every draft's before it), in the default reading order (D39: About me first,
  * then Personal details, Horoscope, Education and career, Family, Contact, Partner preferences), with §6's other
- * default sections in their natural places. Fields are §6's, minus complexion (never a default field) and age
- * (computed, D13). Also the sections "Add a section" offers back, in either form.
+ * default sections in their natural places. Fields are §6's plus Complexion below Height (owner's choice, D52: a typed field, never a list or a preselected
+ * value), minus age (computed, D13). Also the sections "Add a section" offers back, in either form.
  */
 export const DEFAULT_SECTIONS: readonly SectionDef[] = [
   { key: "aboutMe", kind: "fields", fields: ["aboutMe"] },
@@ -256,6 +258,7 @@ export const DEFAULT_SECTIONS: readonly SectionDef[] = [
       "gender",
       "dateOfBirth",
       "height",
+      "complexion",
       "maritalStatus",
       "nationality",
       "motherTongue",
@@ -307,8 +310,8 @@ export const DEFAULT_SECTIONS: readonly SectionDef[] = [
 
 /**
  * The Simple form (D50), what a new draft starts with: the four sections most real biodatas print, on one page.
- * Horoscope, education and career details sit in Personal details, as in the owner's reference biodata (D28); no
- * complexion (§6). The section keys are the Detailed ones, so the headings print from the same dictionaries in all
+ * Horoscope, education and career details sit in Personal details, as in the owner's reference biodata (D28); Complexion
+ * sits below Height. The section keys are the Detailed ones, so the headings print from the same dictionaries in all
  * ten languages, and every field here is also a Detailed default field (the switch only moves them).
  */
 export const SIMPLE_SECTIONS: readonly SectionDef[] = [
@@ -326,6 +329,7 @@ export const SIMPLE_SECTIONS: readonly SectionDef[] = [
       "gotra",
       "maternalGotra",
       "height",
+      "complexion",
       "highestQualification",
       "occupation",
       "annualIncome",

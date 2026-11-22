@@ -143,15 +143,15 @@ test("a hidden field stays hidden after a reload, with its value", async ({ page
   await expect(eye).toHaveAttribute("aria-pressed", "false");
   await expect(label(page, "Nationality")).toHaveValue("Indian");
   expect(storedField(await readStored(page, id), "nationality")).toMatchObject({ value: "Indian", visible: false });
-  // Hidden rows are left out of the count: Personal has 8 rows that print, none filled.
-  await expect(section(page, "personal").getByTestId("section-completion")).toHaveText("0 of 8 filled");
+  // Hidden rows are left out of the count: Personal has 9 rows that print (Complexion included), none filled.
+  await expect(section(page, "personal").getByTestId("section-completion")).toHaveText("0 of 9 filled");
 });
 
 test("the section rail scrolls to a section and follows the scrolling", async ({ page, isMobile }) => {
   test.skip(isMobile, "the rail is for wide screens; phones have the chips");
   await openStoredDraft(page, sampleDraft("rail-draft"));
   const rail = page.getByTestId("section-rail");
-  await expect(rail.getByRole("link", { name: /Personal Details/ })).toContainText("10/10");
+  await expect(rail.getByRole("link", { name: /Personal Details/ })).toContainText("10/11");
   // The top of the biodata (Step 2.0) is the rail's first entry, so it is current at the top of the page.
   await expect(rail.getByRole("link", { name: "Top of your biodata" })).toHaveAttribute("aria-current", "location");
 

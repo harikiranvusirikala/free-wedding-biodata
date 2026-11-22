@@ -360,7 +360,7 @@ describe("restore default fields", () => {
 
     const restored = restoreSectionDefaults(next, personal.id, newId, later);
     const after = section(restored, "personal");
-    expect(keys(after)).toEqual(["fullName", "gender", "dateOfBirth", "height", "maritalStatus", "nationality", "motherTongue", "currentCity", "Blood group", "nativePlace", "occupation"]);
+    expect(keys(after)).toEqual(["fullName", "gender", "dateOfBirth", "height", "complexion", "maritalStatus", "nationality", "motherTongue", "currentCity", "Blood group", "nativePlace", "occupation"]);
     // Every field that was there is the very same object.
     for (const f of before.fields) expect(after.fields).toContain(f);
     expect(after.fields).toHaveLength(before.fields.length + 2);

@@ -3,6 +3,7 @@
     "name": "മലയാളം",
     "reviewed": false,
     "reviewNotes": {
+      "fields.complexion": "Drafted as the usual word for skin tone / complexion (നിറം); a native reader should confirm.",
       "sections.contact": "Drafted as ബന്ധപ്പെടാൻ ('to contact'), as printed on many Kerala biodatas.",
       "sections.references": "Drafted as പരിചയക്കാർ ('acquaintances').",
       "fields.maritalStatus": "Shortened to വിവാഹ നില to fit the label column; വൈവാഹിക നില is the formal phrase.",
@@ -56,6 +57,7 @@
     "gender": "ലിംഗം",
     "dateOfBirth": "ജനനത്തീയതി",
     "height": "ഉയരം",
+    "complexion": "നിറം",
     "maritalStatus": "വിവാഹ നില",
     "nationality": "ദേശീയത",
     "motherTongue": "മാതൃഭാഷ",

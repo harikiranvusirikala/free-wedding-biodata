@@ -3,6 +3,7 @@
     "name": "हिन्दी",
     "reviewed": false,
     "reviewNotes": {
+      "fields.complexion": "Drafted as the usual word for skin tone / complexion (रंग); a native reader should confirm.",
       "sections.religion": "Drafted as 'religion and community'; some families write धर्म एवं जाति.",
       "sections.career": "Drafted as व्यवसाय विवरण; नौकरी / व्यवसाय is also common.",
       "sections.contact": "संपर्क सूत्र, as printed on many Hindi biodatas.",
@@ -54,6 +55,7 @@
     "gender": "लिंग",
     "dateOfBirth": "जन्म तिथि",
     "height": "कद",
+    "complexion": "रंग",
     "maritalStatus": "वैवाहिक स्थिति",
     "nationality": "राष्ट्रीयता",
     "motherTongue": "मातृभाषा",

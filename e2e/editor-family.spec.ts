@@ -224,7 +224,11 @@ test("the rail says how much of the biodata is filled, leaving hidden lines out"
   const percent = async () => Number((await overall.textContent())?.match(/(\d+)%/)?.[1]);
   await expect.poll(percent).toBeGreaterThan(0);
   const one = await percent();
-  // Hiding an empty line leaves fewer lines to fill, so the share goes up.
+  // Hiding an empty line leaves fewer lines to fill: the section's count drops by one and the overall share never
+  // falls (with 50-odd lines it may round to the same whole percent, so the count is the exact check).
+  const personal = page.locator('[data-section="personal"]').getByTestId("section-completion");
+  const total = Number((await personal.textContent())?.match(/of (\d+) filled/)?.[1]);
   await page.getByRole("button", { name: "Show “Nationality” on the biodata" }).click();
-  await expect.poll(percent).toBeGreaterThan(one);
+  await expect(personal).toHaveText(new RegExp(`of ${total - 1} filled`));
+  await expect.poll(percent).toBeGreaterThanOrEqual(one);
 });
