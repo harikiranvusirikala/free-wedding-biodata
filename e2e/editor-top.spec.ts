@@ -140,7 +140,7 @@ test("the document language changes the printed labels; the editor stays in Engl
   await expect(pageOne).not.toContainText("Personal Details");
 });
 
-test("a tradition chip adds its fields once, and Undo takes them out again (D32, D43)", async ({ page }) => {
+test("a tradition chip adds its fields once, a second tap unselects it, and Undo works both ways (D32, D43)", async ({ page }) => {
   const id = await openNewDraft(page);
   const chips = page.getByTestId("tradition-chips");
   await expect(page.locator('[data-section="religion"]').getByTestId("tradition-chips")).toBeVisible();
@@ -150,23 +150,42 @@ test("a tradition chip adds its fields once, and Undo takes them out again (D32,
   await expect(toast(page)).toContainText("Added Devak, Kula Devata, Gan and Nadi");
   await expect(page.locator('[data-section="religion"]').getByLabel("Devak", { exact: true })).toBeVisible();
   await expect(page.locator('[data-section="horoscope"]').getByRole("combobox", { name: "Nadi", exact: true })).toBeVisible();
-  await expect(chips.getByRole("button", { name: "Hindu – Marathi, already added", exact: true })).toBeVisible();
+  const marathi = chips.getByRole("button", { name: "Hindu – Marathi", exact: true });
+  await expect(marathi).toHaveAttribute("aria-pressed", "true");
 
   await toast(page).getByRole("button", { name: "Undo" }).click();
   await expect(toast(page)).toContainText("Removed the details just added");
   await expect(page.getByLabel("Devak", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("combobox", { name: "Nadi", exact: true })).toHaveCount(0);
+  await expect(marathi).toHaveAttribute("aria-pressed", "false");
 
-  await chips.getByRole("button", { name: "Hindu – Marathi", exact: true }).click();
+  // A second tap unselects the chip and takes its empty fields out; Undo brings them back.
+  await marathi.click();
   await expect(page.getByLabel("Devak", { exact: true })).toHaveCount(1);
-  await chips.getByRole("button", { name: "Hindu – Marathi, already added", exact: true }).click();
-  await expect(toast(page)).toContainText("already in your biodata");
+  await marathi.click();
+  await expect(toast(page)).toContainText("Removed Devak, Kula Devata, Gan and Nadi.");
+  await expect(page.getByLabel("Devak", { exact: true })).toHaveCount(0);
+  await expect(marathi).toHaveAttribute("aria-pressed", "false");
+  await toast(page).getByRole("button", { name: "Undo" }).click();
+  await expect(toast(page)).toContainText("Hindu – Marathi is back");
   await expect(page.getByLabel("Devak", { exact: true })).toHaveCount(1);
+  await expect(marathi).toHaveAttribute("aria-pressed", "true");
 
-  // A chip that shares fields adds only what's missing.
-  await chips.getByRole("button", { name: "Hindu – Tamil", exact: true }).click();
+  // A chip that shares fields adds only what's missing, and unselecting it keeps what the other chip uses.
+  const tamil = chips.getByRole("button", { name: "Hindu – Tamil", exact: true });
+  await tamil.click();
   await expect(toast(page)).toContainText("Added Lagnam and Dosham");
   await expect(page.getByLabel("Kula Devata", { exact: true })).toHaveCount(1);
+  // Hindu – other has the same fields as Tamil but wasn't tapped: it stays unticked.
+  await expect(chips.getByRole("button", { name: "Hindu – other", exact: true })).toHaveAttribute("aria-pressed", "false");
+  await page.locator('[data-section="horoscope"]').getByLabel("Dosham", { exact: true }).fill("None");
+  await tamil.click();
+  await expect(toast(page)).toContainText("Removed Lagnam. Kept Dosham, which you've filled in.");
+  await expect(page.getByRole("combobox", { name: "Lagnam", exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("Dosham", { exact: true })).toHaveValue("None");
+  await expect(page.getByLabel("Kula Devata", { exact: true })).toHaveCount(1);
+  await tamil.click();
+  await expect(toast(page)).toContainText("Added Lagnam");
 
   await expect(status(page)).toHaveText(SAVED);
   const stored = await readStored(page, id);

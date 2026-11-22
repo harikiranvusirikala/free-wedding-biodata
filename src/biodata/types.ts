@@ -119,6 +119,11 @@ export interface ProfileOptions {
   motif: string | null;
   /** The invocation line as text ("" = none, the default). Picked lines are copied in so they stay editable (§7). */
   invocation: string;
+  /**
+   * The "details common in your family" chips the user has tapped (D32, D43; ids from TRADITIONS), so a second tap
+   * can unselect one. Absent in drafts saved before it was added: read from the fields then (appliedTraditions).
+   */
+  traditions?: string[];
 }
 
 export const PHOTO_ROTATIONS = [0, 90, 180, 270] as const;

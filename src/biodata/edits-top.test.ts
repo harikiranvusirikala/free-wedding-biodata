@@ -3,6 +3,9 @@ import { DEFAULT_OPTIONS, TRADITIONS, TRADITION_FIELD_SETS, createProfile } from
 import { toDocument } from "./document";
 import {
   addTraditionFields,
+  appliedTraditions,
+  removeTradition,
+  traditionRemoval,
   removeField,
   removeFields,
   removeSection,
@@ -239,5 +242,78 @@ describe("tradition chips (D32, D43)", () => {
     const withMuslim = addTraditionFields(profile, "muslim", () => `m-${++n}`, later);
     const removed = removeField(withMuslim, "m-1", later);
     expect(traditionFieldsToAdd(removed, "muslim").map((a) => a.key)).toEqual(["muslimSect"]);
+  });
+});
+
+describe("unselecting a tradition chip (a second tap)", () => {
+  const counter = (prefix: string) => {
+    let n = 0;
+    return () => `${prefix}-${++n}`;
+  };
+
+  it("records the chips tapped, so two chips with the same fields are told apart", () => {
+    const { profile } = setup();
+    expect(appliedTraditions(profile)).toEqual([]);
+    const tamil = addTraditionFields(profile, "hinduTamil", counter("t"), later);
+    // Hindu – other has the same three fields, but wasn't tapped.
+    expect(appliedTraditions(tamil)).toEqual(["hinduTamil"]);
+    expect(tamil.options.traditions).toEqual(["hinduTamil"]);
+    const both = addTraditionFields(tamil, "hindu", counter("h"), later);
+    expect(allKeys(both)).toEqual(allKeys(tamil));
+    expect(appliedTraditions(both)).toEqual(["hinduTamil", "hindu"]);
+    valid(both);
+  });
+
+  it("reads a draft saved before chips were recorded from its fields", () => {
+    const { profile } = setup();
+    const tamil = addTraditionFields(profile, "hinduTamil", counter("t"), later);
+    const legacy = { ...tamil, options: { ...tamil.options, traditions: undefined } };
+    expect(appliedTraditions(legacy)).toEqual(["hinduTamil", "hindu"]);
+  });
+
+  it("removes the chip's empty fields and forgets it", () => {
+    const { profile } = setup();
+    const marathi = addTraditionFields(profile, "hinduMarathi", counter("m"), later);
+    const off = removeTradition(marathi, "hinduMarathi", later);
+    expect(allKeys(off)).toEqual(allKeys(profile));
+    expect(appliedTraditions(off)).toEqual([]);
+    expect(off.options.traditions).toEqual([]);
+    expect(removeTradition(off, "hinduMarathi", later)).toBe(off);
+    valid(off);
+  });
+
+  it("keeps fields another tapped chip uses, and fields the form has by default", () => {
+    const { profile } = setup();
+    const telugu = addTraditionFields(profile, "hinduTelugu", counter("te"), later);
+    const tamil = addTraditionFields(telugu, "hinduTamil", counter("ta"), later);
+    // Tamil off: Kuladeivam goes; Lagnam and Dosham stay for Telugu.
+    const off = removeTradition(tamil, "hinduTamil", later);
+    expect(allKeys(off).filter((k) => ["lagnam", "dosham", "kulaDevata", "intiPeru"].includes(k!))).toEqual(["intiPeru", "lagnam", "dosham"]);
+    expect(appliedTraditions(off)).toEqual(["hinduTelugu"]);
+    // Sikh off: its own field goes, the default Gotra stays.
+    const sikh = addTraditionFields(profile, "sikh", counter("s"), later);
+    const sikhOff = removeTradition(sikh, "sikh", later);
+    expect(allKeys(sikhOff)).toEqual(allKeys(profile));
+    expect(allKeys(sikhOff)).toContain("gotra");
+  });
+
+  it("keeps a field the user typed in, and says which", () => {
+    const { profile } = setup();
+    const muslim = addTraditionFields(profile, "muslim", counter("mu"), later);
+    const typed = setFieldValue(muslim, "mu-2", "Hanafi", later);
+    expect(traditionRemoval(typed, "muslim")).toEqual({ remove: ["mu-1"], kept: ["maslak"] });
+    const off = removeTradition(typed, "muslim", later);
+    expect(allKeys(off)).toContain("maslak");
+    expect(allKeys(off)).not.toContain("muslimSect");
+    expect(appliedTraditions(off)).toEqual([]);
+  });
+
+  it("records a chip whose fields are already all there, but not one with nowhere to put them", () => {
+    const { profile } = setup();
+    const tamil = addTraditionFields(profile, "hinduTamil", counter("t"), later);
+    const untracked = { ...tamil, options: { ...tamil.options, traditions: [] } };
+    const other = addTraditionFields(untracked, "hindu", counter("h"), later);
+    expect(allKeys(other)).toEqual(allKeys(tamil));
+    expect(appliedTraditions(other)).toEqual(["hindu"]);
   });
 });

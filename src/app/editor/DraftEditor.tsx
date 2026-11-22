@@ -37,7 +37,7 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
   const conflict = status.state === "error" && status.kind === "conflict";
   // The top card comes first in the form and the rail (Step 2.0), then the photo (Step 3.1), then the sections.
   const ids = useMemo(() => [TOP_ID, PHOTO_ID, ...profile.sections.map((s) => s.id)], [profile.sections]);
-  const traditionsDone = useMemo(() => doneTraditions({ sections: profile.sections }), [profile.sections]);
+  const traditionsDone = useMemo(() => doneTraditions({ sections: profile.sections, options: profile.options }), [profile.sections, profile.options]);
   const { current: currentSection, jump } = useCurrentSection(ids);
 
   // One stable function for every row: it applies the edit to the latest profile, so memoised cards and rows

@@ -80,6 +80,8 @@ export const optionsSchema = z.object({
   title: z.string().optional(),
   motif: z.string().min(1).nullable(),
   invocation: z.string(),
+  // Added without a format bump (optional): the tradition chips tapped. Unknown ids are ignored when read.
+  traditions: z.array(z.string().min(1)).optional(),
 });
 
 export const photoCropSchema = z.object({

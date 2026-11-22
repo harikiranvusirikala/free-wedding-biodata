@@ -11,6 +11,7 @@ import {
   type FieldKey,
   type NewId,
   type SectionDef,
+  TRADITIONS,
   TRADITION_FIELD_SETS,
   type Tradition,
 } from "./defaults";
@@ -836,18 +837,70 @@ export function traditionFieldsToAdd(profile: Pick<BiodataProfile, "sections">, 
 }
 
 /**
- * A tradition chip (D32, D43): adds the chip's fields that aren't in the draft yet, empty and shown, at the end of
- * their sections (traditionFieldsToAdd). Tapping it again adds nothing. Only ever called on the user's tap.
+ * The tradition chips the user has tapped, in chip order (D32, D43): `options.traditions`, or, for a draft saved
+ * before chips were recorded, the chips whose fields are all in the draft (what the chips used to show).
+ */
+export function appliedTraditions(profile: Pick<BiodataProfile, "sections" | "options">): Tradition[] {
+  const stored = profile.options.traditions;
+  if (stored) return TRADITIONS.filter((tradition) => stored.includes(tradition));
+  return TRADITIONS.filter((tradition) => traditionFieldsToAdd(profile, tradition).length === 0);
+}
+
+function withTraditions(profile: BiodataProfile, traditions: readonly Tradition[], now: Clock): BiodataProfile {
+  return { ...profile, options: { ...profile.options, traditions: TRADITIONS.filter((t) => traditions.includes(t)) }, updatedAt: now().toISOString() };
+}
+
+/**
+ * A tradition chip (D32, D43): records the chip as tapped and adds its fields that aren't in the draft yet, empty
+ * and shown, at the end of their sections (traditionFieldsToAdd). Tapping a chip already tapped changes nothing.
+ * Only ever called on the user's tap.
  */
 export function addTraditionFields(profile: BiodataProfile, tradition: Tradition, newId: NewId = newUuid, now: Clock = systemClock) {
+  const applied = appliedTraditions(profile);
   const adds = traditionFieldsToAdd(profile, tradition);
-  if (!adds.length) return profile;
+  if (!adds.length) {
+    // Nothing to add: record the chip only when its fields really are all in the draft (else there's nowhere to
+    // put them, and the chip stays unticked).
+    const present = new Set(allFields(profile).map((field) => field.key));
+    if (applied.includes(tradition) || !TRADITION_FIELD_SETS[tradition].every((entry) => present.has(entry.field))) return profile;
+  }
   const sections = profile.sections.map((section) => {
     const mine = adds.filter((a) => a.sectionId === section.id);
     if (!mine.length || section.kind !== "fields") return section;
     return { ...section, fields: [...section.fields, ...mine.map((a) => createField(a.key, newId))] };
   });
-  return touch(profile, sections, now);
+  return withTraditions(adds.length ? touch(profile, sections, now) : profile, [...applied, tradition], now);
+}
+
+/**
+ * What unselecting a chip takes out: the fields of its set that no other tapped chip uses and that the draft's
+ * form doesn't have by default (Gotra stays), but only those still empty and untouched (`remove`, field ids); any
+ * the user has typed in, renamed, hidden or noted are kept (`kept`, their keys), so nothing typed is lost.
+ */
+export function traditionRemoval(profile: Pick<BiodataProfile, "sections" | "options">, tradition: Tradition): { remove: string[]; kept: FieldKey[] } {
+  const others = new Set(
+    appliedTraditions(profile)
+      .filter((t) => t !== tradition)
+      .flatMap((t) => TRADITION_FIELD_SETS[t].map((entry) => entry.field)),
+  );
+  const defaults = new Set(layoutSections(profile.options.formLayout).flatMap((def) => (def.kind === "fields" ? def.fields : [])));
+  const keys = new Set(TRADITION_FIELD_SETS[tradition].map((entry) => entry.field).filter((key) => !others.has(key) && !defaults.has(key)));
+  const remove: string[] = [];
+  const kept: FieldKey[] = [];
+  for (const field of allFields(profile)) {
+    if (!keys.has(field.key as FieldKey)) continue;
+    if (isUntouched(field)) remove.push(field.id);
+    else kept.push(field.key as FieldKey);
+  }
+  return { remove, kept };
+}
+
+/** Unselects a tradition chip (a second tap): forgets it and removes its empty fields (traditionRemoval). */
+export function removeTradition(profile: BiodataProfile, tradition: Tradition, now: Clock = systemClock): BiodataProfile {
+  const applied = appliedTraditions(profile);
+  if (!applied.includes(tradition)) return profile;
+  const { remove } = traditionRemoval(profile, tradition);
+  return withTraditions(removeFields(profile, remove, now), applied.filter((t) => t !== tradition), now);
 }
 
 /** Removes several fields at once (Undo after a tradition chip); unknown ids are ignored. */
