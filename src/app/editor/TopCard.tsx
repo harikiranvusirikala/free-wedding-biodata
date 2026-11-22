@@ -9,7 +9,7 @@ import { accentCard, accentTile, cardTitle } from "@/components/ui/card";
 import { Dialog, DialogActions } from "@/components/ui/Dialog";
 import { field as fieldClass, fieldHint } from "@/components/ui/field";
 import { Icon } from "@/components/ui/icons";
-import { MOTIF_IDS, MOTIF_TRADITIONS, Motif, motifTradition } from "@/document/motifs";
+import { MOTIF_IDS, MOTIF_TRADITIONS, Motif, motifSections, motifTradition } from "@/document/motifs";
 import { getPalette, getTemplate } from "@/document/templates";
 import type { Palette } from "@/document/tokens";
 import { getDocDictionary } from "@/i18n/doc";
@@ -156,7 +156,7 @@ function MotifDialog({ open, value, palette, onClose, onChange }: { open: boolea
   const cell = (selected: boolean) =>
     `flex min-h-28 flex-col items-center justify-center gap-1.5 rounded-xl border p-2 text-center transition-colors ${selected ? "border-brand ring-2 ring-ring" : "border-line-strong hover:border-ink-3"} ${focusRing}`;
   const grid = "grid grid-cols-3 gap-2 sm:grid-cols-6";
-  const groups = MOTIF_TRADITIONS.map((tradition) => ({ tradition, ids: MOTIF_IDS.filter((id) => motifTradition(id) === tradition) })).filter((group) => group.ids.length);
+  const groups = MOTIF_TRADITIONS.map((tradition) => ({ tradition, sets: motifSections(tradition) })).filter((group) => group.sets.length);
   return (
     <Dialog open={open} onClose={onClose} title={t("top.motif.dialog.title")} description={t("top.motif.dialog.text")} wide>
       <div className="space-y-4" data-testid="motif-dialog">
@@ -169,19 +169,24 @@ function MotifDialog({ open, value, palette, onClose, onChange }: { open: boolea
           <span className="text-sm font-semibold text-ink-2">{t("top.motif.none")}</span>
           <span className="text-[13px] text-ink-3">{t("top.motif.noneName")}</span>
         </button>
-        {groups.map(({ tradition, ids }) => (
-          <section key={tradition} aria-label={t(`top.group.${tradition}` as AppKey)}>
-            <h3 className="mb-1.5 text-[12px] font-semibold tracking-wide text-ink-3 uppercase">{t(`top.group.${tradition}` as AppKey)}</h3>
-            <div className={grid}>
-              {ids.map((id) => (
-                <button key={id} type="button" aria-pressed={value === id} onClick={() => pick(id)} className={cell(value === id)} style={{ background: palette.paper }}>
-                  <MotifTile id={id} palette={palette} size={60} />
-                  <span className="text-[12.5px] leading-tight font-semibold" style={{ color: palette.label }}>
-                    {motifName(id)}
-                  </span>
-                </button>
-              ))}
-            </div>
+        {groups.map(({ tradition, sets }) => (
+          <section key={tradition} aria-label={t(`top.group.${tradition}` as AppKey)} className="space-y-3">
+            <h3 className="text-[12px] font-semibold tracking-wide text-ink-3 uppercase">{t(`top.group.${tradition}` as AppKey)}</h3>
+            {sets.map(({ key, ids }) => (
+              <div key={key ?? "rest"} data-testid={key ? `motif-set-${key}` : undefined}>
+                {key && <h4 className="mb-1.5 text-[13px] font-semibold text-ink-2">{t(`top.set.${key}` as AppKey)}</h4>}
+                <div className={grid}>
+                  {ids.map((id) => (
+                    <button key={id} type="button" aria-pressed={value === id} onClick={() => pick(id)} className={cell(value === id)} style={{ background: palette.paper }}>
+                      <MotifTile id={id} palette={palette} size={60} />
+                      <span className="text-[12.5px] leading-tight font-semibold" style={{ color: palette.label }}>
+                        {motifName(id)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </section>
         ))}
       </div>

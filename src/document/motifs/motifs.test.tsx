@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import en from "@/i18n/app/en.json";
 import { IDENTITY } from "@/pdf/matrix";
 import { svgToPdf } from "@/pdf/svg-to-pdf";
-import { DRAWN_IDS, MOTIF_IDS, MOTIF_TRADITIONS, MOTIFS_AWAITING_REVIEW, Motif, PICTURE_IDS, isMotif, motifTradition } from "./index";
+import { DRAWN_IDS, HINDU_SECTIONS, MOTIF_IDS, MOTIF_TRADITIONS, MOTIFS_AWAITING_REVIEW, Motif, PICTURE_IDS, isMotif, motifSections, motifTradition } from "./index";
 
 // The motif library (Step 2.0, redrawn 2026-11-22; VISION D21, D45, D47): every drawing renders in the template's
 // colours with only the SVG the PDF writer draws (src/pdf/svg-to-pdf.ts), no font glyphs, and None draws nothing.
@@ -38,6 +38,22 @@ describe("motif library", () => {
     expect(order.every((t) => t >= 0)).toBe(true);
     expect(order).toEqual([...order].sort((a, b) => a - b));
     expect(new Set(order).size).toBe(MOTIF_TRADITIONS.length);
+  });
+
+  it("organises the Hindu symbols in sets, the classic Ganesha first, each symbol in exactly one set", () => {
+    expect(HINDU_SECTIONS.map((section) => section.key)).toEqual(["ganesha", "ganeshaColour", "om", "gods", "auspicious"]);
+    const hindu = MOTIF_IDS.filter((id) => motifTradition(id) === "hindu");
+    const listed = HINDU_SECTIONS.flatMap((section) => section.ids);
+    expect(new Set(listed).size).toBe(listed.length);
+    expect([...listed].sort()).toEqual([...hindu].sort());
+    expect(hindu).toEqual(listed);
+    expect(MOTIF_IDS[0]).toBe("ganesha");
+    const sets = motifSections("hindu");
+    expect(sets.map((set) => set.key)).toEqual(["ganesha", "ganeshaColour", "om", "gods", "auspicious"]);
+    expect(sets.flatMap((set) => set.ids)).toEqual(hindu);
+    // The other traditions are one set each, without a heading.
+    expect(motifSections("muslim")).toEqual([{ key: null, ids: MOTIF_IDS.filter((id) => motifTradition(id) === "muslim") }]);
+    for (const set of sets) expect(Object.hasOwn(en, `top.set.${set.key}`), String(set.key)).toBe(true);
   });
 
   it("keeps every id a stored draft may hold (ids are never renamed)", () => {

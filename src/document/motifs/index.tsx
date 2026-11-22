@@ -114,12 +114,36 @@ export const motifTradition = (id: string): MotifTradition | undefined => {
   return Object.hasOwn(LIBRARY, key) ? LIBRARY[key].tradition : Object.hasOwn(PICTURES, key) ? PICTURES[key].tradition : undefined;
 };
 
-/** Every symbol in picker order: grouped by tradition, drawn and pictured ones together within each group. */
-const FIRST = ["ganesha"];
-const rank = (id: string) => (FIRST.includes(id) ? FIRST.indexOf(id) : FIRST.length);
-export const MOTIF_IDS = [...DRAWN_IDS, ...PICTURE_IDS].sort(
-  (a, b) => MOTIF_TRADITIONS.indexOf(motifTradition(a)!) - MOTIF_TRADITIONS.indexOf(motifTradition(b)!) || rank(a) - rank(b),
+/**
+ * The Hindu symbols, organised in sets (the picker and its dialog keep this order; ids are never renamed): the
+ * classic Ganesha first, then Ganesha as gold and line art, Ganesha as coloured pictures, Om and blessings, the
+ * gods, and the auspicious symbols. Any Hindu symbol not listed follows the last set, so a new one always shows.
+ */
+export const HINDU_SECTIONS: readonly { key: string; ids: readonly string[] }[] = [
+  { key: "ganesha", ids: ["ganesha", "ganeshaLine", "ganeshaOutline", "ganeshaStencil", "ganeshaSeatedRight", "ganeshaSeatedLeft", "ganeshaMandala", "ganeshaLotus", "ganeshaThrone", "ganeshaTrunk"] },
+  { key: "ganeshaColour", ids: ["ganeshaSeated", "ganeshaTrident", "ganeshaLotusFrame", "ganeshaOrangeFrame"] },
+  { key: "om", ids: ["om", "omGold", "omMandala", "omSeal", "ganeshaNamah"] },
+  { key: "gods", ids: ["venkateswara", "ramaWithBow"] },
+  { key: "auspicious", ids: ["kalash", "swastika", "lotus"] },
+];
+
+const ALL_IDS = [...DRAWN_IDS, ...PICTURE_IDS];
+const hinduListed = new Set(HINDU_SECTIONS.flatMap((section) => section.ids));
+const HINDU_ORDER = [...HINDU_SECTIONS.flatMap((section) => section.ids), ...ALL_IDS.filter((id) => motifTradition(id) === "hindu" && !hinduListed.has(id))];
+
+/** Every symbol in picker order: grouped by tradition; the Hindu ones in their sets (HINDU_SECTIONS). */
+export const MOTIF_IDS = MOTIF_TRADITIONS.flatMap((tradition) =>
+  tradition === "hindu" ? HINDU_ORDER.filter((id) => ALL_IDS.includes(id)) : ALL_IDS.filter((id) => motifTradition(id) === tradition),
 );
+
+/** A tradition's symbols in sets, for the dialog's sub-headings: Hindu has several, the others one without a key. */
+export function motifSections(tradition: MotifTradition): { key: string | null; ids: string[] }[] {
+  const ids = MOTIF_IDS.filter((id) => motifTradition(id) === tradition);
+  if (tradition !== "hindu") return ids.length ? [{ key: null, ids }] : [];
+  const sets = HINDU_SECTIONS.map((section) => ({ key: section.key as string | null, ids: section.ids.filter((id) => ids.includes(id)) }));
+  const rest = ids.filter((id) => !hinduListed.has(id));
+  return [...sets, ...(rest.length ? [{ key: null, ids: rest }] : [])].filter((set) => set.ids.length);
+}
 
 /** Motifs drawn for us that still need a community's review before launch (D47 (3)). */
 export const MOTIFS_AWAITING_REVIEW = MOTIF_IDS.filter((id) => (Object.hasOwn(LIBRARY, id) ? LIBRARY[id].review : PICTURES[id]?.review));
