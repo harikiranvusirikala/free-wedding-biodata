@@ -6,6 +6,7 @@ import { card, cardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icons";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { t } from "@/lib/i18n";
+import { useOfflineReady } from "@/lib/service-worker";
 import { useBackup } from "./BackupProvider";
 import { formatBytes, readStorageStatus, requestPersistence, type PersistAnswer, type StorageStatus } from "@/lib/storage-status";
 
@@ -16,12 +17,14 @@ const ANSWERS = { granted: "storage.granted", declined: "storage.declined", fail
  * browser has promised to keep them, and "Keep my drafts safe", which asks it to and says exactly what it
  * answered. `savedAt` changes after every save, so the size follows the typing. Never a claim that browser
  * storage is a permanent backup: it says so, and offers Download a backup and Restore from a backup (Step 5.1).
+ * Once the offline worker controls the page (Step 5.2), it also says the editor works here without internet.
  */
 export function StorageCard({ savedAt }: { savedAt?: number }) {
   const [status, setStatus] = useState<StorageStatus | null>(null);
   const [answer, setAnswer] = useState<Exclude<PersistAnswer, "unsupported"> | null>(null);
   const [asking, setAsking] = useState(false);
   const backup = useBackup();
+  const offline = useOfflineReady();
 
   useEffect(() => {
     let live = true;
@@ -43,7 +46,7 @@ export function StorageCard({ savedAt }: { savedAt?: number }) {
 
   const kept = status?.persisted;
   return (
-    <section aria-labelledby="storage-title" className={`${card} p-4 sm:p-5`} data-testid="storage-card">
+    <section aria-labelledby="storage-title" className={`${card} @container p-4 sm:p-5`} data-testid="storage-card">
       <div className="flex gap-3">
         <Icon name="database" className="mt-0.5 size-5 text-ink-3" />
         <div className="min-w-0 flex-1">
@@ -57,6 +60,12 @@ export function StorageCard({ savedAt }: { savedAt?: number }) {
                 <Icon name={kept ? "shield" : "info"} className={`mt-[3px] size-4 ${kept ? "text-good" : kept === false ? "text-warn" : "text-ink-3"}`} />
                 <span>{t(kept ? "storage.kept" : kept === false ? "storage.notKept" : "storage.keptUnknown")}</span>
               </p>
+              {offline && (
+                <p className="flex gap-2" data-testid="storage-offline">
+                  <Icon name="check" className="mt-[3px] size-4 text-good" />
+                  <span>{t("storage.offline")}</span>
+                </p>
+              )}
             </div>
           ) : (
             <div className="mt-2 space-y-2" aria-hidden>
@@ -73,7 +82,8 @@ export function StorageCard({ savedAt }: { savedAt?: number }) {
           {t("storage.ask")}
         </button>
       )}
-      <div className="mt-3.5 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+      {/* Side by side only when the card itself is wide enough (on tablets it shares the row with the note card). */}
+      <div className="mt-3.5 grid gap-2 @[26rem]:grid-cols-2">
         <button type="button" className={button("secondary")} onClick={backup.openExport} data-testid="storage-backup">
           <Icon name="download" className="size-4" />
           {t("storage.backup")}

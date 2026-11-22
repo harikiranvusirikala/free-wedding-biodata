@@ -10,6 +10,7 @@ import { openDb, type BiodataDb } from "@/lib/db";
 import { t } from "@/lib/i18n";
 import { createDraft, draftRequest, openDraft, openNewDraft, type OpenDraftResult } from "@/lib/open-draft";
 import { createProfileRepo, type ProfileRepo } from "@/lib/profile-repo";
+import { registerServiceWorker } from "@/lib/service-worker";
 import { DraftEditor } from "./DraftEditor";
 import { EditorFrame } from "./EditorFrame";
 
@@ -52,6 +53,9 @@ function showInAddress(id: string) {
 
 export function Editor() {
   const [state, setState] = useState<EditorState>({ kind: "loading" });
+
+  // The offline worker (Step 5.2): the editor, its fonts and the PDF engine are kept for use without a network.
+  useEffect(registerServiceWorker, []);
 
   useEffect(() => {
     let cancelled = false;

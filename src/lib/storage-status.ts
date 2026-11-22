@@ -7,12 +7,24 @@
 type StorageLike = Partial<Pick<StorageManager, "estimate" | "persisted" | "persist">>;
 
 export interface StorageStatus {
-  /** Bytes this site's storage uses as the browser reports it (it may round or pad), or null when it can't say. */
+  /**
+   * Bytes the drafts and photos use as the browser reports it (it may round or pad), or null when it can't say.
+   * Where the browser breaks it down (Chrome's usageDetails), the offline copy of the app (Step 5.2's service
+   * worker cache, the same for everyone) is left out; elsewhere it is this site's whole storage.
+   */
   usage: number | null;
   /** True when the browser keeps this site's data until the user clears it; null when it can't say. */
   persisted: boolean | null;
   /** The browser can be asked to keep it (persist() exists and it isn't kept yet). */
   canAsk: boolean;
+}
+
+/** The usage less the service worker's caches and registration, when the browser says how big they are. */
+export function draftUsage(estimate: StorageEstimate): number | null {
+  if (typeof estimate.usage !== "number") return null;
+  const details = (estimate as { usageDetails?: Record<string, number | undefined> }).usageDetails;
+  if (!details) return estimate.usage;
+  return Math.max(0, estimate.usage - (details.caches ?? 0) - (details.serviceWorkerRegistrations ?? 0));
 }
 
 /** What the browser said to "Keep my drafts safe". */
@@ -27,7 +39,7 @@ export async function readStorageStatus(storage: StorageLike | undefined = brows
     typeof storage?.estimate === "function"
       ? storage
           .estimate()
-          .then((estimate) => (typeof estimate.usage === "number" ? estimate.usage : null))
+          .then(draftUsage)
           .catch(() => null)
       : null,
     typeof storage?.persisted === "function" ? storage.persisted().catch(() => null) : null,

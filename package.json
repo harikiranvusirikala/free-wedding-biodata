@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node --import tsx scripts/sw-build.mts",
     "serve": "node --import tsx scripts/serve-out.mts",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",

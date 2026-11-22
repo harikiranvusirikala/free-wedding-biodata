@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatBytes, readStorageStatus, requestPersistence } from "./storage-status";
+import { draftUsage, formatBytes, readStorageStatus, requestPersistence } from "./storage-status";
 
 const estimate = (usage?: number) => async () => ({ usage, quota: 1e10 }) as StorageEstimate;
 
@@ -10,6 +10,14 @@ describe("readStorageStatus", () => {
       persisted: false,
       canAsk: true,
     });
+  });
+
+  it("leaves out the offline copy of the app where the browser says how big it is (Chrome's usageDetails)", async () => {
+    const withDetails = async () => ({ usage: 9_000_000, quota: 1e10, usageDetails: { indexedDB: 1_000_000, caches: 7_900_000, serviceWorkerRegistrations: 100_000 } }) as StorageEstimate;
+    expect((await readStorageStatus({ estimate: withDetails })).usage).toBe(1_000_000);
+    expect(draftUsage({ usage: 500, usageDetails: { caches: 800 } } as StorageEstimate)).toBe(0);
+    expect(draftUsage({ usage: 500 })).toBe(500); // Safari and Firefox: the whole site
+    expect(draftUsage({})).toBeNull();
   });
 
   it("doesn't offer to ask again once storage is kept", async () => {

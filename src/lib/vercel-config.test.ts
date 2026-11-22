@@ -40,4 +40,25 @@ describe("vercel.json security headers", () => {
     const keys = all?.headers.map((h) => h.key);
     expect(keys).toEqual(expect.arrayContaining(["X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy", "Cross-Origin-Opener-Policy"]));
   });
+
+  // The offline worker (Step 5.2, BUILD_PLAN A6): browsers always ask for a fresh copy, and it can only ever talk
+  // to this site (never Google Tag Manager, even though it is served next to the public pages).
+  it("serves the service worker uncached and locked to this site", () => {
+    const csp = cspFor("/sw.js");
+    expect(directive(csp, "connect-src")).toBe("connect-src 'self'");
+    expect(directive(csp, "script-src")).toBe("script-src 'self'");
+    expect(csp).not.toContain("googletagmanager");
+    const cacheControl = rules.filter((rule) => new RegExp(`^${rule.source}$`).test("/sw.js")).flatMap((rule) => rule.headers.filter((h) => h.key === "Cache-Control"));
+    expect(cacheControl.map((h) => h.value)).toEqual(["no-cache"]);
+  });
+
+  it.each(["/sw", "/manifest.webmanifest", "/fonts/NotoSans-Regular.ttf"])("keeps the public pages' policy for %s", (path) => {
+    expect(directive(cspFor(path), "script-src")).toContain("https://www.googletagmanager.com");
+  });
+
+  it("lets the editor register its worker and read its manifest", () => {
+    const csp = cspFor("/editor");
+    expect(directive(csp, "worker-src")).toContain("'self'");
+    expect(directive(csp, "default-src")).toBe("default-src 'self'"); // manifest-src falls back to it
+  });
 });

@@ -102,6 +102,7 @@ export default function PrivacyPage() {
         <Prose>
           <p>{t("privacy.where.1")}</p>
           <p>{t("privacy.where.2")}</p>
+          <p>{t("privacy.where.3")}</p>
         </Prose>
       </ContentSection>
 

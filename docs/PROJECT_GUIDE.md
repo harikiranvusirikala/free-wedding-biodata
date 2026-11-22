@@ -41,13 +41,14 @@ flowchart LR
 | `src/lib/picture-store.ts`, `use-pictures.ts`, `picture-urls.ts` | Drawing photo-page pictures and thumbnails, as blob: URLs the Download engine reads from a registry (never fetched); `document-photo.ts` also has `useDocumentPhotos`. |
 | `src/biodata/photo-pages.ts` | What prints after the biodata: frame per layout, page counts, the chart's title. |
 | `src/lib/document-photo.ts` | The cropped photo for the document (a data URL), shared by `/dev/draft` and the live preview. |
+| `public/sw.js`, `scripts/sw-build.mts`, `src/lib/sw-precache.ts`, `src/lib/service-worker.ts`, `src/app/manifest.ts` | Working offline: the service worker (a template; after `next build`, `sw-build.mts` writes into `out/sw.js` which files to keep and the cache version, using the rules in `sw-precache.ts`); registering it from the editor and knowing when the editor works offline; the install manifest (the installed app opens the editor). |
 | `src/lib/site.ts` | The product's name, address, title and descriptions in one place. |
 | `src/lib/empty-module.ts` | An empty stand-in the bundler uses for Node's `module` in the browser (needed by the PDF text shaper). |
 | `src/pdf/` | The Download engine: reads the laid-out pages into a display list, then writes a PDF (HarfBuzz shapes Indian scripts, pdf-lib writes the file) or one image per page. Loaded only when downloading. |
 | `public/` | Files served as they are: the logo (`brand/app-icon.svg`), the installable app's icons (`icons/`) and the Noto fonts with their licence (`fonts/`, copied by `npm run fonts`). |
-| `scripts/` | Helper programs run with `npm run …`: `serve-out.mts` serves `out/` like Vercel; `site-images.mts` draws the icons and previews; `fonts.mts` copies the fonts. |
+| `scripts/` | Helper programs run with `npm run …`: `serve-out.mts` serves `out/` like Vercel; `site-images.mts` draws the icons and previews; `fonts.mts` copies the fonts; `sw-build.mts` fills in the offline worker's file list (run by `npm run build`). |
 | `test/` | Shared test setup for Vitest, and `fixtures/scripts.ts`: fictional biodata text in ten languages chosen to stress Indian-script shaping. Unit tests sit beside the code they test (`*.test.ts`). |
-| `e2e/` | Playwright tests that open the built site in Chrome, on a phone and a desktop screen. `screens.spec.ts` saves a screenshot of every page at phone, tablet and desktop size in Day and Night (`test-results/screenshots/`); `pdf.spec.ts` makes PDFs and page images of the templates (`test-results/pdf/`). |
+| `e2e/` | Playwright tests that open the built site in Chrome, on a phone and a desktop screen. `screens.spec.ts` saves a screenshot of every page at phone, tablet and desktop size in Day and Night (`test-results/screenshots/`); `pdf.spec.ts` makes PDFs and page images of the templates (`test-results/pdf/`); `offline.spec.ts` checks the editor with the network off and that it makes no request to another site (the only spec that allows service workers). |
 | `docs/` | The vision, build plan, this guide, the brand icon (`brand/app-icon.svg`), GitHub's social preview (`social-preview.png`), pictures it is drawn from (`screenshots/`) and the PDF spike's report and evidence (`spikes/`). |
 | `.github/workflows/ci.yml` | The checks GitHub runs on every push: lint, types, tests, build, e2e. |
 
@@ -56,7 +57,7 @@ flowchart LR
 | File | What it does |
 |---|---|
 | `next.config.ts` | Tells Next.js to make a static site (`output: "export"`) and wires Tailwind CSS. |
-| `vercel.json` | Security headers for every page. The editor's Content Security Policy only allows this site, so nothing typed can be sent elsewhere. |
+| `vercel.json` | Security headers for every page. The editor's Content Security Policy only allows this site, so nothing typed can be sent elsewhere. `/sw.js` is never cached by the browser (`no-cache`), so a new deploy's worker is found at once. |
 | `src/app/globals.css` | The colour tokens for Day and Night (`bg-page`, `text-ink`, `bg-brand`, …). |
 | `vitest.config.mts`, `playwright.config.ts` | Unit test and browser test settings. |
 | `.npmrc` | Keeps `package-lock.json` free of download addresses, so it works on any machine. |

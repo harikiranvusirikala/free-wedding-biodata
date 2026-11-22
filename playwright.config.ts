@@ -14,6 +14,9 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     trace: "retain-on-failure",
     reducedMotion: "reduce",
+    // The production build registers the offline worker (public/sw.js). Specs stub files with page.route, which a
+    // worker would bypass, and each must load the build fresh: only e2e/offline.spec.ts allows it.
+    serviceWorkers: "block",
   },
   projects: [
     { name: "phone", use: { ...devices["iPhone 13"], defaultBrowserType: "chromium", channel } },
