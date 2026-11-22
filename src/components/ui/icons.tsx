@@ -176,6 +176,32 @@ const PATHS = {
       <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
     </>
   ),
+  image: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2.5" />
+      <circle cx="9" cy="9" r="1.8" />
+      <path d="m21 15.5-4.6-4.6a1.5 1.5 0 0 0-2.1 0L4.5 20.7" />
+    </>
+  ),
+  layout: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="2.5" />
+      <path d="M3 9h18M9 21V9" />
+    </>
+  ),
+  minus: <path d="M5 12h14" />,
+  zoomIn: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3M11 8v6M8 11h6" />
+    </>
+  ),
+  zoomOut: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3M8 11h6" />
+    </>
+  ),
   database: (
     <>
       <ellipse cx="12" cy="5" rx="8" ry="3" />

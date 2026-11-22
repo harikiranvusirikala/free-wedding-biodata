@@ -23,11 +23,12 @@ import { LanguageNotice } from "./LanguageNotice";
 import { PHOTO_ID, PhotoCard } from "./PhotoCard";
 import { TOP_ID, TopCard } from "./TopCard";
 import { doneTraditions, showsTraditions } from "./TraditionChips";
+import { LivePreview } from "./preview/LivePreview";
 
 /**
  * The open draft: the drafts menu and save status in the header; the section rail (chips on tablets and phones),
- * the form as one scroll of section cards, and the right column, which holds where the draft is kept (with the
- * storage status) until the live preview takes it in Step 3.3 (BUILD_PLAN A7 Editor rule). Edits go straight to
+ * the form as one scroll of section cards ending with where the draft is kept (and the storage status), and the live
+ * preview: the right column on desktop, a pill and sheet below (Step 3.3, BUILD_PLAN A7 Editor rule). Edits go straight to
  * the autosave controller, which writes them after a pause and when the page is hidden or closed (VISION §9).
  */
 export function DraftEditor({ controller, repo, db }: { controller: AutosaveController; repo: ProfileRepo; db: BiodataDb }) {
@@ -103,14 +104,15 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
         <ManageProvider profile={profile} current={current} edit={edit} jump={jump}>
           <h1 className="sr-only">{t("editor.title")}</h1>
           <div className="flex-1 lg:grid lg:grid-cols-[4rem_minmax(27.5rem,36.25rem)_minmax(0,1fr)] xl:grid-cols-[14.5rem_minmax(27.5rem,36.25rem)_minmax(0,1fr)]">
-            <div className="border-r border-line bg-surface max-lg:hidden">
+            <div className="border-r border-line bg-surface max-lg:hidden" data-editor-pane>
               <SectionRail sections={profile.sections} hasPhoto={!!profile.photo} current={currentSection} onJump={jump} canAdd={!conflict} />
             </div>
             {/* Sticky here, not inside: the chips stay under the header for the whole form. */}
-            <div className="sticky top-14 z-20 lg:hidden">
+            <div className="sticky top-14 z-20 lg:hidden" data-editor-pane>
               <SectionJump sections={profile.sections} current={currentSection} onJump={jump} />
             </div>
-            <div className="mx-auto w-full max-w-3xl min-w-0 space-y-4 px-4 pt-4 pb-6 sm:px-6 sm:pt-6 lg:mx-0 lg:max-w-none lg:px-5 lg:pb-8" data-testid="editor-form">
+            {/* Below lg the bottom padding keeps the last card clear of the floating Preview pill. */}
+            <div className="mx-auto w-full max-w-3xl min-w-0 space-y-4 px-4 pt-4 pb-24 sm:px-6 sm:pt-6 lg:mx-0 lg:max-w-none lg:px-5 lg:pb-8" data-testid="editor-form" data-editor-pane>
               <SaveProblem status={status} onRetry={() => void controller.flush()} />
               <TopCard
                 options={profile.options}
@@ -134,10 +136,8 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
                 />
               ))}
               <AddSectionButton disabled={conflict} />
-            </div>
-            {/* The live preview's place from Step 3.3; for now, how the draft is kept. */}
-            <aside className="mx-auto w-full max-w-3xl px-4 pb-8 sm:px-6 lg:mx-0 lg:max-w-none lg:border-l lg:border-line lg:bg-sunken/40 lg:px-6 lg:py-6">
-              <div className="grid gap-4 sm:grid-cols-2 lg:sticky lg:top-20 lg:max-w-[34rem] lg:grid-cols-1">
+              {/* Where the draft is kept, after the last section (the right column is the preview since Step 3.3). */}
+              <aside aria-label={t("editor.keptLabel")} className="grid gap-4 pt-4 sm:grid-cols-2 lg:grid-cols-1" data-testid="kept-cards">
                 <div className={`${noteCard} flex gap-3`}>
                   <Icon name="lock" className="mt-0.5 size-5 text-gold" />
                   <div className="min-w-0">
@@ -149,8 +149,10 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
                   </div>
                 </div>
                 <StorageCard savedAt={status.state === "saved" ? status.at.getTime() : undefined} />
-              </div>
-            </aside>
+              </aside>
+            </div>
+            {/* The live preview (Step 3.3): the right column on desktop; a pill and a sheet below 1024 px. */}
+            <LivePreview profile={profile} edit={edit} loadBlob={loadBlob} readOnly={conflict} />
           </div>
         </ManageProvider>
       </EditorFrame>

@@ -136,3 +136,17 @@
     font-size: 16px;
   }
 }
+
+/* Print from the editor (Step 4.1 part 2): only the true-size copy of the laid-out pages prints (made by Print, or
+   on the browser's own beforeprint: src/app/editor/preview/export-files.ts). document.css sets @page A4 and one
+   page per sheet. */
+@media print {
+  body:has(> .print-pages) > :not(.print-pages) {
+    display: none !important;
+  }
+  .print-pages {
+    position: static !important;
+    left: auto !important;
+    width: auto !important;
+  }
+}

@@ -366,6 +366,85 @@ test("family list, add-member dialog, references and the photo card, Day and Nig
   }
 });
 
+// The live preview and its outputs (Steps 3.3, 4.1 part 2), shot as they are, Day and Night: the desktop column with
+// the two-page sample (page 1, page 2, the design and text-size panels, the toast after a download), the 1180 px
+// laptop, the tablet with its pill and side sheet, the phone pill, sheet and image menu, and a one-page draft.
+test("live preview and downloads at every size, Day and Night", async ({ page, isMobile }) => {
+  test.skip(isMobile, "sizes are set here, so one project is enough");
+  test.setTimeout(180_000);
+  const fresh = page.locator('[data-testid="preview-pages"] [data-doc-ready="1"]');
+  const shoot = async (name: string) => {
+    for (const theme of THEMES) {
+      await page.emulateMedia({ colorScheme: theme });
+      await expect(page.locator("html")).toHaveClass(theme === "dark" ? /dark/ : /^(?!.*dark)/);
+      await page.screenshot({ path: `test-results/screenshots/${name}-${theme === "light" ? "day" : "night"}.png`, animations: "disabled" });
+    }
+    await page.emulateMedia({ colorScheme: "light" });
+  };
+  await openSample(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(fresh).toHaveAttribute("data-doc-pages", "2");
+  await shoot("editor-preview-desktop");
+  await page.getByRole("button", { name: /^Design: / }).click();
+  await expect(page.getByTestId("design-panel")).toBeVisible();
+  await shoot("editor-preview-designs-desktop");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: /^Text size: / }).click();
+  await expect(page.getByTestId("text-size-panel")).toBeVisible();
+  await shoot("editor-preview-size-desktop");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Save as image" }).click();
+  await shoot("editor-preview-image-menu-desktop");
+  await page.keyboard.press("Escape");
+  await page.getByTestId("page-nav").getByRole("button", { name: "Next page" }).click();
+  await shoot("editor-preview-page2-desktop");
+  await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download PDF" }).click()]);
+  await expect(page.getByTestId("export-toast")).toContainText("Downloaded");
+  await shoot("editor-preview-downloaded-desktop");
+
+  await page.setViewportSize({ width: 1180, height: 820 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shoot("editor-preview-1180");
+
+  await page.setViewportSize({ width: 810, height: 1080 });
+  await expect(page.getByTestId("preview-pill")).toBeVisible();
+  await shoot("editor-preview-tablet-closed");
+  await page.getByTestId("preview-pill").click();
+  await expect(page.getByRole("dialog", { name: "Preview" })).toBeVisible();
+  await shoot("editor-preview-tablet-open");
+  await page.keyboard.press("Escape");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(page.getByRole("dialog", { name: "Preview" })).toBeHidden();
+  await shoot("editor-preview-phone-pill");
+  await page.getByTestId("preview-pill").click();
+  await expect(page.getByRole("dialog", { name: "Preview" })).toBeVisible();
+  await shoot("editor-preview-phone-sheet");
+  await page.getByRole("dialog", { name: "Preview" }).getByRole("button", { name: "Save as image" }).click();
+  await expect(page.getByRole("menu")).toBeVisible();
+  await shoot("editor-preview-phone-image-menu");
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+
+  // A one-page draft.
+  await page.goto("/editor?new=1");
+  await page.getByLabel("Name", { exact: true }).fill("Sai Teja Mandapati");
+  for (const [label, value] of [["Date of Birth", "15-03-1998"], ["Current City", "Hyderabad"], ["Native Place", "Guntur"], ["Nationality", "Indian"]]) {
+    await page.getByLabel(label, { exact: true }).fill(value);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.getByTestId("save-status")).toHaveText(/Saved on this device · \d/);
+  await expect(page.locator('[data-testid="preview-pages"] [data-page="1"]')).toContainText("Guntur");
+  await expect(fresh).toHaveAttribute("data-doc-pages", "1");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shoot("editor-preview-short-desktop");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByTestId("preview-pill").click();
+  await expect(page.getByRole("dialog", { name: "Preview" })).toBeVisible();
+  await shoot("editor-preview-short-phone-sheet");
+});
+
 /** Screenshots a page as it is (no reload) at every size, Day and Night; colour transitions are finished first. */
 async function shootAll(page: Page, name: string) {
   for (const size of SIZES) {

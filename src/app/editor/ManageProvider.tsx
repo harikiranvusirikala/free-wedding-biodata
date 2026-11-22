@@ -406,7 +406,7 @@ function UndoToast({ text, undo, onDone }: { text: string; undo?: () => void; on
   }, [held]);
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-4" data-testid="manage-toast">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 lg:bottom-5 flex justify-center px-4" data-testid="manage-toast">
       <div
         className="pointer-events-auto"
         onPointerEnter={() => setHeld(true)}

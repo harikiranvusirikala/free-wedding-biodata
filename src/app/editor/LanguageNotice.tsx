@@ -18,7 +18,7 @@ import type { Edit } from "./FieldRow";
 const englishName = (lang: LangCode) => t(`language.${lang}` as AppKey);
 
 /** "తెలుగు (Telugu)", or just "English". */
-function languageName(lang: LangCode): string {
+export function languageName(lang: LangCode): string {
   const own = getDocDictionary(lang).meta.name;
   return lang === "en" ? own : `${own} (${englishName(lang)})`;
 }
@@ -48,7 +48,8 @@ export const LanguageNotice = memo(function LanguageNotice({ lang, edit, readOnl
   );
 });
 
-function LanguageDialog({ open, lang, onClose, onPick }: { open: boolean; lang: LangCode; onClose: () => void; onPick: (lang: LangCode) => void }) {
+/** The ten printing languages (also opened from the live preview's toolbar, Step 3.3). */
+export function LanguageDialog({ open, lang, onClose, onPick }: { open: boolean; lang: LangCode; onClose: () => void; onPick: (lang: LangCode) => void }) {
   return (
     <Dialog open={open} onClose={onClose} title={t("language.dialog.title")} description={t("language.dialog.text")} wide>
       <div role="radiogroup" aria-label={t("language.dialog.title")} className="grid gap-2 sm:grid-cols-2" data-testid="language-options">

@@ -14,7 +14,7 @@ import {
   type Tradition,
 } from "./defaults";
 import { dateToText, heightToInches, parseDateText, parseTimeText, splitInches, timeToText } from "./inputs";
-import type { BiodataProfile, FamilyMember, FamilySection, Field, FieldType, FieldsSection, LangCode, MainPhoto, ProfileOptions, Section } from "./types";
+import type { BiodataProfile, FamilyMember, FamilySection, Field, FieldType, FieldsSection, LabelCase, LangCode, MainPhoto, ProfileOptions, Section, TextSize } from "./types";
 
 // Every change to a profile is a small pure function: (profile, …) → new profile (VISION D6). Nothing is mutated,
 // so React sees a new object exactly when something changed, undo is "keep the old one", and each edit is a
@@ -593,6 +593,35 @@ export function setTitle(profile: BiodataProfile, choice: TitleChoice, now: Cloc
 /** The language of the printed labels (D11); what the user typed is printed as typed whatever it is. */
 export function setDocLanguage(profile: BiodataProfile, docLanguage: LangCode, now: Clock = systemClock) {
   return profile.docLanguage === docLanguage ? profile : { ...profile, docLanguage, updatedAt: now().toISOString() };
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The live preview's controls (BUILD_PLAN Step 3.3, VISION D31, D39, D46): design, colour, text size and label case.
+// Design and colour ids are checked against the template registry by the caller (src/document is not imported here,
+// to keep this module free of React); an unknown id is still safe, since the document falls back at render time.
+
+/**
+ * The design and its colour together: colour ids belong to a design (Classic Gold's "gold", Paisley's "copper"),
+ * so a design change always says which of its colours to use (the editor passes the new design's first one).
+ */
+export function setDesign(profile: BiodataProfile, templateId: string, colorId: string, now: Clock = systemClock) {
+  if (profile.templateId === templateId && profile.colorId === colorId) return profile;
+  return { ...profile, templateId, colorId, updatedAt: now().toISOString() };
+}
+
+/** One of the open design's colour variants (D39). */
+export function setColor(profile: BiodataProfile, colorId: string, now: Clock = systemClock) {
+  return profile.colorId === colorId ? profile : { ...profile, colorId, updatedAt: now().toISOString() };
+}
+
+/** Auto (the largest size that fits one page, never below 9 pt) or a fixed size XS–XL (D31). */
+export function setTextSize(profile: BiodataProfile, textSize: TextSize, now: Clock = systemClock) {
+  return updateOptions(profile, (o) => (o.textSize === textSize ? o : { ...o, textSize }), now);
+}
+
+/** Labels as written, or in capitals (D31; only Latin labels change, Indian scripts have no case). */
+export function setLabelCase(profile: BiodataProfile, labelCase: LabelCase, now: Clock = systemClock) {
+  return updateOptions(profile, (o) => (o.labelCase === labelCase ? o : { ...o, labelCase }), now);
 }
 
 /** Where a tradition field goes when its own section isn't in the draft: the first of these that is. */

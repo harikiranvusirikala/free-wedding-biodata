@@ -302,7 +302,7 @@ export function DraftsMenu(props: {
       <DeleteAllDialog open={dialog?.kind === "deleteAll"} onClose={() => setDialog(null)} db={() => db} />
 
       {toast && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-5 z-50 flex justify-center px-4">
+        <div className="pointer-events-none fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 lg:bottom-5 flex justify-center px-4">
           <Toast tone={toast.tone} role={toast.tone === "danger" ? "alert" : "status"}>
             {toast.text}
           </Toast>
