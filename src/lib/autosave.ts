@@ -44,6 +44,8 @@ export interface AutosaveController {
   update(profile: BiodataProfile, photos?: PhotoChanges): void;
   /** Writes pending changes now; resolves when they are on disk or have failed (see the status). */
   flush(): Promise<void>;
+  /** Pictures added since the last save that wrote them (they are not in the database yet), for a backup (5.1). */
+  pendingPhotos(): PhotoInput[];
   /** Flushes when the page is hidden or being unloaded; returns the cleanup that removes the listeners. */
   attachLifecycle(win: Window): () => void;
   /** Writes what is pending and stops scheduling further writes (the editor is closing this draft). */
@@ -182,6 +184,8 @@ export function createAutosave({
     },
 
     flush,
+
+    pendingPhotos: () => [...pendingPuts.values()],
 
     attachLifecycle(win) {
       // pagehide and a hidden tab are the last moments a browser reliably gives us; beforeunload isn't (VISION §9).

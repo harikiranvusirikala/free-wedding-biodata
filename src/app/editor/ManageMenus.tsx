@@ -24,7 +24,7 @@ import { iconButton } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { Menu, MenuLabel, MenuSeparator, dangerMenuItem, menuItem } from "@/components/ui/Menu";
 import { t } from "@/lib/i18n";
-import { fieldLabel, memberLabel, sectionTitle } from "./labels";
+import { fieldLabel, memberLabel, sectionTitle, useLabelStyle } from "./labels";
 import { fieldMenuId, memberMenuId, sectionMenuId, useManage } from "./ManageProvider";
 
 // The ⋯ menus on field rows and section cards (BUILD_PLAN Step 2.2, VISION §6, mockup: editor). WAI-ARIA menus
@@ -156,7 +156,7 @@ function typesFor(field: Field): FieldType[] {
 const menuButton = `${iconButton} text-ink-3`;
 
 export function FieldMenu({ field, readOnly }: { field: Field; readOnly: boolean }) {
-  const label = fieldLabel(field);
+  const label = fieldLabel(field, useLabelStyle());
   return (
     <Menu
       id={fieldMenuId(field.id)}
@@ -178,8 +178,9 @@ function FieldMenuItems({ field, close }: { field: Field; close: () => void }) {
   const manage = useManage();
   const [view, setView] = useState<"main" | "type" | "move">("main");
   const profile = manage.current();
+  const labelStyle = useLabelStyle();
   const at = locateField(profile, field.id);
-  const label = fieldLabel(field);
+  const label = fieldLabel(field, labelStyle);
   const id = field.id;
   const targets = profile.sections.filter((s) => s.kind === "fields" && s.id !== at?.section.id);
   const run = (change: Parameters<typeof manage.edit>[0]) => {
@@ -216,11 +217,11 @@ function FieldMenuItems({ field, close }: { field: Field; close: () => void }) {
               onClick={() => {
                 close();
                 manage.edit((p) => moveFieldToSection(p, id, section.id));
-                manage.notify(t("manage.moved", { label, section: sectionTitle(section) }));
+                manage.notify(t("manage.moved", { label, section: sectionTitle(section, labelStyle) }));
                 manage.focusSoon(`${fieldMenuId(id)}-button`);
               }}
             >
-              {sectionTitle(section)}
+              {sectionTitle(section, labelStyle)}
             </Item>
           ))}
         </div>
@@ -353,7 +354,7 @@ function MemberMenuItems({ member, close }: { member: FamilyMember; close: () =>
 }
 
 export function SectionMenu({ section, readOnly }: { section: Section; readOnly: boolean }) {
-  const title = sectionTitle(section);
+  const title = sectionTitle(section, useLabelStyle());
   return (
     <Menu
       id={sectionMenuId(section.id)}
@@ -373,6 +374,7 @@ export function SectionMenu({ section, readOnly }: { section: Section; readOnly:
 
 function SectionMenuItems({ section, close }: { section: Section; close: () => void }) {
   const manage = useManage();
+  const labelStyle = useLabelStyle();
   const profile = manage.current();
   const index = profile.sections.findIndex((s) => s.id === section.id);
   const id = section.id;
@@ -422,7 +424,7 @@ function SectionMenuItems({ section, close }: { section: Section; close: () => v
           onClick={() => {
             close();
             manage.edit((p) => restoreSectionDefaults(p, id));
-            const name = sectionTitle(section);
+            const name = sectionTitle(section, labelStyle);
             manage.notify(missing === 1 ? t("manage.restored.one", { section: name }) : t("manage.restored.many", { count: missing, section: name }));
           }}
         >

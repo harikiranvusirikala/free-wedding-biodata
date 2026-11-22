@@ -263,7 +263,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 ## Phase 1 — Foundation and local persistence
 
 - **1.1 App shell:** header (name, drafts menu slot, theme menu, help link), theme as **Day / Night / Follow device** set before first paint (Family Tree's `theme-script.ts` pattern, `dark` class on `<html>`), UI kit, app dictionary (`en`), footer with the Buy me a coffee link (D25), `/help` and `/privacy` content, error screens.
-- **1.2 Profile model:** `types.ts`, `schema.ts`, `defaults.ts` (§6 sections and fields, no complexion, starter field sets D32), `migrate.ts` (v1), `edits.ts` core (set value, toggle visibility); unit tests.
+- **1.2 Profile model:** `types.ts`, `schema.ts`, `defaults.ts` (§6 sections and fields, starter field sets D32; Complexion added below Height by D52), `migrate.ts` (v1), `edits.ts` core (set value, toggle visibility); unit tests.
 - **1.3 Persistence:** Dexie DB v1, `profile-repo.ts`, `autosave.ts`, save status, revision check across tabs, failure and quota messages; unit tests with `fake-indexeddb` (including simulated write failure and quota error); e2e: type → reload → restored.
 - **1.4 Drafts:** create, open, rename, duplicate, delete with confirmation (the "download a backup first" offer is added in 5.1, when backups exist), last-opened restore, landing "Continue editing", storage status (`estimate`, `persist`), "Delete all my local data".
 
@@ -277,7 +277,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 ### Step 1.2: Profile model (built 2026-11-21)
 
 - **Built** (`src/biodata/`, pure TS): `types.ts` (A3 types plus `LangCode`, `CURRENT_SCHEMA_VERSION`), `schema.ts` (zod 4 `profileSchema`, compile-time checked against `BiodataProfile`), `defaults.ts`, `migrate.ts`, `edits.ts`; unit tests beside each.
-- **Default sections** (§6, D28, D39): About me → Personal → Religion and community → Horoscope → Education → Career → Family (Father, Mother) → Family background → Contact → Partner preferences. No complexion, no stored age. §6 "Profile" is folded in (name and gender head Personal; title in `options`; photo in `photo`). Family type/values sit in Family background because Family is a relation list; the duplicate "Native place" in Family background is dropped (Personal has it).
+- **Default sections** (§6, D28, D39): About me → Personal → Religion and community → Horoscope → Education → Career → Family (Father, Mother) → Family background → Contact → Partner preferences. Complexion below Height (D52, owner's choice), no stored age. §6 "Profile" is folded in (name and gender head Personal; title in `options`; photo in `photo`). Family type/values sit in Family background because Family is a relation list; the duplicate "Native place" in Family background is dropped (Personal has it).
 - **One field catalogue** (`FIELD_CATALOG`: key → type, option list) feeds new drafts, Restore defaults (2.2), the tradition chips (`TRADITION_FIELD_SETS`, D32/D43: data only, never added by default; a starting list for 2.0 to review) and later the dictionary completeness tests.
 - **Options lists aren't stored in drafts** (deviation from the A3 sketch): `OPTION_LISTS` by field key, so fixed lists reach old drafts. `optionKey` wins over `value`; typing clears it (D33).
 - **References** (D44) is a family-kind section offered in `QUICK_PICK_SECTIONS`, not a default; a contact's relation note is `Field.note`.
@@ -471,6 +471,22 @@ Every screen is built **production-quality the first time**, to the standard of 
 - `/dev/document` gains a short Classic Gold page per language (27 variants); screenshots checked: no missing glyphs or clipping; two Malayalam labels shortened to fit the label column ("വിവാഹ നില", "യോഗ്യത").
 - Open: native review of nine dictionaries; Devak/Gan have no default field (custom fields); part 2 (script fixture PDFs regenerated and reviewed) follows 4.1. Kannada pages' English labels keep their bold weight (verified 2026-11-22).
 
+### Step 5.1: Backup and restore (built 2026-11-22)
+
+- **Built:** pure core `src/lib/backup.ts` (`buildBackup`, `buildBackupBlob` per-draft Blob parts with chunked base64, `backupFileName`, `parseBackup` with rejections `notJson | notBackup | tooNew | tooBig | invalid | empty`, `withOpenDraft`, `estimateBackupBytes`); browser side `backup-file.ts`, words in `backup-text.ts`; every picture reference of a profile in `src/biodata/photo-refs.ts` (main, second, photo pages, horoscope chart); repo `listForBackup` and `importDrafts(drafts, { mode, restoredName })` (one transaction per draft with its photos, typed per-draft results); `autosave.pendingPhotos()` so a backup holds unsaved typing and photos. UI: export dialog (all drafts or the open one, approximate size), restore dialog (pick or drop, preview with checkboxes, Add or Replace, result with Open links), items in the drafts menu, buttons on the storage card, the privacy page's links (`/editor?backup=download|restore`, so Google Tag Manager never touches the file flow) and its "Backup files" section, "Download a backup first" in both delete dialogs and on the quota message. The 1.3/1.4 "until 5.1" deviations are gone; help text corrected.
+- **Decisions:** format `{ manifest: { app, formatVersion: 1, exportedAt, draftCount }, drafts: [{ profile, photos: [{ id, mimeType, width, height, data }] }] }`; limits file ≤ 100 MB, ≤ 200 drafts, ≤ 2 MB text per draft, depth ≤ 16, ≤ 32 pictures per draft, a picture ≤ 25 MB decoded and ≤ 8000 px long edge, type checked against magic bytes and size read from the header; control characters stripped, `__proto__` dropped; Replace matches by draft id only; photo ids always fresh; replaced drafts get revision + 1; "(restored)" only when the same id already exists; an empty `BACKUP_UPGRADES` table mirrors `migrate`.
+- **Deviations:** the privacy page's links open the editor's dialogs instead of running them in place; no test makes a 100 MB export.
+- **Owner checks:** restore on another browser or phone (iPhone Safari download and the picker accepting `.json`), a large real backup, whether the scrolling draft list feels fine on phones.
+
+### Step 4.5: Owner's M1 polish (built 2026-11-22, VISION D53)
+
+- **Dates:** pure `setDateFormat`; a "Dates" control (three radios with the draft's own date, month names in the printing language; all ten dictionaries complete, tested 10 × 12 × 2).
+- **Telugu families' wording:** optional `options.labelStyle` ("standard" | "telugu", absent = Standard, no format bump); overlay `labelVariants.telugu` in `src/i18n/doc/en.json` (`reviewed:false`, `reviewNotes`) read by `labelTables(dict, lang, style)`, English pages only, a renamed label always wins; the form follows the style (`labels.ts`, `LabelStyleProvider`, `useLabelStyle()`). The panel "Text, labels and dates" has a one-tap "Style: Standard | Telugu families" line (`setStylePreset`); on phones and tablets "Labels and dates" opens in a dialog.
+- **Images:** JPEG default quality 0.97 (`JPEG_QUALITY`, measurements in `src/pdf/index.ts`: Chrome subsamples colour 4:2:0 at every quality below 1, so the faint halo round thin gold text is not a quality matter; quality 1 gives 4:4:4 at 1.9–2.3 MB a page, not shipped); the Save as image menu says "The PDF is the sharpest copy. Images suit WhatsApp status and screens." and PNG is "Lossless, sharpest picture".
+- **Relaxed spacing:** one-page documents with ≥ 3 % room left stretch their vertical gaps (row padding, gaps before and after headings, paragraph padding, the top element's gap and padding) by up to 1.5×, filling to 98.5 % of the content box; fonts, frames and the photo never change, two or more pages are untouched, Auto (D31) unchanged. Every gap goes through `relaxed()` (`tokens.ts`), a `calc()` on `--doc-relax` set by `Page`, so there is one layout for preview, print, PDF and images; `layoutDocument` measures once more at the cap and the pure `relaxFactor` / `blendMetrics` (`src/document/relax.ts`) derive the rest. Dev only: `/dev/draft?d=<id>&relax=0`.
+- **Deviations:** `doc.test.ts` excludes `labelVariants` from a translation's key set; the overlay's review notes live in its own `meta`.
+- **Owner checks:** confirm the Telugu spellings; compare a real phone's JPEG with the PDF; look at the relaxed page against your reference.
+
 ## Phase 5 — Backup and offline
 
 - **5.1** Backup export/import (D8): preview, add-as-new or replace, validation, older-version migration; "download a backup first" offered before destructive actions.
@@ -510,7 +526,8 @@ Every screen is built **production-quality the first time**, to the standard of 
 | 4.2b | Photo pages and attached horoscope page | Not started |
 | 4.3 | Designs 3–10 and frame families | Done 2026-11-22 (committed with 2.0). 20 new unit tests; every design reviewed on screen and as a PDF (en + an Indic language). See the Step 4.3 section |
 | 4.4 | Designs 11–20, motif library, colour variants | Not started |
-| 5.1 | Backup and restore | Not started |
+| 5.1 | Backup and restore | Done 2026-11-22. Unit 131 new, e2e `backup.spec.ts` 14 specs on phone and desktop with the A7 screenshots reviewed (menu, export, pick, error, preview, replace, result, both delete dialogs, storage card, quota; fixed: a wrapping file name, and X/Escape not reloading after the open draft was replaced). Owner to check by hand: another browser or phone, iPhone Safari, a large backup. See the Step 5.1 section |
+| 4.5 | Owner's M1 polish: dates, Telugu wording, sharper images, relaxed spacing (D53) | Done 2026-11-22. Unit about 25 new, `editor-style.spec.ts` (24 passes), five designs, ten languages and 76+ fixtures checked for relaxed spacing. See the Step 4.5 section |
 | 5.2 | Offline and privacy checks | Not started |
 | 6.1 | Landing, search engines, gallery, help, pictures | Not started |
 | 6.2 | Accessibility, phone QA, night theme check | Not started |

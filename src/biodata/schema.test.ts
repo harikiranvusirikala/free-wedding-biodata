@@ -26,6 +26,19 @@ describe("profileSchema", () => {
     expect(profileSchema.safeParse(SAMPLE_PROFILE).success).toBe(true);
   });
 
+  it("reads the optional label style (Step 4.5) without a format bump: absent is fine, unknown is refused", () => {
+    const profile = fresh();
+    expect(profile.options.labelStyle).toBeUndefined();
+    expect(issuesOf(profile)).toEqual([]);
+    for (const labelStyle of ["standard", "telugu"] as const) {
+      const result = profileSchema.parse({ ...profile, options: { ...profile.options, labelStyle } });
+      expect(result.options.labelStyle).toBe(labelStyle);
+    }
+    expect(issuesOf({ ...profile, options: { ...profile.options, labelStyle: "tamil" } })).toEqual(["options.labelStyle"]);
+    // A draft saved without it round-trips unchanged: nothing is added.
+    expect(profileSchema.parse(profile).options).not.toHaveProperty("labelStyle");
+  });
+
   it("accepts photos within the D40/D41 limits", () => {
     const crop = { x: 0.5, y: 0.4, zoom: 1.2, rotation: 90 };
     const profile = {

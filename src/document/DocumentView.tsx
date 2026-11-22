@@ -19,6 +19,8 @@ export interface DocumentLayoutInfo {
   step: TextStep;
   /** A block taller than a page was clipped (only possible with extreme content). */
   overflow: boolean;
+  /** Relaxed spacing: how far a one-page biodata's vertical gaps were stretched (1 = not at all). */
+  relax: number;
 }
 
 export interface DocumentViewProps {
@@ -27,9 +29,11 @@ export interface DocumentViewProps {
   photo?: PhotoInput;
   onLayout?: (info: DocumentLayoutInfo) => void;
   className?: string;
+  /** Relaxed spacing for a one-page biodata with room to spare (default on); only the dev page turns it off. */
+  relaxSpacing?: boolean;
 }
 
-export function DocumentView({ doc, photo, onLayout, className }: DocumentViewProps) {
+export function DocumentView({ doc, photo, onLayout, className, relaxSpacing = true }: DocumentViewProps) {
   const template = getTemplate(doc.templateId);
   const palette = getPalette(template, doc.colorId);
   const specs = useMemo(() => template.blocks(doc, { photo: !!photo }), [template, doc, photo]);
@@ -58,21 +62,21 @@ export function DocumentView({ doc, photo, onLayout, className }: DocumentViewPr
         const box = template.pageBox(i, doc);
         return PAGE.height - box.top - box.bottom;
       };
-      const layout = layoutDocument(root, specs, steps, pageHeight);
+      const layout = layoutDocument(root, specs, steps, pageHeight, { relax: relaxSpacing });
       if (cancelled) return;
       setState({ layout, specs, doc, photo });
-      onLayoutRef.current?.({ pages: layout.pages.length, step: layout.step, overflow: layout.overflow });
+      onLayoutRef.current?.({ pages: layout.pages.length, step: layout.step, overflow: layout.overflow, relax: layout.relax });
     })();
     return () => {
       cancelled = true;
     };
-  }, [doc, photo, specs, steps, template]);
+  }, [doc, photo, specs, steps, template, relaxSpacing]);
 
   const shown = state;
   const { BlockView } = template;
 
   return (
-    <div className={className} data-doc-ready={fresh ? "1" : undefined} data-doc-pages={fresh ? state.layout.pages.length : undefined} data-doc-step={fresh ? state.layout.step : undefined}>
+    <div className={className} data-doc-ready={fresh ? "1" : undefined} data-doc-pages={fresh ? state.layout.pages.length : undefined} data-doc-step={fresh ? state.layout.step : undefined} data-doc-relax={fresh ? state.layout.relax : undefined}>
       {!fresh ? (
         // Off-screen measuring columns, one per text size to try. Never marked data-page, so never printed or exported.
         <div ref={measureRef} aria-hidden lang={doc.lang} style={{ position: "absolute", left: -20000, top: 0, visibility: "hidden", pointerEvents: "none" }}>
@@ -111,6 +115,7 @@ export function DocumentView({ doc, photo, onLayout, className }: DocumentViewPr
                 Frame={t.Frame}
                 box={t.pageBox(p, shown.doc)}
                 bodyPx={shown.layout.bodyPx}
+                relax={shown.layout.relax}
                 decor={p === 0 && t.Aside ? <t.Aside doc={shown.doc} palette={pal} photo={shown.photo} /> : null}
               >
                 {page.fragments.map((f) => {

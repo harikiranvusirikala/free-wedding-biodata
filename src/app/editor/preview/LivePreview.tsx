@@ -2,6 +2,7 @@
 
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 import { toDocument, type DocModel } from "@/biodata/document";
+import { draftExampleDate } from "@/biodata/format";
 import type { BiodataProfile } from "@/biodata/types";
 import { DocumentView, type DocumentLayoutInfo } from "@/document/DocumentView";
 import type { PhotoInput } from "@/document/blocks/types";
@@ -109,6 +110,9 @@ export function LivePreview({ profile, edit, loadBlob, readOnly }: LivePreviewPr
   const docKey = useMemo(() => JSON.stringify(toDocument(shown, getDocDictionary(shown.docLanguage), new Date())), [shown]);
   const doc = useMemo(() => JSON.parse(docKey) as DocModel, [docKey]);
 
+  // The date the date-format choices are shown with: the draft's own.
+  const exampleDate = useMemo(() => draftExampleDate(profile), [profile]);
+
   const photo = useDocumentPhoto(profile.photo, loadBlob);
   // The first layout waits for the photo, so the page doesn't reflow when it arrives; later ones keep the old one.
   const [started, setStarted] = useState(false);
@@ -166,6 +170,7 @@ export function LivePreview({ profile, edit, loadBlob, readOnly }: LivePreviewPr
           onOpenChange={setSheetOpen}
           doc={doc}
           options={profile.options}
+          exampleDate={exampleDate}
           layout={layout}
           edit={edit}
           readOnly={readOnly}
@@ -194,7 +199,7 @@ export function LivePreview({ profile, edit, loadBlob, readOnly }: LivePreviewPr
         <div className="grid grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2">
           <DesignPopover doc={doc} edit={edit} disabled={readOnly} />
           <LanguageButton lang={profile.docLanguage} edit={edit} disabled={readOnly} className={`${button("secondary")} w-full justify-start px-3`} />
-          <TextSizePopover doc={doc} textSize={profile.options.textSize} labelCase={profile.options.labelCase} layout={layout} edit={edit} disabled={readOnly} />
+          <TextSizePopover doc={doc} options={profile.options} exampleDate={exampleDate} layout={layout} edit={edit} disabled={readOnly} />
         </div>
       </div>
       {pages}

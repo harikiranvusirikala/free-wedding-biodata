@@ -16,14 +16,15 @@ export const metadata: Metadata = {
 };
 
 // The local-storage explanation (VISION §9, mockup: privacy) as a content page (BUILD_PLAN A7). It says only
-// what is true today: backups are described as coming, not offered (Part B rule 4); Delete all my local data
-// works from the aside (Step 1.4).
+// what is true today: Delete all my local data works from the aside (Step 1.4), and backup files are made and
+// restored in the editor (Step 5.1), which the aside's links open (plain links: the editor stays a full page load).
 
 const SECTIONS = [
   { id: "overview", label: t("privacy.nav.overview") },
   { id: "where", label: t("privacy.where.title") },
   { id: "sent", label: t("privacy.sent.title") },
   { id: "keep", label: t("privacy.keep.title") },
+  { id: "backups", label: t("privacy.nav.backups") },
   { id: "remove", label: t("privacy.remove.title") },
 ];
 
@@ -66,6 +67,18 @@ export default function PrivacyPage() {
               <Icon name="help" className="size-4" />
               {t("privacy.help.action")}
             </a>
+          </AsideCard>
+          <AsideCard title={t("privacy.backupCard.title")} text={t("privacy.backupCard.text")}>
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+              <a href="/editor?backup=download" className={`${button("secondary")} w-full`} data-testid="privacy-backup">
+                <Icon name="download" className="size-4" />
+                {t("privacy.backupCard.download")}
+              </a>
+              <a href="/editor?backup=restore" className={`${button("secondary")} w-full`} data-testid="privacy-restore">
+                <Icon name="backup" className="size-4" />
+                {t("privacy.backupCard.restore")}
+              </a>
+            </div>
           </AsideCard>
           <DeleteAllCard />
         </>
@@ -110,6 +123,14 @@ export default function PrivacyPage() {
             <Rich text={t("privacy.keep.note")} />
           </p>
           <p>{t("privacy.keep.2")}</p>
+        </Prose>
+      </ContentSection>
+
+      <ContentSection id="backups" title={t("privacy.backups.title")}>
+        <Prose>
+          <p>{t("privacy.backups.1")}</p>
+          <p>{t("privacy.backups.2")}</p>
+          <p>{t("privacy.backups.3")}</p>
         </Prose>
       </ContentSection>
 

@@ -2,11 +2,11 @@
 
 import { TRADITIONS, TRADITION_FIELD_SETS, newUuid, type Tradition } from "@/biodata/defaults";
 import { TRADITION_FALLBACK, addTraditionFields, appliedTraditions, removeFields, removeTradition, traditionFieldsToAdd, traditionRemoval } from "@/biodata/edits";
-import type { BiodataProfile } from "@/biodata/types";
+import type { BiodataProfile, LabelStyle } from "@/biodata/types";
 import { focusRing } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { t, type AppKey } from "@/lib/i18n";
-import { fieldLabel } from "./labels";
+import { fieldLabel, useLabelStyle } from "./labels";
 import { useManage } from "./ManageProvider";
 
 // "Add details common in your family" (BUILD_PLAN Step 2.0, VISION D32, D43): one-tap chips inside the Religion
@@ -31,7 +31,7 @@ export function showsTraditions(profile: Pick<BiodataProfile, "sections">, secti
 }
 
 /** The labels of a chip's fields (for "already in your biodata"). */
-const setLabels = (tradition: Tradition) => [...new Set(TRADITION_FIELD_SETS[tradition].map((entry) => fieldLabel({ key: entry.field })))];
+const setLabels = (tradition: Tradition, style: LabelStyle) => [...new Set(TRADITION_FIELD_SETS[tradition].map((entry) => fieldLabel({ key: entry.field }, style)))];
 
 /** The chips tapped (appliedTraditions), as one string (stable while nothing changes, for memoised cards). */
 export function doneTraditions(profile: Pick<BiodataProfile, "sections" | "options">): string {
@@ -44,6 +44,7 @@ export function doneTraditions(profile: Pick<BiodataProfile, "sections" | "optio
  */
 export function TraditionChips({ done: doneList, readOnly, atEnd = false }: { done: string; readOnly: boolean; atEnd?: boolean }) {
   const manage = useManage();
+  const labelStyle = useLabelStyle();
 
   /** Puts the draft back as it was if nothing changed since `after`, else runs `fallback` on the current draft. */
   function undoTo(before: BiodataProfile, after: BiodataProfile | undefined, fallback: (p: BiodataProfile) => BiodataProfile) {
@@ -68,10 +69,10 @@ export function TraditionChips({ done: doneList, readOnly, atEnd = false }: { do
       manage.notify(t("traditions.removed"));
     };
     if (!adds.length) {
-      manage.notify(t("traditions.already", { labels: listOf(setLabels(tradition)) }), after === before ? undefined : undo);
+      manage.notify(t("traditions.already", { labels: listOf(setLabels(tradition, labelStyle)) }), after === before ? undefined : undo);
       return;
     }
-    const labels = listOf(adds.map((a) => fieldLabel({ key: a.key })));
+    const labels = listOf(adds.map((a) => fieldLabel({ key: a.key }, labelStyle)));
     // The first new field, in the middle of the screen (clear of the toast at the bottom).
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
@@ -87,11 +88,11 @@ export function TraditionChips({ done: doneList, readOnly, atEnd = false }: { do
     const before = manage.current();
     const { remove, kept } = traditionRemoval(before, tradition);
     const labelsOf = (ids: string[]) =>
-      listOf([...new Set(before.sections.flatMap((s) => (s.kind === "fields" ? s.fields.filter((f) => ids.includes(f.id)) : [])).map((f) => fieldLabel(f)))]);
+      listOf([...new Set(before.sections.flatMap((s) => (s.kind === "fields" ? s.fields.filter((f) => ids.includes(f.id)) : [])).map((f) => fieldLabel(f, labelStyle)))]);
     let after: BiodataProfile | undefined;
     manage.edit((p) => (after = removeTradition(p, tradition)));
     const name = t(`traditions.${tradition}` as AppKey);
-    const keptText = kept.length ? t("traditions.kept", { labels: listOf([...new Set(kept.map((key) => fieldLabel({ key })))]) }) : "";
+    const keptText = kept.length ? t("traditions.kept", { labels: listOf([...new Set(kept.map((key) => fieldLabel({ key }, labelStyle)))]) }) : "";
     const text = remove.length ? t("traditions.unselected", { labels: labelsOf(remove) }) : t("traditions.unselectedNone", { name });
     manage.notify([text, keptText].filter(Boolean).join(" "), () => {
       undoTo(before, after, (p) => addTraditionFields(p, tradition));

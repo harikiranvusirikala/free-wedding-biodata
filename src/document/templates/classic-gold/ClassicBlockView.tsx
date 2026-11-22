@@ -6,7 +6,7 @@ import { Row, type RowLook } from "../../blocks/Row";
 import { Invocation } from "../../blocks/TopElement";
 import { Motif, tint } from "../../motifs";
 import { mixedFontStack, scriptFamilies } from "../../scripts";
-import { isLatin, SPACE, type Palette } from "../../tokens";
+import { isLatin, relaxed, SPACE, type Palette } from "../../tokens";
 import type { BlockViewProps } from "../types";
 
 // The Classic skeleton's drawings (VISION §7 Classic Gold, D29, D34), proportioned on the owner's reference:
@@ -64,7 +64,7 @@ function TopElement({ doc, palette }: { doc: DocModel; palette: Palette }) {
   // and only Latin titles get spaced capitals.
   const latin = isLatin(doc.lang) && !scriptFamilies(doc.title ?? "").length;
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.35em", paddingBottom: "0.2em", textAlign: "center" }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: relaxed("0.35em"), paddingBottom: relaxed("0.2em"), textAlign: "center" }}>
       <Invocation doc={doc} palette={palette} />
       <Motif id={doc.motif} ink={palette.ink} base={palette.inkBase} paper={palette.paper} size={MOTIF_SIZE} />
       {doc.title ? (

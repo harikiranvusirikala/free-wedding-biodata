@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useState } from "react";
 import { createSampleProfile } from "@/biodata/defaults";
 import { fullNameOf, renameDraft } from "@/biodata/draft-name";
 import type { BiodataProfile } from "@/biodata/types";
+import { BackupButton } from "@/components/BackupButton";
 import { DeleteAllDialog } from "@/components/DeleteAllDialog";
 import { button, focusRing } from "@/components/ui/button";
 import { Dialog, DialogActions } from "@/components/ui/Dialog";
@@ -12,15 +13,18 @@ import { Icon } from "@/components/ui/icons";
 import { Menu, MenuLabel, MenuSeparator, dangerMenuItem, menuItem } from "@/components/ui/Menu";
 import { Toast } from "@/components/ui/Toast";
 import type { AutosaveController } from "@/lib/autosave";
+import { downloadBackup } from "@/lib/backup-file";
 import type { BiodataDb } from "@/lib/db";
 import { copyTitleOf, editedAgo, titleOf } from "@/lib/draft-title";
 import { t } from "@/lib/i18n";
 import type { DraftSummary, ProfileRepo } from "@/lib/profile-repo";
+import { useBackup } from "./BackupProvider";
 
 // The drafts menu in the editor's header (BUILD_PLAN Step 1.4, VISION §5 "Draft manager", mockup: editor): the
 // open draft's name as the button; the drafts in this browser, newest first, each opening with a full page load
-// after the open draft's changes are written; New draft, Rename, Duplicate, Delete; and Delete all my local data.
-// A draft that can't be opened is listed as such, with Delete only. Nothing is deleted without a confirmation.
+// after the open draft's changes are written; New draft, Rename, Duplicate, Delete; Download a backup and Restore
+// from a backup (Step 5.1); and Delete all my local data. A draft that can't be opened is listed as such, with
+// Delete only. Nothing is deleted without a confirmation, and each delete dialog offers "Download a backup first".
 
 type Leave = (url: string) => Promise<void>;
 
@@ -48,6 +52,7 @@ export function DraftsMenu(props: {
   locked: boolean;
 }) {
   const { controller, profile, repo, db, leave, locked } = props;
+  const backup = useBackup();
   const [drafts, setDrafts] = useState<DraftSummary[]>([]);
   const [dialog, setDialog] = useState<{ kind: "rename" } | { kind: "delete"; draft: { id: string; name: string; broken: boolean } } | { kind: "deleteAll" } | null>(null);
   const [toast, setToast] = useState<{ text: string; tone: "good" | "danger" } | null>(null);
@@ -259,6 +264,21 @@ export function DraftsMenu(props: {
               {t("drafts.delete")}
             </button>
             <MenuSeparator />
+            <button type="button" role="menuitem" className={menuItem} disabled={busy} onClick={() => {
+              close();
+              backup.openExport();
+            }}>
+              <Icon name="download" className="size-[18px]" />
+              {t("drafts.backup")}
+            </button>
+            <button type="button" role="menuitem" className={menuItem} disabled={busy} onClick={() => {
+              close();
+              backup.openRestore();
+            }}>
+              <Icon name="backup" className="size-[18px]" />
+              {t("drafts.restore")}
+            </button>
+            <MenuSeparator />
             <button type="button" role="menuitem" className={dangerMenuItem} disabled={busy} onClick={() => {
               close();
               setDialog({ kind: "deleteAll" });
@@ -288,6 +308,16 @@ export function DraftsMenu(props: {
         title={dialog?.kind === "delete" ? t("delete.title", { name: dialog.draft.name }) : ""}
         description={dialog?.kind === "delete" && dialog.draft.broken ? t("delete.brokenText") : t("delete.text")}
       >
+        {/* A draft that can't be opened can't go into a backup either. */}
+        {dialog?.kind === "delete" && !dialog.draft.broken && (
+          <div className="rounded-xl border border-line bg-sunken p-3">
+            <BackupButton
+              run={() => downloadBackup(repo, { ids: [dialog.draft.id], open: backup.getOpen })}
+              hint={t("backup.first.draftHint")}
+              disabled={busy}
+            />
+          </div>
+        )}
         <DialogActions>
           <button type="button" className={button("secondary")} onClick={() => setDialog(null)} disabled={busy}>
             {t("ui.cancel")}
@@ -299,7 +329,7 @@ export function DraftsMenu(props: {
         </DialogActions>
       </Dialog>
 
-      <DeleteAllDialog open={dialog?.kind === "deleteAll"} onClose={() => setDialog(null)} db={() => db} />
+      <DeleteAllDialog open={dialog?.kind === "deleteAll"} onClose={() => setDialog(null)} db={() => db} backup={() => downloadBackup(repo, { open: backup.getOpen })} />
 
       {toast && (
         <div className="pointer-events-none fixed inset-x-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-50 lg:bottom-5 flex justify-center px-4">

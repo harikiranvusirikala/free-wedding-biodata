@@ -388,3 +388,19 @@ describe("useAutosave", () => {
     expect(result.current.status).toEqual({ state: "saved", at: SAVED_AT });
   });
 });
+
+describe("autosave: pictures waiting for a save (backups, Step 5.1)", () => {
+  it("offers the pictures added since the last save, until a save has carried them", async () => {
+    const { repo, profile } = await realRepo();
+    await repo.create(profile);
+    const autosave = createAutosave({ repo, initial: profile, now });
+    expect(autosave.pendingPhotos()).toEqual([]);
+
+    const picture = { id: "p1", blob: new Blob(["x"]), mimeType: "image/jpeg", width: 3, height: 4 };
+    autosave.update({ ...profile, photo: { id: "p1", frame: "3:4", crop: { x: 0.5, y: 0.5, zoom: 1, rotation: 0 } } }, { put: [picture] });
+    expect(autosave.pendingPhotos()).toEqual([picture]);
+
+    autosave.update(autosave.getSnapshot().profile, { delete: ["p1"] });
+    expect(autosave.pendingPhotos()).toEqual([]);
+  });
+});

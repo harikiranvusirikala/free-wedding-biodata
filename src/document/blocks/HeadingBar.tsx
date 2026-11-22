@@ -1,5 +1,6 @@
 import type { LangCode } from "@/biodata/types";
 import { hasIndicScript, textFontStack } from "../scripts";
+import { relaxed } from "../tokens";
 
 // A section heading (D39 heading-bar styles): a filled bar with dark text (Classic) or a small spaced title over
 // a hairline (Minimal). The fill and the hairline are a background and a bottom border, both of which the
@@ -25,7 +26,7 @@ export interface HeadingLook {
 
 export function HeadingBar({ title, lang, look }: { title: string; lang: LangCode; look: HeadingLook }) {
   return (
-    <div style={{ paddingBottom: look.after }}>
+    <div style={{ paddingBottom: relaxed(look.after) }}>
       <h2
         style={{
           margin: 0,

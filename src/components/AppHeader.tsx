@@ -7,8 +7,8 @@ import { t } from "@/lib/i18n";
 
 /**
  * The editor's compact header (mockups: editor, editor-phone): logo, then the drafts menu (the open draft's name)
- * and its save status, then the theme menu and Help on the right. Backup joins it in Step 5.1 (BUILD_PLAN Part B
- * rule 4). With a status, phones show the icon without the name; with the drafts menu too, phones stack the
+ * and its save status, then the theme menu and Help on the right. Backups live in the drafts menu
+ * (Step 5.1), not as a header button. With a status, phones show the icon without the name; with the drafts menu too, phones stack the
  * draft's name over its status, as in the phone mockup, the whole two lines being the menu's button.
  */
 export function AppHeader({ status, drafts }: { status?: ReactNode; drafts?: ReactNode }) {

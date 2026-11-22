@@ -3,7 +3,7 @@ import { invocationParts } from "@/biodata/invocations";
 import { mix } from "../frames/geometry";
 import { Motif } from "../motifs";
 import { mixedFontStack, scriptFamilies } from "../scripts";
-import { isLatin, type Palette } from "../tokens";
+import { isLatin, relaxed, type Palette } from "../tokens";
 
 // The top of page 1 (VISION D21, D39, D45), shared by the Step 4.3 designs: the invocation line, the chosen motif
 // and the title, centred (an invocation of 2-4 parts joined by " · " is spread left, centre, right, as families print
@@ -66,7 +66,7 @@ export function TopElement({ doc, palette, look }: { doc: DocModel; palette: Pal
   const size = look.titleSize ?? 1.6;
   const flourish = mix(palette.label, palette.paper, 0.45);
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.35em", paddingBottom: "0.2em", textAlign: "center" }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: relaxed("0.35em"), paddingBottom: relaxed("0.2em"), textAlign: "center" }}>
       <Invocation doc={doc} palette={palette} />
       <Motif id={doc.motif} ink={palette.ink} base={palette.inkBase} paper={palette.paper} size={look.motifSize} />
       {doc.title ? (

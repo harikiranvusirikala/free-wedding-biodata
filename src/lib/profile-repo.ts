@@ -1,7 +1,9 @@
 import { newUuid, systemClock, type Clock, type NewId } from "@/biodata/defaults";
 import { fullNameOf } from "@/biodata/draft-name";
 import { migrate, type MigrateErrorCode } from "@/biodata/migrate";
-import type { BiodataProfile, PhotoRef } from "@/biodata/types";
+import { keepPhotoRefs, photoIdsOf, swapPhotoIds } from "@/biodata/photo-refs";
+import type { BiodataProfile } from "@/biodata/types";
+import type { BackupEntry } from "./backup";
 import type { BiodataDb, PhotoRecord } from "./db";
 
 // The only code that writes IndexedDB (BUILD_PLAN A5, VISION §9). Every method resolves to a result instead of
@@ -53,6 +55,40 @@ export type DuplicateResult = { ok: true; profile: BiodataProfile } | { ok: fals
 /** A photo to store with a save; its profileId and updatedAt are filled in by the repo. */
 export type PhotoInput = Pick<PhotoRecord, "id" | "blob" | "mimeType" | "width" | "height">;
 
+/** What a backup is made from (Step 5.1): every readable draft with its pictures, and the ones that can't be read. */
+export interface BackupSource {
+  /** Newest first. Each draft's pictures are only the ones it points at. */
+  entries: BackupEntry[];
+  /** Drafts that can't be opened, so can't go into a backup; they stay in the database untouched. */
+  unreadable: { id: string; draftName: string }[];
+}
+
+/** A draft from a backup file that passed parseBackup, ready to write. Its id and revision are not trusted. */
+export interface ImportDraft {
+  profile: BiodataProfile;
+  photos: PhotoInput[];
+}
+
+/**
+ * Add: every draft becomes a new draft with a new id. Replace: a draft whose id a stored draft already has takes
+ * that draft's place (and its pictures'); the others are added.
+ */
+export type ImportMode = "add" | "replace";
+
+export interface ImportOptions {
+  mode: ImportMode;
+  /**
+   * The name for a draft added beside a stored draft with the same id (the same biodata restored twice), the only
+   * time a name is changed, so the two can be told apart. Other drafts keep the name they had.
+   */
+  restoredName: (profile: BiodataProfile) => string;
+}
+
+/** What happened to one draft of an import. `sourceId` is the id the file gave it; `id` is where it is now. */
+export type ImportItem =
+  | { ok: true; status: "added" | "replaced"; sourceId: string; id: string; draftName: string }
+  | { ok: false; sourceId: string; error: RepoError };
+
 export interface SaveOptions {
   /** The revision this tab last loaded or saved. Anything else in the database means another tab saved first. */
   expectedRevision: number;
@@ -72,6 +108,21 @@ export interface ProfileRepo {
    * given name, revision 0 and the time now; everything else exactly as stored.
    */
   duplicate(id: string, options: { draftName: string }): Promise<DuplicateResult>;
+  /**
+   * Every readable draft (or just those in `ids`) with the pictures it points at, for a backup file (Step 5.1),
+   * read in one transaction so each draft matches its pictures. A draft that can't be opened is listed apart.
+   */
+  listForBackup(ids?: readonly string[]): Promise<Result<BackupSource>>;
+  /**
+   * Writes the drafts of a backup, one transaction each (the draft with its pictures), so one that fails (the
+   * device is out of space) leaves the others written and nothing half-written. The file's ids and revisions
+   * aren't trusted: a draft is added with a new id and revision 0 (add mode), or replaces the stored draft with
+   * the same id at revision + 1, so a tab that has it open stops and offers a reload (D9). Pictures always get new
+   * ids, in both modes, so a file can never overwrite another draft's picture; a replaced draft's old pictures
+   * go with it. A stored draft that can't be opened is never replaced: the file's copy is added beside it.
+   * Resolves with one item per draft, in order.
+   */
+  importDrafts(drafts: readonly ImportDraft[], options: ImportOptions): Promise<ImportItem[]>;
   /** Deletes a draft and all of its photos together; called only after the user confirms. */
   remove(id: string): Promise<Result<void>>;
   getPhoto(id: string): Promise<Result<PhotoRecord | undefined>>;
@@ -169,7 +220,7 @@ export function createProfileRepo(db: BiodataDb, { now = systemClock, newId = ne
           const photoIds = new Map(photos.map((photo) => [photo.id, newId()]));
           const timestamp = now().toISOString();
           const profile: BiodataProfile = {
-            ...withPhotoIds(structuredClone(result.profile), photoIds),
+            ...swapPhotoIds(structuredClone(result.profile), photoIds),
             id: newId(),
             revision: 0,
             draftName,
@@ -186,6 +237,42 @@ export function createProfileRepo(db: BiodataDb, { now = systemClock, newId = ne
       } catch (error) {
         return { ok: false, error: error instanceof SourceError ? error.error : toRepoError(error) };
       }
+    },
+
+    async listForBackup(ids) {
+      return attempt(() =>
+        db.transaction("r", [db.profiles, db.photos], async () => {
+          const records: unknown[] = ids ? (await db.profiles.bulkGet([...ids])).filter((record) => record !== undefined) : await db.profiles.toArray();
+          const entries: BackupEntry[] = [];
+          const unreadable: BackupSource["unreadable"] = [];
+          for (const raw of records) {
+            const result = migrate(raw);
+            if (!result.ok) {
+              const record = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
+              unreadable.push({ id: String(record.id), draftName: typeof record.draftName === "string" ? record.draftName : "" });
+              continue;
+            }
+            const used = new Set(photoIdsOf(result.profile));
+            const stored = await db.photos.where("profileId").equals(result.profile.id).toArray();
+            const photos = stored.filter((photo) => used.has(photo.id)).map(({ id, blob, mimeType, width, height }) => ({ id, blob, mimeType, width, height }));
+            entries.push({ profile: result.profile, photos });
+          }
+          entries.sort((a, b) => b.profile.updatedAt.localeCompare(a.profile.updatedAt));
+          return { entries, unreadable };
+        }),
+      );
+    },
+
+    async importDrafts(drafts, { mode, restoredName }) {
+      const items: ImportItem[] = [];
+      for (const draft of drafts) {
+        try {
+          items.push(await db.transaction("rw", [db.profiles, db.photos], () => importOne(db, draft, mode, restoredName, newId)));
+        } catch (error) {
+          items.push({ ok: false, sourceId: draft.profile.id, error: toRepoError(error) });
+        }
+      }
+      return items;
     },
 
     async remove(id) {
@@ -243,15 +330,42 @@ function summarise(raw: unknown): DraftSummary {
   };
 }
 
-/** The profile with every photo reference pointed at its copy's id (a reference with no stored photo is kept). */
-function withPhotoIds(profile: BiodataProfile, ids: Map<string, string>): BiodataProfile {
-  const swap = <T extends PhotoRef>(ref: T): T => ({ ...ref, id: ids.get(ref.id) ?? ref.id });
-  const next = { ...profile };
-  if (next.photo) next.photo = swap(next.photo);
-  if (next.secondPhoto) next.secondPhoto = swap(next.secondPhoto);
-  if (next.horoscopeChart) next.horoscopeChart = swap(next.horoscopeChart);
-  if (next.photoPages) next.photoPages = { ...next.photoPages, photos: next.photoPages.photos.map(swap) };
-  return next;
+/** An id the app could have made (a UUID or alike): the only kind a backup's draft may keep. Starts with a letter or digit, so never `__proto__`. */
+const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/;
+
+/** Writes one imported draft; runs inside the caller's transaction. */
+async function importOne(db: BiodataDb, draft: ImportDraft, mode: ImportMode, restoredName: ImportOptions["restoredName"], newId: NewId): Promise<ImportItem> {
+  const source = draft.profile;
+  const stored: unknown = await db.profiles.get(source.id);
+  const clash = stored !== undefined;
+
+  let id = newId();
+  let status: "added" | "replaced" = "added";
+  let revision = 0;
+  if (mode === "replace" && SAFE_ID.test(source.id)) {
+    const existing = clash ? migrate(stored) : undefined;
+    if (!clash) id = source.id; // not here yet: it comes back under its own id, so importing the file again replaces it
+    else if (existing?.ok) {
+      id = source.id;
+      status = "replaced";
+      revision = existing.profile.revision + 1;
+    }
+    // else: the stored draft can't be opened. It stays untouched and the file's copy is added beside it.
+  }
+  const draftName = status === "added" && clash ? restoredName(source) : source.draftName;
+
+  // New picture ids, always; only the pictures the file actually brought, and nothing points at one it didn't.
+  const photos = new Map(draft.photos.map((photo) => [photo.id, photo]));
+  const fresh = new Map([...photos.keys()].map((photoId) => [photoId, newId()]));
+  const profile: BiodataProfile = { ...swapPhotoIds(keepPhotoRefs(source, new Set(photos.keys())), fresh), id, revision, draftName };
+
+  if (status === "replaced") await db.photos.where("profileId").equals(id).delete();
+  await db.profiles.put(profile);
+  for (const [photoId, photo] of photos) {
+    const { blob, mimeType, width, height } = photo;
+    await db.photos.add({ id: fresh.get(photoId)!, profileId: id, blob, mimeType, width, height, updatedAt: profile.updatedAt });
+  }
+  return { ok: true, status, sourceId: source.id, id, draftName };
 }
 
 /** A stored record's revision, or NaN when it has none: a broken record never matches, so it is never overwritten. */

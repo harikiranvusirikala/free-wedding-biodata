@@ -1,7 +1,8 @@
 import type { LangCode } from "@/biodata/types";
 import type { BlockSpec } from "./blocks/types";
 import { autoFit, paginate, type BlockMetrics, type PageLayout } from "./paginate";
-import { BODY_PX, FONT_FAMILY, type TextStep } from "./tokens";
+import { blendMetrics, relaxFactor, RELAX_MAX, stackedHeight } from "./relax";
+import { BODY_PX, FONT_FAMILY, RELAX_VAR, type TextStep } from "./tokens";
 
 // Browser side of pagination (BUILD_PLAN A4 step 3): the blocks are rendered off-screen at true size, once per
 // text size Auto may try (DocumentView draws them, each in a [data-measure-step] column of the content width
@@ -35,13 +36,16 @@ export async function loadElementFonts(root: HTMLElement): Promise<void> {
   await Promise.all([...wanted].map(([font, chars]) => document.fonts.load(font, [...chars].join("")).catch(() => [])));
 }
 
-/** Heights (and, for paragraphs, line metrics) of the blocks rendered in one measuring column. */
-export function measureBlocks(column: HTMLElement, specs: readonly BlockSpec[], bodyPx: number): BlockMetrics[] {
+/**
+ * Heights (and, for paragraphs, line metrics) of the blocks rendered in one measuring column. `relax` is the factor
+ * the column's gaps are at (its CSS variable), so the space above each block scales with it as the gaps inside do.
+ */
+export function measureBlocks(column: HTMLElement, specs: readonly BlockSpec[], bodyPx: number, relax = 1): BlockMetrics[] {
   const els = column.querySelectorAll<HTMLElement>(":scope > [data-block]");
   return specs.map((spec, i) => {
     const el = els[i];
     const rect = el.getBoundingClientRect();
-    const metrics: BlockMetrics = { height: rect.height, spaceBefore: spec.spaceBefore * bodyPx, keepWithNext: spec.keepWithNext };
+    const metrics: BlockMetrics = { height: rect.height, spaceBefore: spec.spaceBefore * bodyPx * relax, keepWithNext: spec.keepWithNext };
     const text = spec.block.kind === "paragraph" ? el.querySelector<HTMLElement>("[data-lines]") : null;
     if (text) {
       const t = text.getBoundingClientRect();
@@ -98,25 +102,54 @@ export interface DocumentLayout {
   pieces: Map<number, Map<number, string>>;
   /** True when a block is taller than a page (it is placed alone and clipped). */
   overflow: boolean;
+  /** Relaxed spacing (relax.ts): the factor the page's vertical gaps are stretched by; 1 for no change. */
+  relax: number;
 }
 
-/** Measures every step's column, picks the text size (D31) and splits paragraphs into per-page text pieces. */
+/**
+ * Measures every step's column, picks the text size (D31) and splits paragraphs into per-page text pieces. A document
+ * that then fits ONE page with plenty of room left gets relaxed spacing: its gaps are measured once more at the cap
+ * (the chosen step's column only, with its CSS variable set), and the factor that fills the page, and the blocks at
+ * that factor, come from those two measurements (relax.ts). The text size is never changed by it; two pages or more
+ * stay exactly as paginated. `options.relax: false` turns it off (the dev page's before/after comparison).
+ */
 export function layoutDocument(
   root: HTMLElement,
   specs: readonly BlockSpec[],
   steps: readonly TextStep[],
   pageHeight: (index: number) => number,
+  options: { relax?: boolean } = {},
 ): DocumentLayout {
   const columns = new Map<TextStep, HTMLElement>();
   root.querySelectorAll<HTMLElement>("[data-measure-step]").forEach((el) => columns.set(el.dataset.measureStep as TextStep, el));
   const measured = new Map<TextStep, BlockMetrics[]>();
-  const { step, pages } = autoFit(steps, (s) => {
+  const fit = autoFit(steps, (s) => {
     const metrics = measureBlocks(columns.get(s)!, specs, BODY_PX[s]);
     measured.set(s, metrics);
     return paginate(metrics, { pageHeight });
   });
 
-  const metrics = measured.get(step)!;
+  const { step } = fit;
+  let { pages } = fit;
+  let metrics = measured.get(step)!;
+  let relax = 1;
+  if (pages.length === 1 && options.relax !== false) {
+    const column = columns.get(step)!;
+    column.style.setProperty(RELAX_VAR, String(RELAX_MAX));
+    const wide = measureBlocks(column, specs, BODY_PX[step], RELAX_MAX);
+    column.style.removeProperty(RELAX_VAR);
+    const factor = relaxFactor({ capacity: pageHeight(0), used: stackedHeight(metrics), usedAtMax: stackedHeight(wide) });
+    if (factor > 1) {
+      const blended = blendMetrics(metrics, wide, factor);
+      const relaxedPages = paginate(blended, { pageHeight });
+      // Never trade a one-page biodata for a longer one: if the blended gaps don't fit, nothing changes.
+      if (relaxedPages.length === 1) {
+        metrics = blended;
+        pages = relaxedPages;
+        relax = factor;
+      }
+    }
+  }
   const pieces = new Map<number, Map<number, string>>();
   const column = columns.get(step)!;
   const blockEls = column.querySelectorAll<HTMLElement>(":scope > [data-block]");
@@ -147,5 +180,5 @@ export function layoutDocument(
       }
     }
   });
-  return { step, bodyPx: BODY_PX[step], pages, pieces, overflow };
+  return { step, bodyPx: BODY_PX[step], pages, pieces, overflow, relax };
 }

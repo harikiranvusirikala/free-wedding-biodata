@@ -1,4 +1,4 @@
-import type { DateFormat, HeightFormat } from "./types";
+import type { BiodataProfile, DateFormat, HeightFormat } from "./types";
 import { fill, type DocDictionary } from "@/i18n/doc";
 
 // How values are printed (VISION §6, D13, D14): dates, birth time, height and age. Pure functions of the stored
@@ -16,6 +16,15 @@ export function parseIsoDate(value: string): { year: number; month: number; day:
   const check = new Date(Date.UTC(year, month - 1, day));
   if (check.getUTCFullYear() !== year || check.getUTCMonth() !== month - 1 || check.getUTCDate() !== day) return null;
   return { year, month, day };
+}
+
+/** The date the format picker shows its examples with when a draft has no date yet (13 January 1998). */
+export const EXAMPLE_DATE = "1998-01-13";
+
+/** The draft's own date for the date-format examples: the date of birth, else any other real date it holds. */
+export function draftExampleDate(profile: Pick<BiodataProfile, "sections">): string | undefined {
+  const dates = profile.sections.flatMap((s) => (s.kind === "fields" ? s.fields : [])).filter((f) => f.type === "date" && parseIsoDate(f.value));
+  return (dates.find((f) => f.key === "dateOfBirth") ?? dates[0])?.value.trim();
 }
 
 const pad2 = (n: number) => String(n).padStart(2, "0");

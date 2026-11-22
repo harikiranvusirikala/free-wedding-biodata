@@ -5,7 +5,7 @@ import { Photo } from "../../blocks/Photo";
 import { Row, type RowLook } from "../../blocks/Row";
 import { isMotif, Motif } from "../../motifs";
 import { mixedFontStack, scriptFamilies, textFontStack } from "../../scripts";
-import { isLatin, type Palette } from "../../tokens";
+import { isLatin, relaxed, type Palette } from "../../tokens";
 import type { BlockViewProps } from "../types";
 import { minimalSubtitle } from "./layout";
 
@@ -62,10 +62,10 @@ function Header({ doc, palette, photo }: Pick<BlockViewProps, "doc" | "palette" 
   return (
     // One band: the words on the left (motif and invocation, if chosen, above the title kicker, name and subtitle),
     // the photo on the right, centred against each other so no height is wasted.
-    <div style={{ display: "flex", alignItems: "center", gap: 30, paddingBottom: "1.2em", borderBottom: `1px solid ${palette.rule}` }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 30, paddingBottom: relaxed("1.2em"), borderBottom: `1px solid ${palette.rule}` }}>
         <div style={{ flex: "1 1 0", minWidth: 0 }}>
           {isMotif(doc.motif) || doc.invocation ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.7em", paddingBottom: "0.8em" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.7em", paddingBottom: relaxed("0.8em") }}>
               <Motif id={doc.motif} ink={palette.ink} base={palette.inkBase} paper={palette.paper} size={44} />
               {doc.invocation ? (
                 <div style={{ color: palette.label, fontFamily: mixedFontStack(doc.lang, doc.invocation), minWidth: 0, overflowWrap: "anywhere" }}>{doc.invocation}</div>
@@ -80,7 +80,7 @@ function Header({ doc, palette, photo }: Pick<BlockViewProps, "doc" | "palette" 
                 fontWeight: 700,
                 letterSpacing: latin ? "0.3em" : 0,
                 textTransform: latin ? "uppercase" : undefined,
-                paddingBottom: "0.7em",
+                paddingBottom: relaxed("0.7em"),
                 fontFamily: mixedFontStack(doc.lang, doc.title),
                 overflowWrap: "anywhere",
               }}
@@ -91,7 +91,7 @@ function Header({ doc, palette, photo }: Pick<BlockViewProps, "doc" | "palette" 
           {doc.name ? (
             <div style={{ color: palette.text, fontSize: "2.5em", lineHeight: 1.15, overflowWrap: "anywhere", fontFamily: textFontStack(doc.lang, doc.name) }}>{doc.name}</div>
           ) : null}
-          {subtitle ? <div style={{ color: palette.label, paddingTop: "0.5em", fontFamily: textFontStack(doc.lang, subtitle) }}>{subtitle}</div> : null}
+          {subtitle ? <div style={{ color: palette.label, paddingTop: relaxed("0.5em"), fontFamily: textFontStack(doc.lang, subtitle) }}>{subtitle}</div> : null}
         </div>
         {photo ? <Photo photo={photo} width={PHOTO_WIDTH[photo.frame]} radius={2} /> : null}
     </div>

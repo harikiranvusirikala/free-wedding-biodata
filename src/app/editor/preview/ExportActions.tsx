@@ -6,7 +6,7 @@ import { pageImageFileName, pdfFileName } from "@/biodata/filename";
 import type { BiodataProfile } from "@/biodata/types";
 import { button, iconButton, outlineIconButton } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
-import { Menu, menuItem } from "@/components/ui/Menu";
+import { Menu, MenuSeparator, menuItem } from "@/components/ui/Menu";
 import { Toast, toastAction } from "@/components/ui/Toast";
 import { t, type AppKey } from "@/lib/i18n";
 import { canShareFiles, copyPages, saveBlobs, shareFiles } from "./export-files";
@@ -242,6 +242,10 @@ function ImageMenu({ controls, buttonClassName, inSheet }: { controls: ExportCon
             {item("image", t("export.image.jpeg"), t("export.image.jpegHint"), () => void controls.saveImages("jpeg"), close)}
             {item("image", t("export.image.png"), t("export.image.pngHint"), () => void controls.saveImages("png"), close)}
             {controls.canShareImages && item("share", t("export.image.share"), t("export.image.shareHint"), () => void controls.shareImages(), close)}
+            <MenuSeparator />
+            <p role="none" className="px-2.5 pt-0.5 pb-1.5 text-[12.5px] leading-snug text-pretty text-ink-3" data-testid="image-note">
+              {t("export.image.note")}
+            </p>
           </>
         )}
       </Menu>

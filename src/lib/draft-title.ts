@@ -16,6 +16,11 @@ export function copyTitleOf(draft: { draftName: string; fullName: string }): str
   return copyName(titleOf(draft), DRAFT_NAME_WORDS);
 }
 
+/** The name for a draft restored beside a draft that is already here (Step 5.1): "<name> (restored)". */
+export function restoredTitleOf(draft: { draftName: string; fullName: string }): string {
+  return t("drafts.restored", { name: titleOf(draft) });
+}
+
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;

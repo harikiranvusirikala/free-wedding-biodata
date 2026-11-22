@@ -1,4 +1,4 @@
-import type { LangCode } from "@/biodata/types";
+import type { LabelStyle, LangCode } from "@/biodata/types";
 import bn from "./bn.json";
 import en from "./en.json";
 import gu from "./gu.json";
@@ -78,4 +78,31 @@ export function getTranslation(lang: LangCode): PartialDocDictionary | undefined
 /** Fills `{name}` placeholders. A placeholder with no value is left as it is, so it shows up in review. */
 export function fill(template: string, values: Record<string, string | number>): string {
   return template.replace(/\{(\w+)\}/g, (match, name: string) => (name in values ? String(values[name]) : match));
+}
+
+/** The section titles and field labels a page prints: the dictionary's, with a label style's wording laid over them. */
+export interface LabelTables {
+  sections: Record<string, string>;
+  fields: Record<string, string>;
+}
+
+const tableCache = new Map<DocDictionary, Map<LabelStyle, LabelTables>>();
+
+/**
+ * The section and field labels for a document language and label style. "telugu" re-words some English labels
+ * (Birth Star, Swagothram, Salary…; the overlay in en.json's `labelVariants`) and, like the dictionaries themselves,
+ * falls back to the standard label key by key. Any other language ignores the style: Telugu families print their
+ * own language's words there. A label the user renamed always wins; that is the caller's rule, not this table's.
+ */
+export function labelTables(dict: DocDictionary, lang: LangCode, style: LabelStyle = "standard"): LabelTables {
+  const variant = style === "telugu" && lang === "en" ? dict.labelVariants.telugu : undefined;
+  if (!variant) return dict;
+  let byStyle = tableCache.get(dict);
+  if (!byStyle) tableCache.set(dict, (byStyle = new Map()));
+  let tables = byStyle.get(style);
+  if (!tables) {
+    tables = { sections: { ...dict.sections, ...variant.sections }, fields: { ...dict.fields, ...variant.fields } };
+    byStyle.set(style, tables);
+  }
+  return tables;
 }

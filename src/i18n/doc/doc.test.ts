@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_SECTIONS, FIELD_CATALOG, OPTION_LISTS, QUICK_PICK_SECTIONS, RELATION_KEYS } from "@/biodata/defaults";
 import { LANG_CODES, type LangCode } from "@/biodata/types";
-import { DOC_LANGUAGES_WITH_LABELS, fill, getDocDictionary, getTranslation, withEnglishFallback, type PartialDocDictionary } from "./index";
+import { DOC_LANGUAGES_WITH_LABELS, fill, getDocDictionary, getTranslation, labelTables, withEnglishFallback, type PartialDocDictionary } from "./index";
 
 // Every key the profile model can print has an English label, and each of the nine Indian-language dictionaries
 // (VISION §8, D11) has exactly the English key set, in its own script, marked "not yet reviewed" until a native
@@ -26,10 +26,13 @@ function labels(dict: PartialDocDictionary): [string, string | undefined][] {
 
 const missing = (dict: PartialDocDictionary) => labels(dict).filter(([, text]) => !text?.trim()).map(([path]) => path);
 
-/** Every leaf of a dictionary (meta left out) as [path, value]; array items are "months.0" … "months.11". */
+/**
+ * Every leaf of a dictionary (meta left out) as [path, value]; array items are "months.0" … "months.11".
+ * `labelVariants` (the English Telugu-families overlay) isn't part of a translation's key set.
+ */
 function leaves(value: unknown, prefix = ""): [string, unknown][] {
   if (typeof value === "object" && value !== null) {
-    return Object.entries(value).flatMap(([key, v]) => (prefix === "" && key === "meta" ? [] : leaves(v, prefix ? `${prefix}.${key}` : key)));
+    return Object.entries(value).flatMap(([key, v]) => (prefix === "" && (key === "meta" || key === "labelVariants") ? [] : leaves(v, prefix ? `${prefix}.${key}` : key)));
   }
   return [[prefix, value]];
 }
@@ -143,6 +146,51 @@ describe("document dictionaries", () => {
     expect(partial.sections.personal).toBe("Personal Details");
     expect(partial.months[0]).toBe("January");
     expect(partial.meta.name).toBe("Test");
+  });
+
+  describe("the Telugu families' English wording (labelVariants.telugu)", () => {
+    const en = getDocDictionary("en");
+    const overlay = en.labelVariants.telugu;
+
+    it("re-words only keys English already has, with no empty value, and is marked not yet reviewed", () => {
+      expect(Object.keys(overlay.fields).filter((k) => !(k in en.fields))).toEqual([]);
+      expect(Object.keys(overlay.sections).filter((k) => !(k in en.sections))).toEqual([]);
+      expect([...Object.values(overlay.fields), ...Object.values(overlay.sections)].filter((v) => !v.trim())).toEqual([]);
+      expect(overlay.meta.reviewed).toBe(false);
+      const notes = Object.keys(overlay.meta.reviewNotes ?? {});
+      expect(notes.length).toBeGreaterThan(0);
+      expect(notes.filter((n) => n !== "all" && !(n.startsWith("fields.") ? n.slice(7) in overlay.fields : n.startsWith("sections.") && n.slice(9) in overlay.sections))).toEqual([]);
+    });
+
+    it("prints the owner's wording on English pages and leaves the standard labels as they are", () => {
+      const tables = labelTables(en, "en", "telugu");
+      expect(tables.fields).toMatchObject({
+        nakshatra: "Birth Star",
+        rashi: "Raasi",
+        gotra: "Swagothram",
+        maternalGotra: "Maternal Gothram",
+        highestQualification: "Education",
+        occupation: "Profession",
+        annualIncome: "Salary",
+        birthPlace: "Place Of Birth",
+        birthTime: "Time Of Birth",
+        dateOfBirth: "Date Of Birth",
+      });
+      expect(tables.sections.contact).toBe("Contact Information");
+      // Everything the overlay doesn't mention falls back to the standard label.
+      expect(tables.fields.fullName).toBe("Name");
+      expect(tables.sections.personal).toBe("Personal Details");
+      expect(labelTables(en, "en", "standard")).toBe(en);
+      expect(labelTables(en, "en").fields.nakshatra).toBe("Nakshatra");
+      expect(en.fields.gotra).toBe("Gotra");
+    });
+
+    it("is ignored by every other language", () => {
+      for (const lang of TRANSLATED) {
+        const dict = getDocDictionary(lang);
+        expect(labelTables(dict, lang, "telugu")).toBe(dict);
+      }
+    });
   });
 
   it("serves each language's own labels", () => {

@@ -41,6 +41,17 @@ export const SPACE = {
   labelGap: 0.9,
 } as const;
 
+/**
+ * Relaxed spacing (Step 4.5): a one-page biodata with room to spare stretches its vertical gaps by a factor (up to
+ * RELAX_MAX in relax.ts). The factor is the CSS variable `--doc-relax` on the page (and, while measuring, on the
+ * measuring column); `relaxed()` writes a gap so it follows it. Only vertical gaps use it: font sizes, frames and the
+ * photo don't. Unset, the variable is 1.
+ */
+export const RELAX_VAR = "--doc-relax";
+
+/** A vertical gap (a CSS length such as "0.28em") that relaxed spacing may stretch. */
+export const relaxed = (length: string): string => (/^0(px|em)?$/.test(length) ? length : `calc(${length} * var(${RELAX_VAR}, 1))`);
+
 /** Page margins in px: where the content box sits inside the page. */
 export interface Box {
   top: number;

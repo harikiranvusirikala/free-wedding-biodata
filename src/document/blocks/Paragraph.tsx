@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { LangCode } from "@/biodata/types";
 import { textFontStack } from "../scripts";
+import { relaxed } from "../tokens";
 
 // A paragraph block (About me, Partner expectations, §6 "printed as a short quoted block"): an optional label,
 // then the text beside a thin quote rule. The text element is marked data-lines: the measure step counts its
@@ -32,7 +33,7 @@ export function Paragraph({ text, label, lang, look }: { text: string; label?: s
     fontFamily: label ? textFontStack(lang, label) : undefined,
   };
   return (
-    <div style={{ paddingTop: look.padTop, paddingBottom: look.padBottom }}>
+    <div style={{ paddingTop: relaxed(look.padTop), paddingBottom: relaxed(look.padBottom) }}>
       {label ? <div style={labelStyle}>{label}</div> : null}
       <div style={{ position: "relative", marginLeft: look.indent, paddingLeft: look.rule ? `calc(${look.ruleWidth}px + ${look.ruleGap})` : 0 }}>
         {look.rule ? (

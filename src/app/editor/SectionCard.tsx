@@ -8,7 +8,7 @@ import { accentCard, accentTile, card, cardRows, cardTitle, iconTile } from "@/c
 import { Icon } from "@/components/ui/icons";
 import { t } from "@/lib/i18n";
 import { FieldRow, MemberRow, type Edit } from "./FieldRow";
-import { SECTION_ICONS, sectionTitle } from "./labels";
+import { SECTION_ICONS, sectionTitle, useLabelStyle } from "./labels";
 import { SectionMenu } from "./ManageMenus";
 import { useManage } from "./ManageProvider";
 import { TraditionChips } from "./TraditionChips";
@@ -38,6 +38,7 @@ export const SectionCard = memo(function SectionCard({
   traditions?: string;
 }) {
   const manage = useManage();
+  const labelStyle = useLabelStyle();
   const anchor = sectionAnchor(section);
   const titleId = `${anchor}-title`;
   const { filled, total } = sectionCompletion(section);
@@ -58,7 +59,7 @@ export const SectionCard = memo(function SectionCard({
         </span>
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1 py-1.5">
           <h2 id={titleId} tabIndex={-1} className={`${cardTitle} min-w-0 break-words outline-none ${section.visible ? "" : "text-ink-3!"}`}>
-            {sectionTitle(section)}
+            {sectionTitle(section, labelStyle)}
           </h2>
           {!section.visible && (
             <span

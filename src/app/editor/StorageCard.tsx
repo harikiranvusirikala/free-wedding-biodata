@@ -6,6 +6,7 @@ import { card, cardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icons";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { t } from "@/lib/i18n";
+import { useBackup } from "./BackupProvider";
 import { formatBytes, readStorageStatus, requestPersistence, type PersistAnswer, type StorageStatus } from "@/lib/storage-status";
 
 const ANSWERS = { granted: "storage.granted", declined: "storage.declined", failed: "storage.failed" } as const;
@@ -14,12 +15,13 @@ const ANSWERS = { granted: "storage.granted", declined: "storage.declined", fail
  * Storage on this device (VISION §9, Step 1.4), in the editor's aside: how much space the drafts use, whether the
  * browser has promised to keep them, and "Keep my drafts safe", which asks it to and says exactly what it
  * answered. `savedAt` changes after every save, so the size follows the typing. Never a claim that browser
- * storage is a permanent backup.
+ * storage is a permanent backup: it says so, and offers Download a backup and Restore from a backup (Step 5.1).
  */
 export function StorageCard({ savedAt }: { savedAt?: number }) {
   const [status, setStatus] = useState<StorageStatus | null>(null);
   const [answer, setAnswer] = useState<Exclude<PersistAnswer, "unsupported"> | null>(null);
   const [asking, setAsking] = useState(false);
+  const backup = useBackup();
 
   useEffect(() => {
     let live = true;
@@ -71,10 +73,23 @@ export function StorageCard({ savedAt }: { savedAt?: number }) {
           {t("storage.ask")}
         </button>
       )}
+      <div className="mt-3.5 grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+        <button type="button" className={button("secondary")} onClick={backup.openExport} data-testid="storage-backup">
+          <Icon name="download" className="size-4" />
+          {t("storage.backup")}
+        </button>
+        <button type="button" className={button("secondary")} onClick={backup.openRestore} data-testid="storage-restore">
+          <Icon name="backup" className="size-4" />
+          {t("storage.restore")}
+        </button>
+      </div>
       <p role="status" aria-live="polite" className={answer ? `mt-3 rounded-lg px-3 py-2.5 text-[13px] leading-relaxed text-pretty ${answer === "granted" ? "bg-good-soft text-good" : "bg-sunken text-ink-2"}` : "sr-only"}>
         {answer ? t(ANSWERS[answer]) : ""}
       </p>
-      <p className="mt-3 border-t border-line pt-3 text-[12.5px] leading-relaxed text-pretty text-ink-3">{t("storage.clearing")}</p>
+      <div className="mt-3 space-y-2 border-t border-line pt-3 text-[12.5px] leading-relaxed text-pretty text-ink-3">
+        <p>{t("storage.clearing")}</p>
+        <p>{t("storage.backupNote")}</p>
+      </div>
     </section>
   );
 }

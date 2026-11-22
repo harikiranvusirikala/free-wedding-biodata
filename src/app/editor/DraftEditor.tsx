@@ -8,10 +8,12 @@ import { cardTitle, noteCard } from "@/components/ui/card";
 import { focusRing, textLink } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import type { AutosaveController } from "@/lib/autosave";
+import { downloadBackup } from "@/lib/backup-file";
 import type { BiodataDb } from "@/lib/db";
 import type { ProfileRepo } from "@/lib/profile-repo";
 import { t } from "@/lib/i18n";
 import { useAutosave } from "@/lib/use-autosave";
+import { BackupProvider } from "./BackupProvider";
 import { DraftsMenu } from "./DraftsMenu";
 import { EditorFrame } from "./EditorFrame";
 import { ManageProvider, useManage } from "./ManageProvider";
@@ -105,68 +107,76 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
     void leave(url);
   }
 
+  // "Download a backup" beside the out-of-space message: made from the draft as this tab holds it, newest typing included.
+  const backupNow = useCallback(
+    () => downloadBackup(repo, { open: () => ({ profile: controller.getSnapshot().profile, pendingPhotos: controller.pendingPhotos() }) }),
+    [repo, controller],
+  );
+
   return (
     <div onClickCapture={onClickCapture} className="contents">
-      <EditorFrame
-        status={<SaveStatus status={status} />}
-        drafts={<DraftsMenu controller={controller} profile={profile} repo={repo} db={db} leave={leave} locked={conflict} />}
-      >
-        <ManageProvider profile={profile} current={current} edit={edit} jump={jump}>
-          <h1 className="sr-only">{t("editor.title")}</h1>
-          <div className="flex-1 lg:grid lg:grid-cols-[4rem_minmax(27.5rem,36.25rem)_minmax(0,1fr)] xl:grid-cols-[14.5rem_minmax(27.5rem,36.25rem)_minmax(0,1fr)]">
-            <div className="border-r border-line bg-surface max-lg:hidden" data-editor-pane>
-              <SectionRail sections={profile.sections} hasPhoto={!!profile.photo} current={currentSection} onJump={jump} canAdd={!conflict} />
-            </div>
-            {/* Sticky here, not inside: the chips stay under the header for the whole form. */}
-            <div className="sticky top-14 z-20 lg:hidden" data-editor-pane>
-              <SectionJump sections={profile.sections} current={currentSection} onJump={jump} />
-            </div>
-            {/* Below lg the bottom padding keeps the last card clear of the floating Preview pill. */}
-            <div className="mx-auto w-full max-w-3xl min-w-0 space-y-4 px-4 pt-4 pb-24 sm:px-6 sm:pt-6 lg:mx-0 lg:max-w-none lg:px-5 lg:pb-8" data-testid="editor-form" data-editor-pane>
-              <SaveProblem status={status} onRetry={() => void controller.flush()} />
-              <FormLayoutSwitch layout={profile.options.formLayout} readOnly={conflict} />
-              <TopCard
-                options={profile.options}
-                lang={profile.docLanguage}
-                templateId={profile.templateId}
-                colorId={profile.colorId}
-                edit={edit}
-                readOnly={conflict}
-              />
-              <LanguageNotice lang={profile.docLanguage} edit={edit} readOnly={conflict} />
-              <PhotoCard photo={profile.photo} loadBlob={loadBlob} onChange={onPhotoChange} readOnly={conflict} />
-              {profile.sections.map((section) => (
-                <SectionCard
-                  key={section.id}
-                  section={section}
+      <BackupProvider controller={controller} repo={repo}>
+        <EditorFrame
+          status={<SaveStatus status={status} />}
+          drafts={<DraftsMenu controller={controller} profile={profile} repo={repo} db={db} leave={leave} locked={conflict} />}
+        >
+          <ManageProvider profile={profile} current={current} edit={edit} jump={jump}>
+            <h1 className="sr-only">{t("editor.title")}</h1>
+            <div className="flex-1 lg:grid lg:grid-cols-[4rem_minmax(27.5rem,36.25rem)_minmax(0,1fr)] xl:grid-cols-[14.5rem_minmax(27.5rem,36.25rem)_minmax(0,1fr)]">
+              <div className="border-r border-line bg-surface max-lg:hidden" data-editor-pane>
+                <SectionRail sections={profile.sections} hasPhoto={!!profile.photo} current={currentSection} onJump={jump} canAdd={!conflict} />
+              </div>
+              {/* Sticky here, not inside: the chips stay under the header for the whole form. */}
+              <div className="sticky top-14 z-20 lg:hidden" data-editor-pane>
+                <SectionJump sections={profile.sections} current={currentSection} onJump={jump} />
+              </div>
+              {/* Below lg the bottom padding keeps the last card clear of the floating Preview pill. */}
+              <div className="mx-auto w-full max-w-3xl min-w-0 space-y-4 px-4 pt-4 pb-24 sm:px-6 sm:pt-6 lg:mx-0 lg:max-w-none lg:px-5 lg:pb-8" data-testid="editor-form" data-editor-pane>
+                <SaveProblem status={status} onRetry={() => void controller.flush()} backup={backupNow} />
+                <FormLayoutSwitch layout={profile.options.formLayout} readOnly={conflict} />
+                <TopCard
+                  options={profile.options}
+                  lang={profile.docLanguage}
+                  templateId={profile.templateId}
+                  colorId={profile.colorId}
                   edit={edit}
                   readOnly={conflict}
-                  dateFormat={profile.options.dateFormat}
-                  heightFormat={profile.options.heightFormat}
-                  traditions={showsTraditions(profile, section.id) ? traditionsDone : undefined}
                 />
-              ))}
-              <AddSectionButton disabled={conflict} />
-              {/* Where the draft is kept, after the last section (the right column is the preview since Step 3.3). */}
-              <aside aria-label={t("editor.keptLabel")} className="grid gap-4 pt-4 sm:grid-cols-2 lg:grid-cols-1" data-testid="kept-cards">
-                <div className={`${noteCard} flex gap-3`}>
-                  <Icon name="lock" className="mt-0.5 size-5 text-gold" />
-                  <div className="min-w-0">
-                    <h2 className={`${cardTitle} text-[15px]`}>{t("editor.note.title")}</h2>
-                    <p className="mt-1 text-[13.5px] leading-relaxed text-pretty text-ink-2">{t("editor.note.text")}</p>
-                    <a href="/help#saving" className={`mt-2.5 inline-flex items-center pointer-coarse:min-h-11 text-[13.5px] ${textLink}`}>
-                      {t("editor.note.action")}
-                    </a>
+                <LanguageNotice lang={profile.docLanguage} edit={edit} readOnly={conflict} />
+                <PhotoCard photo={profile.photo} loadBlob={loadBlob} onChange={onPhotoChange} readOnly={conflict} />
+                {profile.sections.map((section) => (
+                  <SectionCard
+                    key={section.id}
+                    section={section}
+                    edit={edit}
+                    readOnly={conflict}
+                    dateFormat={profile.options.dateFormat}
+                    heightFormat={profile.options.heightFormat}
+                    traditions={showsTraditions(profile, section.id) ? traditionsDone : undefined}
+                  />
+                ))}
+                <AddSectionButton disabled={conflict} />
+                {/* Where the draft is kept, after the last section (the right column is the preview since Step 3.3). */}
+                <aside aria-label={t("editor.keptLabel")} className="grid gap-4 pt-4 sm:grid-cols-2 lg:grid-cols-1" data-testid="kept-cards">
+                  <div className={`${noteCard} flex gap-3`}>
+                    <Icon name="lock" className="mt-0.5 size-5 text-gold" />
+                    <div className="min-w-0">
+                      <h2 className={`${cardTitle} text-[15px]`}>{t("editor.note.title")}</h2>
+                      <p className="mt-1 text-[13.5px] leading-relaxed text-pretty text-ink-2">{t("editor.note.text")}</p>
+                      <a href="/help#saving" className={`mt-2.5 inline-flex items-center pointer-coarse:min-h-11 text-[13.5px] ${textLink}`}>
+                        {t("editor.note.action")}
+                      </a>
+                    </div>
                   </div>
-                </div>
-                <StorageCard savedAt={status.state === "saved" ? status.at.getTime() : undefined} />
-              </aside>
+                  <StorageCard savedAt={status.state === "saved" ? status.at.getTime() : undefined} />
+                </aside>
+              </div>
+              {/* The live preview (Step 3.3): the right column on desktop; a pill and a sheet below 1024 px. */}
+              <LivePreview profile={profile} edit={edit} loadBlob={loadBlob} readOnly={conflict} />
             </div>
-            {/* The live preview (Step 3.3): the right column on desktop; a pill and a sheet below 1024 px. */}
-            <LivePreview profile={profile} edit={edit} loadBlob={loadBlob} readOnly={conflict} />
-          </div>
-        </ManageProvider>
-      </EditorFrame>
+          </ManageProvider>
+        </EditorFrame>
+      </BackupProvider>
     </div>
   );
 }

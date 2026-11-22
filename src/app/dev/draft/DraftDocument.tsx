@@ -21,6 +21,7 @@ declare global {
 // (src/lib/document-photo.ts, the same helper the live preview uses). <body data-doc-ready> is set once it is laid
 // out with its photo; a draft that can't be read shows why. window.__draft runs the Download engine on these true-size
 // pages: e2e/editor-download.spec.ts checks the editor's downloads (made from its scaled preview) match it.
+// `&relax=0` lays the page out without relaxed spacing (Step 4.5), for the before/after comparison.
 
 let repo: ReturnType<typeof createProfileRepo> | undefined;
 const getRepo = () => (repo ??= createProfileRepo(openDb()));
@@ -29,10 +30,13 @@ export function DraftDocument() {
   const [profile, setProfile] = useState<BiodataProfile | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [layout, setLayout] = useState<DocumentLayoutInfo | null>(null);
+  const [relax, setRelax] = useState(true);
 
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("d");
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("d");
     void (async () => {
+      setRelax(params.get("relax") !== "0");
       if (!id) return setProblem("Add ?d=<draft id> to the address.");
       const result = await getRepo().load(id);
       if (result.ok) setProfile(result.profile);
@@ -57,7 +61,7 @@ export function DraftDocument() {
   if (!doc) return null;
   return (
     <div style={{ background: "#d6d3d1", padding: "24px 0", minHeight: "100vh" }} data-testid="draft-document">
-      {photo.ready && <DocumentView doc={doc} photo={photo.photo} onLayout={setLayout} />}
+      {photo.ready && <DocumentView doc={doc} photo={photo.photo} onLayout={setLayout} relaxSpacing={relax} />}
     </div>
   );
 }

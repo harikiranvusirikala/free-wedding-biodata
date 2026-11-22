@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import type { LangCode } from "@/biodata/types";
-import { fontStack, LINE_HEIGHT, PAGE, type Box, type Palette } from "./tokens";
+import { fontStack, LINE_HEIGHT, PAGE, RELAX_VAR, type Box, type Palette } from "./tokens";
 
 // One A4 page (BUILD_PLAN A4): a fixed 794 × 1123 px box on the template's paper, the frame artwork behind, any
 // fixed page-1 content (a side panel), and the content box at the template's margins. Marked data-page and lang, so the display-list reader
@@ -14,6 +14,7 @@ export function Page({
   bodyPx,
   number,
   decor,
+  relax = 1,
   children,
 }: {
   lang: LangCode;
@@ -24,6 +25,8 @@ export function Page({
   number: number;
   /** Fixed content outside the content box (the Modern skeleton's side panel on page 1). */
   decor?: ReactNode;
+  /** Relaxed spacing (relax.ts): the factor the page's vertical gaps are stretched by; 1 leaves the page as it was. */
+  relax?: number;
   children: ReactNode;
 }) {
   return (
@@ -43,6 +46,7 @@ export function Page({
         fontSize: bodyPx,
         lineHeight: LINE_HEIGHT,
         textAlign: "left",
+        ...(relax > 1 ? { [RELAX_VAR]: relax } : null),
       }}
     >
       {Frame ? <Frame palette={palette} /> : null}

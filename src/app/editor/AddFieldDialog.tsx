@@ -10,7 +10,7 @@ import { field as fieldClass, fieldHint, fieldLabel as fieldLabelClass } from "@
 import { Icon } from "@/components/ui/icons";
 import { t } from "@/lib/i18n";
 import type { Edit } from "./FieldRow";
-import { fieldLabel, sectionTitle } from "./labels";
+import { fieldLabel, sectionTitle, useLabelStyle } from "./labels";
 
 // "Add a field" (BUILD_PLAN Step 2.2, VISION §6): ready-made fields from the catalogue that aren't in the draft
 // (this section's usual ones first, its tradition fields included; then usual fields of other sections that were
@@ -92,6 +92,7 @@ export function AddFieldDialog({
     onAdded(id);
   }
 
+  const labelStyle = useLabelStyle();
   const group = (title: string, keys: FieldKey[], testId: string) =>
     keys.length > 0 && (
       <div role="group" aria-label={title} data-testid={testId}>
@@ -100,7 +101,7 @@ export function AddFieldDialog({
           {keys.map((key) => (
             <button key={key} type="button" className={PILL} onClick={() => addKey(key)}>
               <Icon name="plus" className="size-3.5" />
-              {fieldLabel({ key })}
+              {fieldLabel({ key }, labelStyle)}
             </button>
           ))}
         </div>
@@ -111,7 +112,7 @@ export function AddFieldDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title={section ? t("manage.addField.title", { section: sectionTitle(section) }) : ""}
+      title={section ? t("manage.addField.title", { section: sectionTitle(section, labelStyle) }) : ""}
       description={t("manage.addField.description")}
     >
       {(usual.length > 0 || other.length > 0) && (

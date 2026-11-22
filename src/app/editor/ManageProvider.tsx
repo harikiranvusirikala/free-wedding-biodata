@@ -25,7 +25,7 @@ import { t } from "@/lib/i18n";
 import { AddFieldDialog } from "./AddFieldDialog";
 import { AddSectionDialog } from "./AddSectionDialog";
 import type { Edit } from "./FieldRow";
-import { defaultFieldLabel, defaultSectionTitle, fieldLabel, memberLabel, sectionTitle } from "./labels";
+import { defaultFieldLabel, defaultSectionTitle, effectiveLabelStyle, fieldLabel, LabelStyleProvider, memberLabel, sectionTitle } from "./labels";
 import { MemberDialog } from "./MemberDialog";
 
 // Field and section management (BUILD_PLAN Step 2.2, VISION §6): the dialogs the ⋯ menus and the Add buttons open
@@ -122,6 +122,9 @@ export function ManageProvider({
     [current, edit, notify, focusSoon, jump],
   );
 
+  // The words the form shows for fields and sections follow the draft's label style (labels.ts).
+  const labelStyle = effectiveLabelStyle(profile.options, profile.docLanguage);
+
   const close = () => setDialog(null);
 
   /** Removes a field, with Undo putting it back at its place; the focus goes to its section's title. */
@@ -131,7 +134,7 @@ export function ManageProvider({
     if (!at) return;
     const removed = at.section.fields[at.index];
     const sectionId = at.section.id;
-    const label = fieldLabel(removed);
+    const label = fieldLabel(removed, labelStyle);
     edit((p) => removeField(p, fieldId));
     focusSoon(`section-${sectionId}-title`);
     notify(t("manage.removed", { label }), () => {
@@ -149,7 +152,7 @@ export function ManageProvider({
     if (index < 0) return;
     const removed = sections[index];
     const next = sections[index + 1] ?? sections[index - 1];
-    const title = sectionTitle(removed);
+    const title = sectionTitle(removed, labelStyle);
     edit((p) => removeSection(p, sectionId));
     focusSoon(next ? `section-${next.id}-title` : "add-section");
     notify(t("manage.removed", { label: title }), () => {
@@ -191,121 +194,123 @@ export function ManageProvider({
 
   return (
     <ManageContext.Provider value={manage}>
-      {children}
+      <LabelStyleProvider value={labelStyle}>
+        {children}
 
-      <RenameDialog
-        open={dialog?.kind === "renameField" && !!field}
-        title={field ? t("manage.renameField.title", { label: fieldLabel(field) }) : ""}
-        label={t("manage.renameField.label")}
-        current={field ? fieldLabel(field) : ""}
-        usual={field ? defaultFieldLabel(field) : undefined}
-        renamed={field?.label !== undefined}
-        hint={field?.key ? t("manage.renameField.hintDefault") : t("manage.renameField.hintCustom")}
-        resetText={(usual) => t("manage.renameField.reset", { label: usual })}
-        onClose={close}
-        onSave={(value) => {
-          if (!field) return;
-          const id = field.id;
-          edit((p) => (value === null ? resetFieldLabel(p, id) : renameField(p, id, value)));
-          close();
-        }}
-      />
+        <RenameDialog
+          open={dialog?.kind === "renameField" && !!field}
+          title={field ? t("manage.renameField.title", { label: fieldLabel(field, labelStyle) }) : ""}
+          label={t("manage.renameField.label")}
+          current={field ? fieldLabel(field, labelStyle) : ""}
+          usual={field ? defaultFieldLabel(field, labelStyle) : undefined}
+          renamed={field?.label !== undefined}
+          hint={field?.key ? t("manage.renameField.hintDefault") : t("manage.renameField.hintCustom")}
+          resetText={(usual) => t("manage.renameField.reset", { label: usual })}
+          onClose={close}
+          onSave={(value) => {
+            if (!field) return;
+            const id = field.id;
+            edit((p) => (value === null ? resetFieldLabel(p, id) : renameField(p, id, value)));
+            close();
+          }}
+        />
 
-      <RenameDialog
-        open={dialog?.kind === "renameSection" && !!section}
-        title={section ? t("manage.renameSection.title", { title: sectionTitle(section) }) : ""}
-        label={t("manage.renameSection.label")}
-        current={section ? sectionTitle(section) : ""}
-        usual={section ? defaultSectionTitle(section) : undefined}
-        renamed={section?.title !== undefined}
-        hint={section?.key ? t("manage.renameField.hintDefault") : t("manage.renameField.hintCustom")}
-        resetText={(usual) => t("manage.renameSection.reset", { title: usual })}
-        onClose={close}
-        onSave={(value) => {
-          if (!section) return;
-          const id = section.id;
-          edit((p) => (value === null ? resetSectionTitle(p, id) : renameSection(p, id, value)));
-          close();
-        }}
-      />
+        <RenameDialog
+          open={dialog?.kind === "renameSection" && !!section}
+          title={section ? t("manage.renameSection.title", { title: sectionTitle(section, labelStyle) }) : ""}
+          label={t("manage.renameSection.label")}
+          current={section ? sectionTitle(section, labelStyle) : ""}
+          usual={section ? defaultSectionTitle(section, labelStyle) : undefined}
+          renamed={section?.title !== undefined}
+          hint={section?.key ? t("manage.renameField.hintDefault") : t("manage.renameField.hintCustom")}
+          resetText={(usual) => t("manage.renameSection.reset", { title: usual })}
+          onClose={close}
+          onSave={(value) => {
+            if (!section) return;
+            const id = section.id;
+            edit((p) => (value === null ? resetSectionTitle(p, id) : renameSection(p, id, value)));
+            close();
+          }}
+        />
 
-      <Dialog
-        open={dialog?.kind === "removeField" && !!field}
-        onClose={close}
-        title={field ? t("manage.removeField.title", { label: fieldLabel(field) }) : ""}
-        description={t("manage.removeField.text")}
-      >
-        <DialogActions>
-          <button type="button" className={button("secondary")} onClick={close}>
-            {t("ui.cancel")}
-          </button>
-          <button type="button" className={button("danger")} onClick={() => field && confirmRemoveField(field.id)}>
-            <Icon name="trash" className="size-4" />
-            {t("manage.removeConfirm")}
-          </button>
-        </DialogActions>
-      </Dialog>
+        <Dialog
+          open={dialog?.kind === "removeField" && !!field}
+          onClose={close}
+          title={field ? t("manage.removeField.title", { label: fieldLabel(field, labelStyle) }) : ""}
+          description={t("manage.removeField.text")}
+        >
+          <DialogActions>
+            <button type="button" className={button("secondary")} onClick={close}>
+              {t("ui.cancel")}
+            </button>
+            <button type="button" className={button("danger")} onClick={() => field && confirmRemoveField(field.id)}>
+              <Icon name="trash" className="size-4" />
+              {t("manage.removeConfirm")}
+            </button>
+          </DialogActions>
+        </Dialog>
 
-      <Dialog
-        open={dialog?.kind === "removeSection" && !!section}
-        onClose={close}
-        title={section ? t("manage.removeSection.title", { title: sectionTitle(section) }) : ""}
-        description={t("manage.removeSection.text")}
-      >
-        <DialogActions>
-          <button type="button" className={button("secondary")} onClick={close}>
-            {t("ui.cancel")}
-          </button>
-          <button type="button" className={button("danger")} onClick={() => section && confirmRemoveSection(section.id)}>
-            <Icon name="trash" className="size-4" />
-            {t("manage.removeConfirm")}
-          </button>
-        </DialogActions>
-      </Dialog>
+        <Dialog
+          open={dialog?.kind === "removeSection" && !!section}
+          onClose={close}
+          title={section ? t("manage.removeSection.title", { title: sectionTitle(section, labelStyle) }) : ""}
+          description={t("manage.removeSection.text")}
+        >
+          <DialogActions>
+            <button type="button" className={button("secondary")} onClick={close}>
+              {t("ui.cancel")}
+            </button>
+            <button type="button" className={button("danger")} onClick={() => section && confirmRemoveSection(section.id)}>
+              <Icon name="trash" className="size-4" />
+              {t("manage.removeConfirm")}
+            </button>
+          </DialogActions>
+        </Dialog>
 
-      <AddFieldDialog
-        open={dialog?.kind === "addField" && section?.kind === "fields"}
-        section={section?.kind === "fields" ? section : undefined}
-        profile={profile}
-        edit={edit}
-        onClose={close}
-        onAdded={(fieldId) => focusSoon(`field-${fieldId}`)}
-      />
+        <AddFieldDialog
+          open={dialog?.kind === "addField" && section?.kind === "fields"}
+          section={section?.kind === "fields" ? section : undefined}
+          profile={profile}
+          edit={edit}
+          onClose={close}
+          onAdded={(fieldId) => focusSoon(`field-${fieldId}`)}
+        />
 
-      <AddSectionDialog
-        open={dialog?.kind === "addSection"}
-        profile={profile}
-        edit={edit}
-        onClose={close}
-        onAdded={(sectionId) => manage.jump(sectionId)}
-      />
+        <AddSectionDialog
+          open={dialog?.kind === "addSection"}
+          profile={profile}
+          edit={edit}
+          onClose={close}
+          onAdded={(sectionId) => manage.jump(sectionId)}
+        />
 
-      <MemberDialog
-        open={!!memberMode}
-        mode={memberMode}
-        edit={edit}
-        onClose={close}
-        onDone={(memberId) => focusSoon(`member-${memberId}`)}
-      />
+        <MemberDialog
+          open={!!memberMode}
+          mode={memberMode}
+          edit={edit}
+          onClose={close}
+          onDone={(memberId) => focusSoon(`member-${memberId}`)}
+        />
 
-      <Dialog
-        open={dialog?.kind === "removeMember" && !!member}
-        onClose={close}
-        title={member ? t("member.removeTitle", { label: memberLabel(member) }) : ""}
-        description={t("member.removeText")}
-      >
-        <DialogActions>
-          <button type="button" className={button("secondary")} onClick={close}>
-            {t("ui.cancel")}
-          </button>
-          <button type="button" className={button("danger")} onClick={() => member && confirmRemoveMember(member.id)}>
-            <Icon name="trash" className="size-4" />
-            {t("manage.removeConfirm")}
-          </button>
-        </DialogActions>
-      </Dialog>
+        <Dialog
+          open={dialog?.kind === "removeMember" && !!member}
+          onClose={close}
+          title={member ? t("member.removeTitle", { label: memberLabel(member) }) : ""}
+          description={t("member.removeText")}
+        >
+          <DialogActions>
+            <button type="button" className={button("secondary")} onClick={close}>
+              {t("ui.cancel")}
+            </button>
+            <button type="button" className={button("danger")} onClick={() => member && confirmRemoveMember(member.id)}>
+              <Icon name="trash" className="size-4" />
+              {t("manage.removeConfirm")}
+            </button>
+          </DialogActions>
+        </Dialog>
 
-      {toast && <UndoToast key={toast.id} text={toast.text} undo={toast.undo} onDone={() => setToast(null)} />}
+        {toast && <UndoToast key={toast.id} text={toast.text} undo={toast.undo} onDone={() => setToast(null)} />}
+      </LabelStyleProvider>
     </ManageContext.Provider>
   );
 }

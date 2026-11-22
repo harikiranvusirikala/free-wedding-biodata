@@ -208,6 +208,36 @@
     "November",
     "December"
   ],
+  "labelVariants": {
+    "telugu": {
+      "meta": {
+        "reviewed": false,
+        "reviewNotes": {
+          "all": "English spellings Telugu families use on their biodatas, taken from the owner's own biodata, not yet confirmed by a second Telugu speaker. Please confirm every spelling and capital letter below.",
+          "fields.nakshatra": "Birth Star: the plain-English name for the nakshatra.",
+          "fields.rashi": "Raasi (double a), as families spell it in English.",
+          "fields.gotra": "Swagothram: the usual Telugu spelling; Gotra on a standard page.",
+          "fields.maternalGotra": "Maternal Gothram: note the spelling differs from Swagothram (gothram, not gotram).",
+          "sections.contact": "Contact Information instead of Contact Details."
+        }
+      },
+      "sections": {
+        "contact": "Contact Information"
+      },
+      "fields": {
+        "dateOfBirth": "Date Of Birth",
+        "birthTime": "Time Of Birth",
+        "birthPlace": "Place Of Birth",
+        "nakshatra": "Birth Star",
+        "rashi": "Raasi",
+        "gotra": "Swagothram",
+        "maternalGotra": "Maternal Gothram",
+        "highestQualification": "Education",
+        "occupation": "Profession",
+        "annualIncome": "Salary"
+      }
+    }
+  },
   "titles": {
     "biodata": "Biodata",
     "marriageBiodata": "Marriage Biodata",

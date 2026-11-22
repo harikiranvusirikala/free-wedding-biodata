@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { completionState, profileCompletion, sectionCompletion } from "@/biodata/completion";
-import type { Section } from "@/biodata/types";
+import type { LabelStyle, Section } from "@/biodata/types";
 import { focusRing } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { t, type AppKey } from "@/lib/i18n";
 import en from "@/i18n/app/en.json";
-import { SECTION_ICONS, sectionTitle } from "./labels";
+import { SECTION_ICONS, sectionTitle, useLabelStyle } from "./labels";
 import { useManage } from "./ManageProvider";
 import { sectionAnchor } from "./SectionCard";
 import { PhotoIcon } from "@/components/photo/icons";
@@ -22,9 +22,9 @@ import { TOP_ID } from "./TopCard";
 const hasKey = (key: string): key is AppKey => Object.hasOwn(en, key);
 
 /** The short name on a phone chip ("Personal" for Personal Details); a renamed or custom section's own title. */
-function chipLabel(section: Section): string {
+function chipLabel(section: Section, style: LabelStyle): string {
   const key = `editor.chip.${section.key}`;
-  return !section.title?.trim() && section.key && hasKey(key) ? t(key) : sectionTitle(section);
+  return !section.title?.trim() && section.key && hasKey(key) ? t(key) : sectionTitle(section, style);
 }
 
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -156,6 +156,7 @@ function OverallCompletion({ sections }: { sections: readonly Section[] }) {
 
 /** The rail beside the form: names with dots and counts at 1280 px and up, icons with dots at 1024–1279. */
 export function SectionRail({ sections, hasPhoto, current, onJump, canAdd = true }: NavProps & { hasPhoto: boolean; canAdd?: boolean }) {
+  const labelStyle = useLabelStyle();
   return (
     <nav aria-label={t("editor.sections")} className="sticky top-14 max-h-[calc(100dvh-3.5rem)] overflow-y-auto px-2 py-4 xl:px-3" data-testid="section-rail">
       <OverallCompletion sections={sections} />
@@ -195,7 +196,7 @@ export function SectionRail({ sections, hasPhoto, current, onJump, canAdd = true
         </li>
         {sections.map((section) => {
           const on = section.id === current;
-          const title = sectionTitle(section);
+          const title = sectionTitle(section, labelStyle);
           const { filled, total } = sectionCompletion(section);
           const progress = t("editor.completion", { filled, total });
           return (
@@ -237,6 +238,7 @@ export function SectionRail({ sections, hasPhoto, current, onJump, canAdd = true
 
 /** Tablets and phones: a sticky, sideways-scrolling row of chips; the current one is kept in view. */
 export function SectionJump({ sections, current, onJump }: NavProps) {
+  const labelStyle = useLabelStyle();
   const listRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
@@ -250,7 +252,7 @@ export function SectionJump({ sections, current, onJump }: NavProps) {
   return (
     <nav aria-label={t("editor.jump")} className="border-b border-line bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85" data-testid="section-jump">
       <ul ref={listRef} className="flex gap-2 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:px-6 [&::-webkit-scrollbar]:hidden">
-        {[{ id: TOP_ID, label: t("editor.chip.top") }, { id: PHOTO_ID, label: t("editor.chip.photo") }, ...sections.map((section) => ({ id: section.id, label: chipLabel(section) }))].map(({ id, label }) => {
+        {[{ id: TOP_ID, label: t("editor.chip.top") }, { id: PHOTO_ID, label: t("editor.chip.photo") }, ...sections.map((section) => ({ id: section.id, label: chipLabel(section, labelStyle) }))].map(({ id, label }) => {
           const on = id === current;
           return (
             <li key={id} className="shrink-0">

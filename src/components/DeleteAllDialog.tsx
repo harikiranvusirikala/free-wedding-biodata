@@ -1,10 +1,12 @@
 "use client";
 
 import { useId, useState } from "react";
+import { BackupButton } from "@/components/BackupButton";
 import { button } from "@/components/ui/button";
 import { Dialog, DialogActions } from "@/components/ui/Dialog";
 import { field, fieldLabel, formError } from "@/components/ui/field";
 import { Icon } from "@/components/ui/icons";
+import type { DownloadOutcome } from "@/lib/backup-file";
 import type { BiodataDb } from "@/lib/db";
 import { t } from "@/lib/i18n";
 
@@ -13,9 +15,11 @@ import { t } from "@/lib/i18n";
  * says what goes and asks for the word DELETE before its button works, then deletes the database and this
  * site's settings and goes to the home page. The storage code is loaded only when it's confirmed, so the
  * privacy page doesn't carry it. The editor passes its own open database, which is then closed for good, so
- * a late autosave can't bring an empty one back.
+ * a late autosave can't bring an empty one back. "Download a backup first" (Step 5.1) saves every draft as a file
+ * before anything is deleted: the editor passes its own way of making one, the privacy page reads this browser's
+ * database itself (and only if one exists).
  */
-export function DeleteAllDialog({ open, onClose, db }: { open: boolean; onClose: () => void; db?: () => BiodataDb }) {
+export function DeleteAllDialog({ open, onClose, db, backup }: { open: boolean; onClose: () => void; db?: () => BiodataDb; backup?: () => Promise<DownloadOutcome> }) {
   const [typed, setTyped] = useState("");
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -53,6 +57,13 @@ export function DeleteAllDialog({ open, onClose, db }: { open: boolean; onClose:
   return (
     <Dialog open={open} onClose={close} title={t("deleteAll.title")} description={t("deleteAll.text")}>
       <form onSubmit={confirm} data-testid="delete-all-dialog">
+        <div className="mb-5 rounded-xl border border-line bg-sunken p-3">
+          <BackupButton
+            run={backup ?? (async () => (await import("@/lib/backup-file")).downloadBackupFromDevice())}
+            hint={t("backup.first.allHint")}
+            disabled={busy}
+          />
+        </div>
         <label htmlFor={inputId} className={fieldLabel}>
           {t("deleteAll.label")}
         </label>

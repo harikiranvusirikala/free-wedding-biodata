@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { LangCode } from "@/biodata/types";
 import { textFontStack } from "../scripts";
+import { relaxed } from "../tokens";
 
 // A label/value row (BUILD_PLAN A4): the label in a fixed column, the value wrapping beside it. Used for fields,
 // the computed age and family members (relation : details, D28), so it is also the "family row". User text is
@@ -61,7 +62,7 @@ export function Row({
     fontFamily: textFontStack(lang, valueText),
   };
   return (
-    <div style={{ display: "flex", alignItems: "baseline", paddingLeft: look.indent, paddingBottom: look.after }}>
+    <div style={{ display: "flex", alignItems: "baseline", paddingLeft: look.indent, paddingBottom: relaxed(look.after) }}>
       <div style={labelStyle}>{labelText}</div>
       <div style={valueStyle}>{valueText}</div>
     </div>

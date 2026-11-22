@@ -278,9 +278,10 @@ test("the drafts menu works from the keyboard", async ({ page }) => {
   await expect(listed(page).first()).toBeFocused();
   await page.keyboard.press("End");
   await expect(menu(page).getByRole("menuitem", { name: "Delete all my local data…" })).toBeFocused();
+  // Up through Restore, Download a backup (Step 5.1), Delete and Duplicate to Rename.
   await page.keyboard.press("ArrowUp");
-  await page.keyboard.press("ArrowUp");
-  await page.keyboard.press("ArrowUp");
+  await expect(menu(page).getByRole("menuitem", { name: "Restore from a backup…" })).toBeFocused();
+  for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowUp");
   await expect(menu(page).getByRole("menuitem", { name: "Rename…" })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(menu(page)).toBeHidden();

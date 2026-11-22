@@ -94,6 +94,14 @@ export type TextSize = (typeof TEXT_SIZES)[number];
 export const LABEL_CASES = ["normal", "upper"] as const;
 export type LabelCase = (typeof LABEL_CASES)[number];
 
+export const LABEL_STYLES = ["standard", "telugu"] as const;
+/**
+ * The wording of the printed English labels: "standard" (Nakshatra, Gotra, Annual Income) or "telugu", the spellings
+ * Telugu families use in English (Birth Star, Swagothram, Salary, Date Of Birth). Only English pages use it; every
+ * other document language prints its own dictionary whatever the style is. Absent = standard.
+ */
+export type LabelStyle = (typeof LABEL_STYLES)[number];
+
 export const FORM_LAYOUTS = ["simple", "detailed"] as const;
 /**
  * Which set of default sections and fields the draft follows (D50): Simple (four sections, the fields most biodatas
@@ -109,6 +117,8 @@ export interface ProfileOptions {
   heightFormat: HeightFormat;
   textSize: TextSize;
   labelCase: LabelCase;
+  /** English label wording (see LabelStyle). Added without a format bump: absent in older drafts and new ones = standard. */
+  labelStyle?: LabelStyle;
   /** Simple or Detailed form (D50). Drafts saved before it was added read as "detailed" (schema default). */
   formLayout: FormLayout;
   /** A preset title (e.g. "biodata"), printed in the document language (D45). Neither this nor `title` = no title. */

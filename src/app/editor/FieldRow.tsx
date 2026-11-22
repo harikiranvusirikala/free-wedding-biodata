@@ -12,7 +12,7 @@ import en from "@/i18n/app/en.json";
 import { ChoiceValue } from "./ChoiceInput";
 import { FieldMenu, MemberMenu } from "./ManageMenus";
 import { DateValue, HeightValue, ParagraphValue, TextValue, TimeValue } from "./FieldInputs";
-import { choicesFor, fieldLabel, memberLabel } from "./labels";
+import { choicesFor, fieldLabel, memberLabel, useLabelStyle } from "./labels";
 
 // One row of a section card (mockup: editor): the label, the value's input, the eye that hides the row from the
 // biodata (its value is kept, §6) and the ⋯ menu (rename, type, move, remove: Step 2.2). From tablets up the label
@@ -118,7 +118,8 @@ interface FieldRowProps {
 
 export const FieldRow = memo(function FieldRow({ field, edit, readOnly, dateFormat, heightFormat }: FieldRowProps) {
   const id = `field-${field.id}`;
-  const label = fieldLabel(field);
+  const labelStyle = useLabelStyle();
+  const label = fieldLabel(field, labelStyle);
   const hint = hintFor(field);
   const hintId = `${id}-hint`;
   const fieldId = field.id;

@@ -1,7 +1,7 @@
 import { FIELD_CATALOG } from "./defaults";
 import { ageOn, formatAge, formatDate, formatHeight, formatTime } from "./format";
 import type { BiodataProfile, Field, LabelCase, LangCode, PhotoFrame, Section, TextSize } from "./types";
-import type { DocDictionary } from "@/i18n/doc";
+import { labelTables, type DocDictionary, type LabelTables } from "@/i18n/doc";
 
 // Profile + document dictionary + today → the document model (BUILD_PLAN A4 step 1). Everything a template
 // prints and nothing else: hidden or empty fields, members and sections are dropped (§6, §7 "empty fields and
@@ -69,9 +69,9 @@ const isCatalogKey = (key: string | undefined): key is keyof typeof FIELD_CATALO
 const lookup = (table: Record<string, string>, key: string | undefined): string | undefined =>
   key !== undefined && Object.hasOwn(table, key) ? table[key] : undefined;
 
-/** The printed label: the user's own if set (and not blank), else the dictionary's by key. */
-function fieldLabel(field: Field, dict: DocDictionary): string {
-  return field.label?.trim() || lookup(dict.fields, field.key) || field.key || "";
+/** The printed label: the user's own if set (and not blank), else the dictionary's (in the label style) by key. */
+function fieldLabel(field: Field, tables: LabelTables): string {
+  return field.label?.trim() || lookup(tables.fields, field.key) || field.key || "";
 }
 
 /** The printed value, or "" when there is nothing to print. */
@@ -98,7 +98,7 @@ function fieldValue(field: Field, profile: BiodataProfile, dict: DocDictionary):
   }
 }
 
-function sectionItems(section: Section, profile: BiodataProfile, dict: DocDictionary, today: Date): DocItem[] {
+function sectionItems(section: Section, profile: BiodataProfile, dict: DocDictionary, tables: LabelTables, today: Date): DocItem[] {
   if (section.kind === "family") {
     return section.members
       .filter((m) => m.visible && m.details.trim())
@@ -115,7 +115,7 @@ function sectionItems(section: Section, profile: BiodataProfile, dict: DocDictio
     if (!field.visible) continue;
     const value = fieldValue(field, profile, dict);
     if (!value) continue;
-    const label = fieldLabel(field, dict);
+    const label = fieldLabel(field, tables);
     if (field.type === "textarea") {
       items.push({ kind: "paragraph", id: field.id, key: field.key, label, text: value });
       continue;
@@ -135,18 +135,20 @@ function sectionItems(section: Section, profile: BiodataProfile, dict: DocDictio
 /** The document model for a profile in its document language, as of `today` (for the age). */
 export function toDocument(profile: BiodataProfile, dict: DocDictionary, today: Date): DocModel {
   const { options } = profile;
+  // English pages may use the Telugu families' wording (Birth Star, Swagothram…); other languages ignore the style.
+  const tables = labelTables(dict, profile.docLanguage, options.labelStyle);
   const sections: DocSection[] = [];
   let name: string | undefined;
   for (const section of profile.sections) {
     if (!section.visible) continue;
-    const items = sectionItems(section, profile, dict, today);
+    const items = sectionItems(section, profile, dict, tables, today);
     if (!items.length) continue;
     name ??= items.find((i): i is DocRow => i.kind === "row" && i.key === "fullName")?.value;
     sections.push({
       id: section.id,
       key: section.key,
       kind: section.kind,
-      title: section.title?.trim() || lookup(dict.sections, section.key) || section.key || "",
+      title: section.title?.trim() || lookup(tables.sections, section.key) || section.key || "",
       items,
     });
   }
