@@ -24,7 +24,12 @@
       "relations.maternalAunt": "పిన్ని is the mother's younger sister; పెద్దమ్మ the elder.",
       "relations.cousin": "Common borrowed word.",
       "words.am": "Kept as AM/PM, common in printed Telugu biodatas; ఉదయం / సాయంత్రం is an alternative.",
-      "words.heightCm": "సెం.మీ. for centimetres."
+      "words.heightCm": "సెం.మీ. for centimetres.",
+      "fields.intiPeru": "Step 2.0 (Telugu chip): the family name a Telugu biodata prints before the given name (ఇంటి పేరు); drafted as the usual word for 'surname'.",
+      "fields.devak": "Step 2.0 (Marathi chip): the family's devak (clan totem); transliterated.",
+      "fields.gan": "Step 2.0: gana used in guna matching (Deva / Manushya / Rakshasa).",
+      "fields.maslak": "Step 2.0 (Muslim chip): school or jamaat (Hanafi, Deobandi, Barelvi…); transliterated.",
+      "titles.bioData": "Step 2.0: the hyphenated 'Bio-Data' spelling many printed biodatas use."
     }
   },
   "sections": {
@@ -97,7 +102,12 @@
     "denomination": "శాఖ",
     "church": "చర్చి",
     "sikhPractice": "సిక్కు ఆచరణ",
-    "jainSect": "శాఖ"
+    "jainSect": "శాఖ",
+    "intiPeru": "ఇంటి పేరు",
+    "devak": "దేవక్",
+    "gan": "గణం",
+    "nadi": "నాడి",
+    "maslak": "మస్లక్"
   },
   "options": {
     "gender": { "male": "పురుషుడు", "female": "స్త్రీ" },
@@ -187,7 +197,9 @@
     "muslimSect": { "sunni": "సున్నీ", "shia": "షియా" },
     "denomination": { "catholic": "కాథలిక్", "protestant": "ప్రొటెస్టంట్", "orthodox": "ఆర్థొడాక్స్" },
     "sikhPractice": { "amritdhari": "అమృత్‌ధారి", "keshdhari": "కేశ్‌ధారి", "sahajdhari": "సహజ్‌ధారి" },
-    "jainSect": { "digambar": "దిగంబర", "shwetambar": "శ్వేతాంబర" }
+    "jainSect": { "digambar": "దిగంబర", "shwetambar": "శ్వేతాంబర" },
+    "gan": { "deva": "దేవ", "manushya": "మనుష్య", "rakshasa": "రాక్షస" },
+    "nadi": { "adi": "ఆది", "madhya": "మధ్య", "antya": "అంత్య" }
   },
   "relations": {
     "father": "తండ్రి",
@@ -226,7 +238,8 @@
   ],
   "titles": {
     "biodata": "బయోడేటా",
-    "marriageBiodata": "వివాహ బయోడేటా"
+    "marriageBiodata": "వివాహ బయోడేటా",
+    "bioData": "బయో-డేటా"
   },
   "words": {
     "age": "వయస్సు",

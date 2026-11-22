@@ -240,6 +240,69 @@ test("hidden and empty sections, and Add a section with ready-made picks, Day an
   }
 });
 
+// The editor's opening (Step 2.0), shot as it is at phone and desktop size, Day and Night: the top card on a new
+// draft (all None) and with a symbol, a line and a title chosen; the symbol picker and the language dialog open;
+// the tradition chips with the toast after one is tapped; and the printed top of page 1 in English and Telugu.
+test("top of your biodata, its pickers, the language notice and tradition chips, Day and Night", async ({ page, isMobile }) => {
+  test.skip(isMobile, "sizes are set here, so one project is enough");
+  test.setTimeout(120_000);
+  const shoot = async (name: string, size: string, fullPage = false) => {
+    for (const theme of THEMES) {
+      await page.emulateMedia({ colorScheme: theme });
+      await expect(page.locator("html")).toHaveClass(theme === "dark" ? /dark/ : /^(?!.*dark)/);
+      await page.screenshot({ path: `test-results/screenshots/${name}-${size}-${theme === "light" ? "day" : "night"}.png`, fullPage, animations: "disabled" });
+    }
+  };
+  await page.goto("/editor?new=1");
+  await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
+  const card = page.locator('[data-section="top"]');
+  for (const size of SIZES.filter((s) => s.name !== "tablet")) {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await shoot("editor-top-new", size.name);
+  }
+  await page.getByLabel("Name", { exact: true }).fill("Sai Teja Mandapati");
+  await card.getByRole("radio", { name: "Ganesha", exact: true }).click();
+  await card.getByLabel("Invocation line").selectOption("shriGaneshaya");
+  await card.getByRole("radiogroup", { name: "Title" }).getByRole("radio", { name: "Marriage Biodata", exact: true }).click();
+  await expect(page.getByTestId("save-status")).toHaveText(/Saved on this device · \d/);
+  const id = new URL(page.url()).searchParams.get("d")!;
+  for (const size of SIZES.filter((s) => s.name !== "tablet")) {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await shoot("editor-top-chosen", size.name);
+    await card.getByRole("button", { name: "See them larger" }).click();
+    await expect(page.getByTestId("motif-dialog")).toBeVisible();
+    await shoot("editor-top-motifs", size.name);
+    await page.getByRole("dialog").getByRole("button", { name: "Close" }).first().click();
+    await page.getByRole("button", { name: "Change the language of the printed headings" }).click();
+    await expect(page.getByTestId("language-options")).toBeVisible();
+    await shoot("editor-language-dialog", size.name);
+    await page.getByRole("dialog").getByRole("button", { name: "Done" }).click();
+    await page.locator('[data-section="religion"]').evaluate((el) => el.scrollIntoView({ block: "start" }));
+    await page.getByTestId("tradition-chips").getByRole("button", { name: "Muslim", exact: true }).click();
+    await expect(page.getByTestId("manage-toast")).toBeVisible();
+    await shoot("editor-tradition-chips", size.name);
+    await page.getByTestId("manage-toast").getByRole("button", { name: "Undo" }).click();
+    await page.getByTestId("manage-toast").getByRole("button", { name: "Dismiss" }).click();
+  }
+  // The printed top (one A4 page at true size; the document is always a light page).
+  await page.setViewportSize({ width: 900, height: 1200 });
+  await page.emulateMedia({ colorScheme: "light" });
+  for (const lang of ["en", "te"]) {
+    if (lang === "te") {
+      await page.goto(`/editor?d=${id}`);
+      await page.getByRole("button", { name: "Change the language of the printed headings" }).click();
+      await page.getByRole("dialog").getByRole("radio", { name: /తెలుగు/ }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "Done" }).click();
+      await expect(page.getByTestId("save-status")).toHaveText(/Saved on this device · \d/);
+    }
+    await page.goto(`/dev/draft?d=${id}`);
+    await expect(page.locator("body[data-doc-ready]")).toHaveCount(1);
+    await page.locator("[data-page]").first().screenshot({ path: `test-results/screenshots/document-top-${lang}.png`, animations: "disabled" });
+  }
+});
+
 /** Screenshots a page as it is (no reload) at every size, Day and Night; colour transitions are finished first. */
 async function shootAll(page: Page, name: string) {
   for (const size of SIZES) {

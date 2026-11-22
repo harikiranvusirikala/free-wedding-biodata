@@ -13,6 +13,8 @@ export interface HeadingLook {
   uppercase: boolean;
   /** A hairline under the heading: colour, or null. */
   underline: string | null;
+  /** Its thickness in px (default 1; the underline bar style uses 2). */
+  underlineWidth?: number;
   /** Space below the heading, before its first row. */
   after: string;
 }
@@ -31,7 +33,7 @@ export function HeadingBar({ title, look }: { title: string; look: HeadingLook }
           lineHeight: 1.35,
           letterSpacing: look.letterSpacing,
           textTransform: look.uppercase ? "uppercase" : undefined,
-          borderBottom: look.underline ? `1px solid ${look.underline}` : undefined,
+          borderBottom: look.underline ? `${look.underlineWidth ?? 1}px solid ${look.underline}` : undefined,
           overflowWrap: "anywhere",
         }}
       >

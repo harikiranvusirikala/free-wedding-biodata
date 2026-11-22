@@ -3,7 +3,7 @@
     "name": "বাংলা",
     "reviewed": false,
     "reviewNotes": {
-      "sections.horoscope": "Drafted as কোষ্ঠী বিবরণ; কুষ্ঠি / জন্মছক are also used. Bengali biodatas often add গণ (দেব/নর/রাক্ষস); there is no field for it yet.",
+      "sections.horoscope": "Drafted as কোষ্ঠী বিবরণ; কুষ্ঠি / জন্মছক are also used. Bengali biodatas often add গণ (দেব/নর/রাক্ষস); the Gan field (Step 2.0) covers it.",
       "sections.career": "কর্মজীবন ('working life').",
       "sections.partnerPreferences": "Gender-neutral জীবনসঙ্গী; families often write পাত্র / পাত্রীর কাছে প্রত্যাশা.",
       "sections.references": "Drafted as পরিচিতজন ('acquaintances').",
@@ -25,7 +25,12 @@
       "relations.uncle": "কাকু, the general word for an uncle.",
       "relations.aunt": "কাকিমা, the general word for an aunt.",
       "relations.cousin": "তুতো ভাই / বোন (any cousin); খুড়তুতো / মামাতো / পিসতুতো / মাসতুতো are specific.",
-      "words.am": "Kept as AM/PM; সকাল / বিকেল / রাত before the time is an alternative."
+      "words.am": "Kept as AM/PM; সকাল / বিকেল / রাত before the time is an alternative.",
+      "fields.intiPeru": "Step 2.0 (Telugu chip): the family name a Telugu biodata prints before the given name (ఇంటి పేరు); drafted as the usual word for 'surname'.",
+      "fields.devak": "Step 2.0 (Marathi chip): the family's devak (clan totem); transliterated.",
+      "fields.gan": "Step 2.0: gana used in guna matching (Deva / Manushya / Rakshasa).",
+      "fields.maslak": "Step 2.0 (Muslim chip): school or jamaat (Hanafi, Deobandi, Barelvi…); transliterated.",
+      "titles.bioData": "Step 2.0: the hyphenated 'Bio-Data' spelling many printed biodatas use."
     }
   },
   "sections": {
@@ -98,7 +103,12 @@
     "denomination": "শাখা",
     "church": "গির্জা",
     "sikhPractice": "শিখ আচার",
-    "jainSect": "শাখা"
+    "jainSect": "শাখা",
+    "intiPeru": "পদবি",
+    "devak": "দেবক",
+    "gan": "গণ",
+    "nadi": "নাড়ী",
+    "maslak": "মাসলাক"
   },
   "options": {
     "gender": { "male": "পুরুষ", "female": "মহিলা" },
@@ -188,7 +198,9 @@
     "muslimSect": { "sunni": "সুন্নি", "shia": "শিয়া" },
     "denomination": { "catholic": "ক্যাথলিক", "protestant": "প্রোটেস্ট্যান্ট", "orthodox": "অর্থোডক্স" },
     "sikhPractice": { "amritdhari": "অমৃতধারী", "keshdhari": "কেশধারী", "sahajdhari": "সহজধারী" },
-    "jainSect": { "digambar": "দিগম্বর", "shwetambar": "শ্বেতাম্বর" }
+    "jainSect": { "digambar": "দিগম্বর", "shwetambar": "শ্বেতাম্বর" },
+    "gan": { "deva": "দেব", "manushya": "নর", "rakshasa": "রাক্ষস" },
+    "nadi": { "adi": "আদি", "madhya": "মধ্য", "antya": "অন্ত্য" }
   },
   "relations": {
     "father": "পিতা",
@@ -227,7 +239,8 @@
   ],
   "titles": {
     "biodata": "বায়োডেটা",
-    "marriageBiodata": "বিবাহ বায়োডেটা"
+    "marriageBiodata": "বিবাহ বায়োডেটা",
+    "bioData": "বায়ো-ডেটা"
   },
   "words": {
     "age": "বয়স",

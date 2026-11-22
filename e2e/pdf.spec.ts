@@ -6,8 +6,9 @@ import { expect, test, type Page } from "@playwright/test";
 // 1. /dev/pdf: the display list records alignment, justified lines, spaces between runs, italic, the whole font
 //    stack and exact baselines, and the PDF's shaped widths match the browser's on every line (per-glyph fallback
 //    on a Kannada page included).
-// 2. /dev/document: Classic Gold and Minimal Ivory in English and Telugu (short and long) and the short Classic
-//    Gold page in all ten languages: the PDF and JPEG page images are written to test-results/pdf/ next to Chrome's
+// 2. /dev/document: Classic Gold and Minimal Ivory in English and Telugu (short and long), the short Classic Gold
+//    page in all ten languages, and designs 3–10 (Step 4.3: English short and long, Telugu, one more Indic language,
+//    all three colours, dark paper included): the PDF and JPEG page images are written to test-results/pdf/ next to Chrome's
 //    screenshots of the same pages (for the PDFKit side-by-side check), page counts match, sizes are sane, every
 //    line's width matches, times are logged (desktop and CPU ÷4), and nothing is requested from another origin.
 
@@ -17,9 +18,22 @@ test.skip(({ isMobile }) => isMobile, "pages are a fixed A4 size; one project is
 test.use({ deviceScaleFactor: 2 });
 
 const LANGS = ["en", "te", "hi", "ta", "kn", "ml", "mr", "gu", "bn", "pa"];
+/** Step 4.3's designs: their extra Indic language and their other two colours (test/fixtures/documents.ts). */
+const NEW_DESIGNS = [
+  ["kalyanam", "hi", "saffron", "leaf"],
+  ["temple-bells", "ta", "amber", "blue"],
+  ["rangoli", "kn", "violet", "marigold"],
+  ["paisley", "ml", "maroon", "teal"],
+  ["royal-maroon", "mr", "purple", "wine"],
+  ["deepam", "gu", "purple", "night"],
+  ["executive-navy", "bn", "forest", "plum"],
+  ["modern-two-column", "pa", "amber", "rose"],
+] as const;
 const VARIANTS = [
   ...["classic-gold", "minimal-ivory"].flatMap((t) => ["en", "te"].flatMap((lang) => [`${t}-${lang}-short`, `${t}-${lang}-long`])),
   ...LANGS.filter((l) => l !== "en" && l !== "te").map((lang) => `classic-gold-${lang}-short`),
+  ...NEW_DESIGNS.flatMap(([d, lang, c2, c3]) => [`${d}-en-short`, `${d}-en-long`, `${d}-te-short`, `${d}-${lang}-short`, `${d}-en-short-${c2}`, `${d}-en-short-${c3}`]),
+  "executive-navy-en-split",
 ];
 
 function watchOffsite(page: Page): string[] {
@@ -110,7 +124,7 @@ test("feature page: the display list carries what the writers need, and the PDF 
 });
 
 test("real templates in ten languages: PDF and page images, page counts, sizes, widths, timings", async ({ page }) => {
-  test.setTimeout(300_000);
+  test.setTimeout(600_000);
   const offsite = watchOffsite(page);
   await mkdir(OUT, { recursive: true });
   await page.setViewportSize({ width: 900, height: 1200 });

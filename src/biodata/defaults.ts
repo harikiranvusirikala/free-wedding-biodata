@@ -101,6 +101,8 @@ export const OPTION_LISTS = {
   denomination: ["catholic", "protestant", "orthodox"],
   sikhPractice: ["amritdhari", "keshdhari", "sahajdhari"],
   jainSect: ["digambar", "shwetambar"],
+  gan: ["deva", "manushya", "rakshasa"],
+  nadi: ["adi", "madhya", "antya"],
 } as const satisfies Record<string, readonly string[]>;
 
 export type OptionListId = keyof typeof OPTION_LISTS;
@@ -181,7 +183,12 @@ export const FIELD_CATALOG = {
   lagnam: { type: "select", options: "rashi" },
   dosham: { type: "text" },
   kulaDevata: { type: "text" },
+  intiPeru: { type: "text" },
+  devak: { type: "text" },
+  gan: { type: "select", options: "gan" },
+  nadi: { type: "select", options: "nadi" },
   muslimSect: { type: "select", options: "muslimSect" },
+  maslak: { type: "text" },
   denomination: { type: "select", options: "denomination" },
   church: { type: "text" },
   sikhPractice: { type: "select", options: "sikhPractice" },
@@ -299,27 +306,76 @@ export const DEFAULT_SECTIONS: readonly SectionDef[] = [
 /** Ready-made sections in "Add a section" (D44), not in a new draft. References: people who vouch for the family. */
 export const QUICK_PICK_SECTIONS: readonly SectionDef[] = [{ key: "references", kind: "family", members: [] }];
 
-export const TRADITIONS = ["hindu", "muslim", "christian", "sikh", "jain"] as const;
+/**
+ * The "Add details common in your family" chips (Step 2.0; D32 as refined by D43), in the Religion card (or the
+ * Horoscope card when Religion is gone). Hindu families' conventions differ by region more than anything else, so
+ * Hindu has a chip per region whose biodatas print something the defaults lack, plus one for everyone else.
+ */
+export const TRADITIONS = [
+  "hinduTelugu",
+  "hinduTamil",
+  "hinduMarathi",
+  "hindu",
+  "muslim",
+  "christian",
+  "sikh",
+  "jain",
+] as const;
 export type Tradition = (typeof TRADITIONS)[number];
 
 /**
- * The one-tap chips inside Religion and Horoscope ("Add Hindu fields"…, D32 as refined by D43). Only ever added
- * when the user taps one, never inferred from the Religion value; a field already in the draft is skipped. A
- * starting list for Step 2.0 to review; the General set is simply the default sections.
+ * What each chip adds, and where (Step 2.0 decisions, from VISION §6/§7 and how printed biodatas in each community
+ * are laid out; kept modest: only what the default sections lack, never more than four fields). Added only when
+ * the user taps the chip, never inferred from the Religion value; a field already anywhere in the draft is
+ * skipped (one key, one field), which is why a set may name a default field (Gotra for Sikh and Jain families
+ * whose draft no longer has the Horoscope section). The General set is simply the default sections.
+ * - Telugu: Intiperu (the family name printed before the given name), Lagnam, Dosham.
+ * - Tamil: Kuladeivam (family deity), Lagnam, Dosham (Sevvai, Rahu–Ketu).
+ * - Marathi: Devak, Kuldevta, Gan and Nadi (both used in guna matching).
+ * - Hindu, other regions: Lagnam, Dosham, Kula Devata.
+ * - Muslim: Sect (Sunni/Shia) and Maslak (school or jamaat, typed: Hanafi, Shafi'i, Deobandi, Barelvi, Bohra…).
+ * - Christian: Denomination and Church / Parish.
+ * - Sikh: Amritdhari/Keshdhari/Sahajdhari, and Gotra where families print it.
+ * - Jain: Digambar/Shwetambar, and Gotra.
  */
 export const TRADITION_FIELD_SETS: Record<Tradition, readonly { section: string; field: FieldKey }[]> = {
+  hinduTelugu: [
+    { section: "personal", field: "intiPeru" },
+    { section: "horoscope", field: "lagnam" },
+    { section: "horoscope", field: "dosham" },
+  ],
+  hinduTamil: [
+    { section: "religion", field: "kulaDevata" },
+    { section: "horoscope", field: "lagnam" },
+    { section: "horoscope", field: "dosham" },
+  ],
+  hinduMarathi: [
+    { section: "religion", field: "devak" },
+    { section: "religion", field: "kulaDevata" },
+    { section: "horoscope", field: "gan" },
+    { section: "horoscope", field: "nadi" },
+  ],
   hindu: [
     { section: "horoscope", field: "lagnam" },
     { section: "horoscope", field: "dosham" },
     { section: "religion", field: "kulaDevata" },
   ],
-  muslim: [{ section: "religion", field: "muslimSect" }],
+  muslim: [
+    { section: "religion", field: "muslimSect" },
+    { section: "religion", field: "maslak" },
+  ],
   christian: [
     { section: "religion", field: "denomination" },
     { section: "religion", field: "church" },
   ],
-  sikh: [{ section: "religion", field: "sikhPractice" }],
-  jain: [{ section: "religion", field: "jainSect" }],
+  sikh: [
+    { section: "religion", field: "sikhPractice" },
+    { section: "religion", field: "gotra" },
+  ],
+  jain: [
+    { section: "religion", field: "jainSect" },
+    { section: "religion", field: "gotra" },
+  ],
 };
 
 /** A new, empty, visible default field. A keyed field has no label: it comes from the dictionary. */

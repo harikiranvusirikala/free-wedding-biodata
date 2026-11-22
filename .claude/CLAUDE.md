@@ -16,7 +16,7 @@ Free Wedding Biodata (https://free-wedding-biodata.vercel.app, VISION D37): a fr
 
 Read only the sections a task needs (`grep -n '^#' <file>`, then `Read` with `offset`/`limit`).
 
-**Current state:** Phase 0 is done: the skeleton (0.1) and the PDF spike (0.2), which chose HarfBuzz + pdf-lib fed by the laid-out pages (VISION D49, `docs/spikes/PDF_SPIKE.md`); the production engine is `src/pdf/` (Step 4.1 part 1). Phase 1: 1.1 (app shell) and 1.2 (profile model) are built; Phase 1 is complete (shell, profile model, autosave in IndexedDB, drafts menu); 3.2 (document engine, Classic Gold and Minimal Ivory) is built ahead of Phase 2. Check the Progress table for the latest. Check the Progress table for what's actually built before assuming any file below exists. `docs/PROJECT_GUIDE.md` lists every folder and page.
+**Current state:** Phase 0 is done: the skeleton (0.1) and the PDF spike (0.2), which chose HarfBuzz + pdf-lib fed by the laid-out pages (VISION D49, `docs/spikes/PDF_SPIKE.md`); the production engine is `src/pdf/` (Step 4.1 part 1). Phase 1 is complete; Phase 2 has 2.0–2.2 (2.3 next); 3.1's photo component (not yet in the editor), 3.2 and 4.3 (ten designs), 4.1 part 1 (the Download engine) and 4.2 part 1 (labels in ten languages) are built. Next toward M1: 2.3, photo in the editor, 3.3 live preview, 4.1 part 2 buttons. Check the Progress table for what's actually built before assuming any file below exists. `docs/PROJECT_GUIDE.md` lists every folder and page.
 
 ## Commands
 
@@ -78,6 +78,8 @@ A single e2e file (`npx playwright test e2e/<file>.spec.ts`) isn't allowlisted: 
 - **Sticky bars:** `sticky` on an element inside a wrapper only as tall as itself never sticks; put it on the wrapper. `getByLabel` also matches `aria-label`s and labelled regions: use `{ exact: true }` or `getByRole`.
 - **Same label in two sections** ("Occupation" in Career and Partner preferences): scope e2e locators to the section, `[data-section="career"]`.
 - **A new script font** needs the same `unicode-range` in `src/document/document.css` and `FONT_UNICODE_RANGE` (`tokens.ts`); a test checks they match.
+- **Fonts in a stack:** the PDF writer loads every font in an element's stack, so never widen `fontStack` globally; use `mixedFontStack` (`src/document/scripts.ts`) only where text may be in another script. `getByLabel` also matches a combobox's listbox `aria-label`: use `getByRole("combobox", …)`.
+- **Daily API budget:** long parallel agent runs can hit the daily budget and stop mid-step; their work stays in the tree. Snapshot it to a `wip/<date>` branch (temporary index + `commit-tree`, `main` untouched) and resume the agents with SendMessage.
 - **Parallel agents** may share the working tree: check `git status` and stage only a step's own files when committing.
 - **`next build` type-checks every `.ts`/`.mts` file**, including `scripts/` and `e2e/`: import local modules without the `.ts` extension, and run `npx tsc --noEmit` before a build.
 - **Next.js 16 differs from older versions:** read `node_modules/next/dist/docs/` before writing Next.js code.

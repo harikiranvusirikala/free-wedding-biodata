@@ -80,7 +80,21 @@ describe("adding fields", () => {
 
   it("lists the catalogue fields not in the profile, counting moved fields as present", () => {
     const { profile } = setup();
-    expect(missingCatalogKeys(profile)).toEqual(["lagnam", "dosham", "kulaDevata", "muslimSect", "denomination", "church", "sikhPractice", "jainSect"]);
+    expect(missingCatalogKeys(profile)).toEqual([
+      "lagnam",
+      "dosham",
+      "kulaDevata",
+      "intiPeru",
+      "devak",
+      "gan",
+      "nadi",
+      "muslimSect",
+      "maslak",
+      "denomination",
+      "church",
+      "sikhPractice",
+      "jainSect",
+    ]);
     const gotra = field(profile, "gotra");
     const moved = moveFieldToSection(profile, gotra.id, section(profile, "religion").id, later);
     expect(missingCatalogKeys(moved)).not.toContain("gotra");

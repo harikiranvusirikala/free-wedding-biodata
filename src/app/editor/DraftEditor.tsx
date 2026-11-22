@@ -17,6 +17,9 @@ import { SaveProblem, SaveStatus } from "./SaveStatus";
 import { SectionCard } from "./SectionCard";
 import { SectionJump, SectionRail, useCurrentSection } from "./SectionNav";
 import { StorageCard } from "./StorageCard";
+import { LanguageNotice } from "./LanguageNotice";
+import { TOP_ID, TopCard } from "./TopCard";
+import { doneTraditions, showsTraditions } from "./TraditionChips";
 
 /**
  * The open draft: the drafts menu and save status in the header; the section rail (chips on tablets and phones),
@@ -27,7 +30,9 @@ import { StorageCard } from "./StorageCard";
 export function DraftEditor({ controller, repo, db }: { controller: AutosaveController; repo: ProfileRepo; db: BiodataDb }) {
   const { profile, status } = useAutosave(controller);
   const conflict = status.state === "error" && status.kind === "conflict";
-  const ids = useMemo(() => profile.sections.map((s) => s.id), [profile.sections]);
+  // The top card comes first in the form and the rail (Step 2.0), then the sections.
+  const ids = useMemo(() => [TOP_ID, ...profile.sections.map((s) => s.id)], [profile.sections]);
+  const traditionsDone = useMemo(() => doneTraditions({ sections: profile.sections }), [profile.sections]);
   const { current: currentSection, jump } = useCurrentSection(ids);
 
   // One stable function for every row: it applies the edit to the latest profile, so memoised cards and rows
@@ -89,6 +94,15 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
             </div>
             <div className="mx-auto w-full max-w-3xl min-w-0 space-y-4 px-4 pt-4 pb-6 sm:px-6 sm:pt-6 lg:mx-0 lg:max-w-none lg:px-5 lg:pb-8" data-testid="editor-form">
               <SaveProblem status={status} onRetry={() => void controller.flush()} />
+              <TopCard
+                options={profile.options}
+                lang={profile.docLanguage}
+                templateId={profile.templateId}
+                colorId={profile.colorId}
+                edit={edit}
+                readOnly={conflict}
+              />
+              <LanguageNotice lang={profile.docLanguage} edit={edit} readOnly={conflict} />
               {profile.sections.map((section) => (
                 <SectionCard
                   key={section.id}
@@ -97,6 +111,7 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
                   readOnly={conflict}
                   dateFormat={profile.options.dateFormat}
                   heightFormat={profile.options.heightFormat}
+                  traditions={showsTraditions(profile, section.id) ? traditionsDone : undefined}
                 />
               ))}
               <AddSectionButton disabled={conflict} />

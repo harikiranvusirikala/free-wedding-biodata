@@ -10,9 +10,11 @@ import {
   type FieldKey,
   type NewId,
   type SectionDef,
+  TRADITION_FIELD_SETS,
+  type Tradition,
 } from "./defaults";
 import { dateToText, heightToInches, parseDateText, parseTimeText, splitInches, timeToText } from "./inputs";
-import type { BiodataProfile, FamilyMember, FamilySection, Field, FieldType, FieldsSection, Section } from "./types";
+import type { BiodataProfile, FamilyMember, FamilySection, Field, FieldType, FieldsSection, LangCode, ProfileOptions, Section } from "./types";
 
 // Every change to a profile is a small pure function: (profile, …) → new profile (VISION D6). Nothing is mutated,
 // so React sees a new object exactly when something changed, undo is "keep the old one", and each edit is a
@@ -212,7 +214,7 @@ export type CustomFieldType = (typeof CUSTOM_FIELD_TYPES)[number];
 const isFieldKey = (key: string | undefined): key is FieldKey => key !== undefined && Object.hasOwn(FIELD_CATALOG, key);
 
 /** Every field in the profile, in order. */
-function allFields(profile: BiodataProfile): Field[] {
+function allFields(profile: Pick<BiodataProfile, "sections">): Field[] {
   return profile.sections.flatMap((section) => (section.kind === "fields" ? section.fields : []));
 }
 
@@ -535,4 +537,110 @@ export function restoreSectionDefaults(profile: BiodataProfile, sectionId: strin
     profile.sections.map((s) => (s.id === sectionId ? next : s)),
     now,
   );
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The editor's opening (BUILD_PLAN Step 2.0, VISION D21, D43): the top of the biodata (motif, invocation line,
+// title), the document language, and the tradition chips. Same rules: immutable, a no-op returns the same profile.
+
+/** Applies `change` to the options; the same profile if nothing changed. */
+function updateOptions(profile: BiodataProfile, change: (options: ProfileOptions) => ProfileOptions, now: Clock): BiodataProfile {
+  const options = change(profile.options);
+  return options === profile.options ? profile : { ...profile, options, updatedAt: now().toISOString() };
+}
+
+/** The motif at the top (an id from the motif library), or null for None (D21: never inferred). */
+export function setMotif(profile: BiodataProfile, motif: string | null, now: Clock = systemClock) {
+  const next = motif || null;
+  return updateOptions(profile, (o) => (o.motif === next ? o : { ...o, motif: next }), now);
+}
+
+/** The invocation line as typed ("" = None). A picked line arrives here as its text, so it stays editable (§7). */
+export function setInvocation(profile: BiodataProfile, invocation: string, now: Clock = systemClock) {
+  return updateOptions(profile, (o) => (o.invocation === invocation ? o : { ...o, invocation }), now);
+}
+
+/**
+ * The title's three states (D45): none; a preset printed in the document language (`titleKey`); or the user's own
+ * words, printed as typed. "Own words" with nothing typed yet is `{ kind: "custom", text: "" }`: it prints nothing,
+ * but the editor keeps the box open.
+ */
+export type TitleChoice = { kind: "none" } | { kind: "preset"; key: string } | { kind: "custom"; text: string };
+
+export function titleChoice(options: Pick<ProfileOptions, "titleKey" | "title">): TitleChoice {
+  if (options.titleKey !== undefined) return { kind: "preset", key: options.titleKey };
+  if (options.title !== undefined) return { kind: "custom", text: options.title };
+  return { kind: "none" };
+}
+
+export function setTitle(profile: BiodataProfile, choice: TitleChoice, now: Clock = systemClock) {
+  return updateOptions(
+    profile,
+    (o) => {
+      const current = titleChoice(o);
+      if (choice.kind === "none" && current.kind === "none") return o;
+      if (choice.kind === "preset" && current.kind === "preset" && current.key === choice.key) return o;
+      if (choice.kind === "custom" && current.kind === "custom" && current.text === choice.text) return o;
+      const rest = without(without(o, "titleKey"), "title");
+      if (choice.kind === "preset" && choice.key) return { ...rest, titleKey: choice.key };
+      if (choice.kind === "custom") return { ...rest, title: choice.text };
+      return rest;
+    },
+    now,
+  );
+}
+
+/** The language of the printed labels (D11); what the user typed is printed as typed whatever it is. */
+export function setDocLanguage(profile: BiodataProfile, docLanguage: LangCode, now: Clock = systemClock) {
+  return profile.docLanguage === docLanguage ? profile : { ...profile, docLanguage, updatedAt: now().toISOString() };
+}
+
+/** Where a tradition field goes when its own section isn't in the draft: the first of these that is. */
+const TRADITION_FALLBACK = ["religion", "horoscope", "personal"];
+
+/**
+ * The fields a tradition chip would add (D32, D43): its set minus the keys already anywhere in the draft, each
+ * with the id of the fields section it would go to (its own section, else Religion, Horoscope, Personal details or
+ * the first fields section). Empty when there is nothing left to add.
+ */
+export function traditionFieldsToAdd(profile: Pick<BiodataProfile, "sections">, tradition: Tradition): { key: FieldKey; sectionId: string }[] {
+  const present = new Set(allFields(profile).map((field) => field.key));
+  const fieldSections = profile.sections.filter((s): s is FieldsSection => s.kind === "fields");
+  const byKey = (key: string) => fieldSections.find((s) => s.key === key);
+  const out: { key: FieldKey; sectionId: string }[] = [];
+  for (const { section, field } of TRADITION_FIELD_SETS[tradition] ?? []) {
+    if (present.has(field)) continue;
+    const target = byKey(section) ?? TRADITION_FALLBACK.map(byKey).find(Boolean) ?? fieldSections[0];
+    if (!target) continue;
+    present.add(field);
+    out.push({ key: field, sectionId: target.id });
+  }
+  return out;
+}
+
+/**
+ * A tradition chip (D32, D43): adds the chip's fields that aren't in the draft yet, empty and shown, at the end of
+ * their sections (traditionFieldsToAdd). Tapping it again adds nothing. Only ever called on the user's tap.
+ */
+export function addTraditionFields(profile: BiodataProfile, tradition: Tradition, newId: NewId = newUuid, now: Clock = systemClock) {
+  const adds = traditionFieldsToAdd(profile, tradition);
+  if (!adds.length) return profile;
+  const sections = profile.sections.map((section) => {
+    const mine = adds.filter((a) => a.sectionId === section.id);
+    if (!mine.length || section.kind !== "fields") return section;
+    return { ...section, fields: [...section.fields, ...mine.map((a) => createField(a.key, newId))] };
+  });
+  return touch(profile, sections, now);
+}
+
+/** Removes several fields at once (Undo after a tradition chip); unknown ids are ignored. */
+export function removeFields(profile: BiodataProfile, fieldIds: readonly string[], now: Clock = systemClock) {
+  const ids = new Set(fieldIds);
+  let changed = false;
+  const sections = profile.sections.map((section) => {
+    if (section.kind !== "fields" || !section.fields.some((f) => ids.has(f.id))) return section;
+    changed = true;
+    return { ...section, fields: section.fields.filter((f) => !ids.has(f.id)) };
+  });
+  return changed ? touch(profile, sections, now) : profile;
 }

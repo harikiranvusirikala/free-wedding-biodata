@@ -116,6 +116,16 @@ export interface Palette {
   inkBase: string;
   /** Frame artwork gradient (dark, light, mid), for illustrated frames. */
   frame: readonly [string, string, string];
+  /** Illustrated frames (Step 4.3): the second ornament colour (beads, flames, flowers); defaults to `label`. */
+  accent?: string;
+  /** Illustrated frames: the pale tint behind bands and medallions; defaults to `inkBase`. */
+  soft?: string;
+  /** A heading underline (underline bar style) when it differs from `label`. */
+  barRule?: string;
+  /** Modern skeleton (D34): the side panel's fill, its text and its muted text (labels, small headings). */
+  side?: string;
+  sideText?: string;
+  sideMuted?: string;
 }
 
 export const CLASSIC_GOLD_COLORS: readonly Palette[] = [

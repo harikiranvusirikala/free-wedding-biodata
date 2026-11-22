@@ -33,4 +33,19 @@ export interface TemplateDef {
   /** The frame artwork drawn on every page, if any. */
   Frame?: ComponentType<{ palette: Palette }>;
   BlockView: ComponentType<BlockViewProps>;
+  /**
+   * Fixed artwork with content drawn on page 1 only, outside the content box (the Modern skeleton's side panel:
+   * photo, name, contact). It isn't paginated, so it must fit the page by construction.
+   */
+  Aside?: ComponentType<AsideProps>;
+  /** Every string the Aside prints (for the e2e check that the pages and the PDF carry them). */
+  asideTexts?: (doc: DocModel, options: { photo: boolean }) => string[];
+  /** The photo frame the design is drawn for (D40): the cropper's default for this design (Step 3.3). */
+  photoFrame?: PhotoInput["frame"];
+}
+
+export interface AsideProps {
+  doc: DocModel;
+  palette: Palette;
+  photo?: PhotoInput;
 }

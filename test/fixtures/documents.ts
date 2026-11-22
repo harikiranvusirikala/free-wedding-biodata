@@ -121,6 +121,35 @@ function makeSplit(p: BiodataProfile): BiodataProfile {
   return p;
 }
 
+/** Each design's first (default) colour: a variant in it has no colour part in its id. */
+const DEFAULT_COLOR: Record<string, string> = {
+  "classic-gold": "gold",
+  "minimal-ivory": "ink",
+  kalyanam: "maroon",
+  "temple-bells": "maroon",
+  rangoli: "rose",
+  paisley: "copper",
+  "royal-maroon": "maroon",
+  deepam: "maroon",
+  "executive-navy": "navy",
+  "modern-two-column": "teal",
+};
+
+/**
+ * The Step 4.3 designs: default colour, the other two colours, one more Indic language each (so every script is
+ * seen in a new design) and the photo frame each is drawn for.
+ */
+export const NEW_DESIGNS: readonly { id: string; colors: readonly [string, string, string]; lang: LangCode; photo: "3:4" | "2:3" }[] = [
+  { id: "kalyanam", colors: ["maroon", "saffron", "leaf"], lang: "hi", photo: "3:4" },
+  { id: "temple-bells", colors: ["maroon", "amber", "blue"], lang: "ta", photo: "3:4" },
+  { id: "rangoli", colors: ["rose", "violet", "marigold"], lang: "kn", photo: "3:4" },
+  { id: "paisley", colors: ["copper", "maroon", "teal"], lang: "ml", photo: "2:3" },
+  { id: "royal-maroon", colors: ["maroon", "purple", "wine"], lang: "mr", photo: "3:4" },
+  { id: "deepam", colors: ["maroon", "purple", "night"], lang: "gu", photo: "3:4" },
+  { id: "executive-navy", colors: ["navy", "forest", "plum"], lang: "bn", photo: "3:4" },
+  { id: "modern-two-column", colors: ["teal", "amber", "rose"], lang: "pa", photo: "3:4" },
+];
+
 function variant(templateId: string, colorId: string, lang: LangCode, length: DocLength, photo: DocVariant["photo"] = "3:4"): DocVariant {
   let profile = base(templateId, lang, colorId);
   if (length === "short") profile = makeShort(profile);
@@ -128,11 +157,14 @@ function variant(templateId: string, colorId: string, lang: LangCode, length: Do
   if (length === "split") profile = makeSplit(profile);
   const usedPhoto = length === "long" || length === "split" ? null : photo;
   if (usedPhoto) profile.photo = { id: "placeholder", frame: usedPhoto, crop: { x: 0.5, y: 0.5, zoom: 1, rotation: 0 } };
-  const colorPart = ["gold", "ink"].includes(colorId) ? "" : `-${colorId}`;
+  const colorPart = DEFAULT_COLOR[templateId] === colorId ? "" : `-${colorId}`;
   return { id: `${templateId}-${lang}-${length}${colorPart}`, templateId, colorId, lang, length, photo: usedPhoto, profile };
 }
 
-/** Every variant the dev page shows: both templates × en/te × three lengths, plus the other colour variants. */
+/**
+ * Every variant the dev page shows: Classic Gold and Minimal Ivory × en/te × three lengths and their other colours,
+ * plus the Step 4.3 designs (NEW_DESIGNS).
+ */
 export function documentVariants(): DocVariant[] {
   const out: DocVariant[] = [];
   for (const [templateId, colorId] of [
@@ -149,6 +181,19 @@ export function documentVariants(): DocVariant[] {
   out.push(variant("classic-gold", "rose", "en", "short"), variant("classic-gold", "sage", "en", "short"));
   out.push(variant("minimal-ivory", "maroon", "en", "short"), variant("minimal-ivory", "navy", "en", "short"));
   out.push(variant("classic-gold", "gold", "en", "split"), variant("classic-gold", "gold", "te", "split"), variant("minimal-ivory", "ink", "en", "split"));
+  // Step 4.3: each new design short and long in English, short in Telugu and in one more Indic language, and short
+  // in its other two colours; the Modern skeleton also split across pages.
+  for (const d of NEW_DESIGNS) {
+    const [first, ...others] = d.colors;
+    out.push(
+      variant(d.id, first, "en", "short", d.photo),
+      variant(d.id, first, "en", "long", d.photo),
+      variant(d.id, first, "te", "short", d.photo),
+      variant(d.id, first, d.lang, "short", d.photo),
+      ...others.map((c) => variant(d.id, c, "en", "short", d.photo)),
+    );
+  }
+  out.push(variant("executive-navy", "navy", "en", "split"));
   return out;
 }
 

@@ -4,6 +4,7 @@ import { Paragraph, type ParagraphLook } from "../../blocks/Paragraph";
 import { Photo } from "../../blocks/Photo";
 import { Row, type RowLook } from "../../blocks/Row";
 import { Motif, tint } from "../../motifs";
+import { mixedFontStack, scriptFamilies } from "../../scripts";
 import { isLatin, SPACE, type Palette } from "../../tokens";
 import type { BlockViewProps } from "../types";
 
@@ -54,11 +55,17 @@ const paragraph = (doc: DocModel, p: Palette): ParagraphLook => ({
 });
 
 function TopElement({ doc, palette }: { doc: DocModel; palette: Palette }) {
-  const latin = isLatin(doc.lang);
+  // Step 2.0: the invocation line and a title of the user's own print in their own script on any page (scripts.ts),
+  // and only Latin titles get spaced capitals.
+  const latin = isLatin(doc.lang) && !scriptFamilies(doc.title ?? "").length;
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.35em", paddingBottom: "0.2em", textAlign: "center" }}>
       <Motif id={doc.motif} ink={palette.ink} base={palette.inkBase} size={MOTIF_SIZE} />
-      {doc.invocation ? <div style={{ color: palette.label, fontWeight: 700, fontSize: "1.15em", lineHeight: 1.4 }}>{doc.invocation}</div> : null}
+      {doc.invocation ? (
+        <div style={{ color: palette.label, fontWeight: 700, fontSize: "1.15em", lineHeight: 1.4, fontFamily: mixedFontStack(doc.lang, doc.invocation), overflowWrap: "anywhere" }}>
+          {doc.invocation}
+        </div>
+      ) : null}
       {doc.title ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.7em", width: "100%" }}>
           <div aria-hidden style={{ width: 72, height: 1.5, background: tint(palette.label, 0.35), flex: "none" }} />
@@ -72,6 +79,8 @@ function TopElement({ doc, palette }: { doc: DocModel; palette: Palette }) {
               lineHeight: 1.3,
               // Letter spacing adds space after the last letter too; shift it back so the title is centred.
               marginRight: latin ? "-0.24em" : 0,
+              fontFamily: mixedFontStack(doc.lang, doc.title),
+              overflowWrap: "anywhere",
             }}
           >
             {doc.title}

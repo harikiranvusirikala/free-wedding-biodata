@@ -148,11 +148,13 @@ describe("field catalogue and lists", () => {
     const defaultKeys = new Set(allFields(create()).map((f) => f.key));
     const sectionKeys = new Set(DEFAULT_SECTIONS.map((s) => s.key));
     for (const set of Object.values(TRADITION_FIELD_SETS)) {
-      for (const { section, field } of set) {
-        expect(defaultKeys.has(field), field).toBe(false);
-        expect(sectionKeys.has(section), section).toBe(true);
-      }
+      // Each chip adds something a new draft lacks; it may also name a default field (Gotra), skipped if present.
+      expect(set.some(({ field }) => !defaultKeys.has(field))).toBe(true);
+      expect(set.length).toBeLessThanOrEqual(4);
+      for (const { section } of set) expect(sectionKeys.has(section), section).toBe(true);
     }
+    const chipOnly = Object.values(TRADITION_FIELD_SETS).flatMap((set) => set.map((e) => e.field)).filter((k) => !defaultKeys.has(k));
+    for (const key of chipOnly) expect(DEFAULT_SECTIONS.some((s) => s.kind === "fields" && s.fields.includes(key)), key).toBe(false);
   });
 
   it("offers References as a quick pick, not a default section (D44)", () => {

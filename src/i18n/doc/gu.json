@@ -25,7 +25,12 @@
       "relations.aunt": "કાકી, the general Gujarati word for an aunt.",
       "relations.cousin": "પિતરાઈ (paternal cousin), commonly used for any cousin; મામાનો / માસીનો દીકરો are specific.",
       "titles.marriageBiodata": "લગ્ન બાયોડેટા; લગ્ન માટે બાયોડેટા is also common.",
-      "words.am": "Kept as AM/PM; સવારે / સાંજે before the time is an alternative."
+      "words.am": "Kept as AM/PM; સવારે / સાંજે before the time is an alternative.",
+      "fields.intiPeru": "Step 2.0 (Telugu chip): the family name a Telugu biodata prints before the given name (ఇంటి పేరు); drafted as the usual word for 'surname'.",
+      "fields.devak": "Step 2.0 (Marathi chip): the family's devak (clan totem); transliterated.",
+      "fields.gan": "Step 2.0: gana used in guna matching (Deva / Manushya / Rakshasa).",
+      "fields.maslak": "Step 2.0 (Muslim chip): school or jamaat (Hanafi, Deobandi, Barelvi…); transliterated.",
+      "titles.bioData": "Step 2.0: the hyphenated 'Bio-Data' spelling many printed biodatas use."
     }
   },
   "sections": {
@@ -98,7 +103,12 @@
     "denomination": "સંપ્રદાય",
     "church": "ચર્ચ",
     "sikhPractice": "શીખ આચરણ",
-    "jainSect": "સંપ્રદાય"
+    "jainSect": "સંપ્રદાય",
+    "intiPeru": "અટક",
+    "devak": "દેવક",
+    "gan": "ગણ",
+    "nadi": "નાડી",
+    "maslak": "મસલક"
   },
   "options": {
     "gender": { "male": "પુરુષ", "female": "સ્ત્રી" },
@@ -188,7 +198,9 @@
     "muslimSect": { "sunni": "સુન્ની", "shia": "શિયા" },
     "denomination": { "catholic": "કેથોલિક", "protestant": "પ્રોટેસ્ટન્ટ", "orthodox": "ઓર્થોડોક્સ" },
     "sikhPractice": { "amritdhari": "અમૃતધારી", "keshdhari": "કેશધારી", "sahajdhari": "સહજધારી" },
-    "jainSect": { "digambar": "દિગંબર", "shwetambar": "શ્વેતાંબર" }
+    "jainSect": { "digambar": "દિગંબર", "shwetambar": "શ્વેતાંબર" },
+    "gan": { "deva": "દેવ", "manushya": "મનુષ્ય", "rakshasa": "રાક્ષસ" },
+    "nadi": { "adi": "આદ્ય", "madhya": "મધ્ય", "antya": "અંત્ય" }
   },
   "relations": {
     "father": "પિતા",
@@ -227,7 +239,8 @@
   ],
   "titles": {
     "biodata": "બાયોડેટા",
-    "marriageBiodata": "લગ્ન બાયોડેટા"
+    "marriageBiodata": "લગ્ન બાયોડેટા",
+    "bioData": "બાયો-ડેટા"
   },
   "words": {
     "age": "ઉંમર",

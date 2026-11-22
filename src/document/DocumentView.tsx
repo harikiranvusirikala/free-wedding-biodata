@@ -5,6 +5,7 @@ import type { DocModel } from "@/biodata/document";
 import type { PhotoInput } from "./blocks/types";
 import { layoutDocument, loadDocumentFonts, type DocumentLayout } from "./measure";
 import { Page } from "./Page";
+import { topElementFamilies } from "./scripts";
 import { getPalette, getTemplate } from "./templates";
 import { BODY_PX, fontStack, LINE_HEIGHT, PAGE, type TextStep } from "./tokens";
 import "./document.css";
@@ -48,7 +49,7 @@ export function DocumentView({ doc, photo, onLayout, className }: DocumentViewPr
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      await loadDocumentFonts(doc.lang);
+      await loadDocumentFonts(doc.lang, topElementFamilies(doc));
       const root = measureRef.current;
       if (cancelled || !root) return;
       const pageHeight = (i: number) => {
@@ -94,7 +95,16 @@ export function DocumentView({ doc, photo, onLayout, className }: DocumentViewPr
             const t = getTemplate(shown.doc.templateId);
             const pal = getPalette(t, shown.doc.colorId);
             return (
-              <Page key={p} number={p + 1} lang={shown.doc.lang} palette={pal} Frame={t.Frame} box={t.pageBox(p, shown.doc)} bodyPx={shown.layout.bodyPx}>
+              <Page
+                key={p}
+                number={p + 1}
+                lang={shown.doc.lang}
+                palette={pal}
+                Frame={t.Frame}
+                box={t.pageBox(p, shown.doc)}
+                bodyPx={shown.layout.bodyPx}
+                decor={p === 0 && t.Aside ? <t.Aside doc={shown.doc} palette={pal} photo={shown.photo} /> : null}
+              >
                 {page.fragments.map((f) => {
                   const spec = shown.specs[f.block];
                   const piece = f.fromLine !== undefined ? shown.layout.pieces.get(f.block)?.get(f.fromLine) : undefined;

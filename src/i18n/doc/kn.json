@@ -25,7 +25,12 @@
       "relations.aunt": "ಅತ್ತೆ, the general word; it can also mean mother-in-law.",
       "relations.fatherInLaw": "ಮಾವನವರು (respectful) to tell it apart from ಮಾವ (uncle).",
       "words.am": "Kept as AM/PM; ಬೆಳಿಗ್ಗೆ / ಸಂಜೆ before the time is an alternative.",
-      "words.heightCm": "ಸೆಂ.ಮೀ. for centimetres."
+      "words.heightCm": "ಸೆಂ.ಮೀ. for centimetres.",
+      "fields.intiPeru": "Step 2.0 (Telugu chip): the family name a Telugu biodata prints before the given name (ఇంటి పేరు); drafted as the usual word for 'surname'.",
+      "fields.devak": "Step 2.0 (Marathi chip): the family's devak (clan totem); transliterated.",
+      "fields.gan": "Step 2.0: gana used in guna matching (Deva / Manushya / Rakshasa).",
+      "fields.maslak": "Step 2.0 (Muslim chip): school or jamaat (Hanafi, Deobandi, Barelvi…); transliterated.",
+      "titles.bioData": "Step 2.0: the hyphenated 'Bio-Data' spelling many printed biodatas use."
     }
   },
   "sections": {
@@ -98,7 +103,12 @@
     "denomination": "ಪಂಗಡ",
     "church": "ಚರ್ಚ್",
     "sikhPractice": "ಸಿಖ್ ಆಚರಣೆ",
-    "jainSect": "ಪಂಥ"
+    "jainSect": "ಪಂಥ",
+    "intiPeru": "ಮನೆತನದ ಹೆಸರು",
+    "devak": "ದೇವಕ್",
+    "gan": "ಗಣ",
+    "nadi": "ನಾಡಿ",
+    "maslak": "ಮಸ್ಲಕ್"
   },
   "options": {
     "gender": { "male": "ಪುರುಷ", "female": "ಸ್ತ್ರೀ" },
@@ -188,7 +198,9 @@
     "muslimSect": { "sunni": "ಸುನ್ನಿ", "shia": "ಶಿಯಾ" },
     "denomination": { "catholic": "ಕ್ಯಾಥೊಲಿಕ್", "protestant": "ಪ್ರೊಟೆಸ್ಟೆಂಟ್", "orthodox": "ಆರ್ಥೊಡಾಕ್ಸ್" },
     "sikhPractice": { "amritdhari": "ಅಮೃತಧಾರಿ", "keshdhari": "ಕೇಶಧಾರಿ", "sahajdhari": "ಸಹಜಧಾರಿ" },
-    "jainSect": { "digambar": "ದಿಗಂಬರ", "shwetambar": "ಶ್ವೇತಾಂಬರ" }
+    "jainSect": { "digambar": "ದಿಗಂಬರ", "shwetambar": "ಶ್ವೇತಾಂಬರ" },
+    "gan": { "deva": "ದೇವ", "manushya": "ಮನುಷ್ಯ", "rakshasa": "ರಾಕ್ಷಸ" },
+    "nadi": { "adi": "ಆದಿ", "madhya": "ಮಧ್ಯ", "antya": "ಅಂತ್ಯ" }
   },
   "relations": {
     "father": "ತಂದೆ",
@@ -227,7 +239,8 @@
   ],
   "titles": {
     "biodata": "ಬಯೋಡೇಟಾ",
-    "marriageBiodata": "ವಿವಾಹ ಬಯೋಡೇಟಾ"
+    "marriageBiodata": "ವಿವಾಹ ಬಯೋಡೇಟಾ",
+    "bioData": "ಬಯೋ-ಡೇಟಾ"
   },
   "words": {
     "age": "ವಯಸ್ಸು",

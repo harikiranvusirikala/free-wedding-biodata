@@ -71,9 +71,14 @@
     "kulaDevata": "Kula Devata",
     "muslimSect": "Sect",
     "denomination": "Denomination",
-    "church": "Church",
+    "church": "Church / Parish",
     "sikhPractice": "Sikh Practice",
-    "jainSect": "Sect"
+    "jainSect": "Sect",
+    "intiPeru": "Surname (Intiperu)",
+    "devak": "Devak",
+    "gan": "Gan",
+    "nadi": "Nadi",
+    "maslak": "Maslak"
   },
   "options": {
     "gender": { "male": "Male", "female": "Female" },
@@ -163,7 +168,9 @@
     "muslimSect": { "sunni": "Sunni", "shia": "Shia" },
     "denomination": { "catholic": "Catholic", "protestant": "Protestant", "orthodox": "Orthodox" },
     "sikhPractice": { "amritdhari": "Amritdhari", "keshdhari": "Keshdhari", "sahajdhari": "Sahajdhari" },
-    "jainSect": { "digambar": "Digambar", "shwetambar": "Shwetambar" }
+    "jainSect": { "digambar": "Digambar", "shwetambar": "Shwetambar" },
+    "gan": { "deva": "Deva", "manushya": "Manushya", "rakshasa": "Rakshasa" },
+    "nadi": { "adi": "Adi", "madhya": "Madhya", "antya": "Antya" }
   },
   "relations": {
     "father": "Father",
@@ -202,7 +209,8 @@
   ],
   "titles": {
     "biodata": "Biodata",
-    "marriageBiodata": "Marriage Biodata"
+    "marriageBiodata": "Marriage Biodata",
+    "bioData": "Bio-Data"
   },
   "words": {
     "age": "Age",

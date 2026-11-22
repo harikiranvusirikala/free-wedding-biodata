@@ -150,7 +150,8 @@ test("the section rail scrolls to a section and follows the scrolling", async ({
   await openStoredDraft(page, sampleDraft("rail-draft"));
   const rail = page.getByTestId("section-rail");
   await expect(rail.getByRole("link", { name: /Personal Details/ })).toContainText("10/10");
-  await expect(rail.getByRole("link", { name: /About Me/ })).toHaveAttribute("aria-current", "location");
+  // The top of the biodata (Step 2.0) is the rail's first entry, so it is current at the top of the page.
+  await expect(rail.getByRole("link", { name: "Top of your biodata" })).toHaveAttribute("aria-current", "location");
 
   await rail.getByRole("link", { name: /Education/ }).click();
   const heading = section(page, "education").getByRole("heading", { level: 2 });
@@ -161,7 +162,7 @@ test("the section rail scrolls to a section and follows the scrolling", async ({
   // Scrolling back up moves the highlight with it.
   await page.waitForTimeout(1300);
   await page.evaluate(() => window.scrollTo(0, 0));
-  await expect(rail.getByRole("link", { name: /About Me/ })).toHaveAttribute("aria-current", "location");
+  await expect(rail.getByRole("link", { name: "Top of your biodata" })).toHaveAttribute("aria-current", "location");
 });
 
 test("on a phone the section chips jump to a section", async ({ page, isMobile }) => {

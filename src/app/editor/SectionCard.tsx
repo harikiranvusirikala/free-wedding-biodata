@@ -11,6 +11,7 @@ import { FieldRow, MemberRow, type Edit } from "./FieldRow";
 import { sectionTitle } from "./labels";
 import { SectionMenu } from "./ManageMenus";
 import { useManage } from "./ManageProvider";
+import { TraditionChips } from "./TraditionChips";
 
 // A section of the biodata as a card (mockup: editor): its title, how much is filled ("3 of 9 filled",
 // informational only, §5), its ⋯ menu (rename, move, hide, restore default fields, remove: Step 2.2), a row per
@@ -25,12 +26,15 @@ export const SectionCard = memo(function SectionCard({
   readOnly,
   dateFormat,
   heightFormat,
+  traditions,
 }: {
   section: Section;
   edit: Edit;
   readOnly: boolean;
   dateFormat: DateFormat;
   heightFormat: HeightFormat;
+  /** Step 2.0: this card holds the tradition chips; the chips already fully added (doneTraditions). */
+  traditions?: string;
 }) {
   const manage = useManage();
   const anchor = sectionAnchor(section);
@@ -66,6 +70,7 @@ export const SectionCard = memo(function SectionCard({
         )}
         <SectionMenu section={section} readOnly={readOnly} />
       </div>
+      {traditions !== undefined && <TraditionChips done={traditions} readOnly={readOnly} />}
       {!section.visible && <p className="border-b border-line bg-sunken/60 px-4 py-2 text-[13px] text-pretty text-ink-3 sm:px-5">{t("manage.section.hiddenTip")}</p>}
       {empty ? (
         <p className="px-4 py-5 text-sm text-pretty text-ink-3 sm:px-5" data-testid="section-empty">

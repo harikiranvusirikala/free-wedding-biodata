@@ -29,7 +29,8 @@ async function rowsOf(card: Locator): Promise<string[]> {
   return card.locator("[data-testid^='row-'] label").allTextContents();
 }
 
-const sectionOrder = (page: Page) => page.locator("section[data-section]").evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.section));
+// The biodata's sections, without the top card (Step 2.0), which is always first and never moves.
+const sectionOrder = (page: Page) => page.locator("section[data-section]:not([data-section='top'])").evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.section));
 
 /** What the biodata prints for a stored draft: its document model in English. */
 function printed(profile: BiodataProfile) {

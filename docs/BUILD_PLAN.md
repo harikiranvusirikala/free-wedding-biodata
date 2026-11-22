@@ -338,6 +338,15 @@ Every screen is built **production-quality the first time**, to the standard of 
 - **Rename:** saving the usual name or a blank restores the dictionary label, so it keeps printing in the document language.
 - **Deviations:** no "Move a field here" button (mockup); an empty relation list (References) shows a note until 2.3 adds members; family rows get their ⋯ in 2.3. Built by a subagent in parallel with the 4.1 engine.
 
+### Step 2.0: Editor opening (built 2026-11-22, after 2.1/2.2)
+
+- **Top of your biodata** (`TopCard`), first in the form and rail: Symbol (None + 13 original drawings in `src/document/motifs/library.tsx`, 2 × 7 tiles in the design's paper and ink, "See them larger"), Invocation line (None, 12 lines by tradition, Write your own; stored as editable text, `src/biodata/invocations.ts`), Title (None / Biodata / Marriage Biodata / Bio-Data in the document language, or your own). Pure edits `setMotif`, `setInvocation`, `setTitle`/`titleChoice`. None is first and preselected (D21).
+- Om and Ik Onkar are outlines taken from Noto Bold (D47); the crescent and rings use no masks (the PDF writer has none); the Khanda and Jain symbols carry COMMUNITY REVIEW comments (6.3).
+- Invocation lines and titles print in their own script on any page (`src/document/scripts.ts` `mixedFontStack`; the extra fonts load before measuring). `fontStack` is not widened globally because the PDF writer loads every font in a stack.
+- **Language notice** + dialog: ten languages named in their own script, unreviewed ones marked; `setDocLanguage`.
+- **Tradition chips** (in Religion, else Horoscope; at most 4 fields each, added once, Undo): Telugu (Intiperu, Lagnam, Dosham), Tamil (Kuladeivam, Lagnam, Dosham), Marathi (Devak, Kuldevta, Gan, Nadi), Hindu – other (Lagnam, Dosham, Kula Devata), Muslim (Sect, Maslak), Christian (Denomination, Church / Parish), Sikh (Practice, Gotra), Jain (Sect, Gotra). No Allah medallion (needs vector calligraphy). `/dev/draft` renders a stored draft for e2e.
+- **Open:** values typed in another script still print in the page's font only (the help page promises any script): fix with per-value script detection in 4.1 part 2.
+
 ## Phase 3 — Photo and live preview
 
 - **3.1** Photo: pick, validate, downscale (≤ 3000 px long edge), own cropper (drag, pinch, zoom slider, rotate) with a 3:4 or tall 2:3 frame, replace, remove, optional second photo, empty-state tips, and a low-resolution warning below ~200 dpi at the chosen frame size (VISION D12, D40, D47).
@@ -382,6 +391,17 @@ Every screen is built **production-quality the first time**, to the standard of 
 - Spike code deleted (`src/pdf-spike/`, `/dev/pdf-spike`, `e2e/spike/`, `scripts/spike-vector.mts`); `docs/spikes/` stays as the record. Built by a subagent in parallel with 2.1 and 2.2.
 - **Next (part 2):** Download / Share / Save image / Print in the editor after 3.3, then milestone M1.
 
+### Step 4.3: Designs 3–10 and their frame families (built 2026-11-22)
+
+- **Built:** Kalyanam (thoranam, mandala watermark), Temple Bells (bells and diyas), Rangoli (kolam band), Paisley (tall 2:3 photo), Royal Maroon (mandala corners), Deepam (gold filigree on dark paper), Executive Navy and Modern Two-Column (Modern skeleton); each with 3 colours, a frame in `src/document/frames/`, in the registry (D46 order, Minimal Ivory last).
+- **Classic skeleton as data:** `skeletons/classic.tsx` `classicSkeleton(look)` (Classic Gold's block list + margins, bar style solid/underline, photo size, title flourish); shared `blocks/TopElement` (motif, invocation, title, with 2.0's mixed-script fonts).
+- **Modern skeleton** (D34): the side panel is a frame on every page; page 1's photo, name, designation · city and Contact are a fixed `Aside` (Contact only if ≤ 7 rows and 360 characters, else in the main column); the main column is the same on every page, so `paginate` is unchanged.
+- **Frames** ported from the mockup's frames.js: opacity becomes paper-mixed solids, the radial gradient a linear one, compact paths (≤ 34 KB markup, 3.7–6.3 KB source); a unit test runs each through `svgToPdf` with no warnings.
+- **Checks:** `designs.test` (registry, frames, WCAG AA for every palette, Modern layout and pagination); `/dev/document` +49 variants; document/pdf specs cover them; PDFKit renders match Chrome in English and an Indic language for every design; PDFs 19–43 KB.
+- **Deviations:** no design preselects a motif (D21); title styles are flourish rules, no serif or script faces (Noto only); About me stays in the Modern main column, so the panel is empty below Contact; Classic Gold keeps its own view.
+- **Weak spots:** the two Modern designs differ only in colour and the band; the partner-preferences list style waits for D44; Kalyanam's garland is a little sparse.
+- Committed together with 2.0: the two parallel agents both edited shared document files (`DocumentView`, block views, fixtures), so the steps couldn't be separated cleanly.
+
 ### Step 4.2, part 1: document labels in ten languages (built 2026-11-21, ahead of 4.1)
 
 - `hi`, `ta`, `kn`, `ml`, `mr`, `gu`, `bn`, `pa` dictionaries in `src/i18n/doc/` (every `en` key, the wording families use on biodatas, Gregorian months, AM/PM kept), all `reviewed: false` with 23–28 `reviewNotes` each for the D47 native review; `index.ts` registers them (plus `withEnglishFallback` for testing the fallback).
@@ -413,7 +433,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 | 1.2 | Profile model | Done 2026-11-21 (built by a subagent in parallel with 1.1; committed first since it doesn't depend on it). Unit 71 in `src/biodata/`. Deviations: option lists by key, not stored; photo slots for D40/D41; see the Step 1.2 section. VISION gaps noted there (tradition chip contents, Partner preferences display style) |
 | 1.3 | Persistence and autosave | Done 2026-11-21. Unit 248 at the time (incl. 3.2's in-progress tests), e2e: all 1.3 tests pass (8 new in `drafts.spec.ts`); screenshots of editor, saved, conflict, not-found and blocked-storage states at 3 sizes × Day/Night reviewed. Fixed during the step: Try again after a failed save now shows Saving… (test fails without the fix). See the Step 1.3 section |
 | 1.4 | Drafts and storage status | Done 2026-11-21. Unit 304 at the time (55 new), e2e 92 passed (+36 skips by design); drafts menu, delete/rename/delete-all dialogs, editor, landing with Continue and privacy reviewed at 3 sizes × Day/Night (fixed: tablet aside cards two across). See the Step 1.4 section. **Phase 1 complete** |
-| 2.0 | Editor opening: top element card, language notice, tradition chips | Not started |
+| 2.0 | Editor opening: top element card, language notice, tradition chips | Done 2026-11-22 (committed with 4.3). Unit 512, e2e 148 passed (46 skips by design); top card, symbol and language dialogs and the printed page in en/te reviewed at 3 sizes × Day/Night. Paused overnight by the daily API budget and resumed. See the Step 2.0 section |
 | 2.1 | Editor inputs | Done 2026-11-21. Unit 419 at the time (25 new), e2e 118 passed (6 new in `editor-inputs.spec.ts`); editor screens (sample and empty draft, desktop, 1180 px, tablet, phone, Day/Night, open combobox, conflict) reviewed (fixed: sticky chips, wrapping family details, cut rail names, duplicate phone hint, faint Night dots). See the Step 2.1 section |
 | 2.2 | Field and section management | Done 2026-11-21. Unit 470 at the time (30 new), e2e 137 passed (45 skips by design); field/section menus, Move to section, Add a field/section, remove dialog, Undo toast, hidden and empty sections reviewed on phone and desktop, Day/Night (fixed: type cards wrapping, toast covering shots, phone keyboard opening on Add a section). See the Step 2.2 section |
 | 2.3 | Family members and sample profile | Not started |
@@ -424,7 +444,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 | M1 | Owner's own biodata made with the app (VISION D29) | Not started |
 | 4.2 | Ten languages in the document | Part 1 done 2026-11-21 (labels for all ten languages, built by a subagent; unit 357 at the time, e2e 92 passed). Part 2 (fixture PDFs) after 4.1 |
 | 4.2b | Photo pages and attached horoscope page | Not started |
-| 4.3 | Designs 3–10 and frame families | Not started |
+| 4.3 | Designs 3–10 and frame families | Done 2026-11-22 (committed with 2.0). 20 new unit tests; every design reviewed on screen and as a PDF (en + an Indic language). See the Step 4.3 section |
 | 4.4 | Designs 11–20, motif library, colour variants | Not started |
 | 5.1 | Backup and restore | Not started |
 | 5.2 | Offline and privacy checks | Not started |

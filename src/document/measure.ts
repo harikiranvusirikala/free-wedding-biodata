@@ -8,10 +8,13 @@ import { BODY_PX, FONT_FAMILY, type TextStep } from "./tokens";
 // holding one [data-block] per block); after the fonts are loaded this reads their heights and line metrics and
 // hands them to the pure paginate()/autoFit(). The pages then render with exactly the measured blocks.
 
-/** Loads the document's fonts (Regular and Bold) before anything is measured. */
-export async function loadDocumentFonts(lang: LangCode): Promise<void> {
+/**
+ * Loads the document's fonts (Regular and Bold) before anything is measured, plus `extra` families for text in
+ * another script (an invocation line, Step 2.0: src/document/scripts.ts).
+ */
+export async function loadDocumentFonts(lang: LangCode, extra: readonly string[] = []): Promise<void> {
   if (typeof document === "undefined" || !document.fonts) return;
-  const families = new Set([FONT_FAMILY[lang], "Noto Sans"]);
+  const families = new Set([FONT_FAMILY[lang], "Noto Sans", ...extra]);
   await Promise.all([...families].flatMap((family) => ["400", "700"].map((w) => document.fonts.load(`${w} 16px "${family}"`).catch(() => []))));
   await document.fonts.ready;
 }

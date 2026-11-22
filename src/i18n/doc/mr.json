@@ -28,7 +28,12 @@
       "relations.aunt": "काकू, the general Marathi word for an aunt.",
       "relations.cousin": "चुलत भाऊ / बहीण is the paternal cousin; मावस / आते / मामे भाऊ are others.",
       "titles.marriageBiodata": "विवाह बायोडाटा; लग्नाचा बायोडाटा or वधू-वर परिचय are alternatives.",
-      "words.am": "Kept as AM/PM; Marathi biodatas also write सकाळी / संध्याकाळी before the time."
+      "words.am": "Kept as AM/PM; Marathi biodatas also write सकाळी / संध्याकाळी before the time.",
+      "fields.intiPeru": "Step 2.0 (Telugu chip): the family name a Telugu biodata prints before the given name (ఇంటి పేరు); drafted as the usual word for 'surname'.",
+      "fields.devak": "Step 2.0 (Marathi chip): the family's devak (clan totem); transliterated.",
+      "fields.gan": "Step 2.0: gana used in guna matching (Deva / Manushya / Rakshasa).",
+      "fields.maslak": "Step 2.0 (Muslim chip): school or jamaat (Hanafi, Deobandi, Barelvi…); transliterated.",
+      "titles.bioData": "Step 2.0: the hyphenated 'Bio-Data' spelling many printed biodatas use."
     }
   },
   "sections": {
@@ -101,7 +106,12 @@
     "denomination": "पंथ",
     "church": "चर्च",
     "sikhPractice": "शीख आचरण",
-    "jainSect": "पंथ"
+    "jainSect": "पंथ",
+    "intiPeru": "आडनाव",
+    "devak": "देवक",
+    "gan": "गण",
+    "nadi": "नाडी",
+    "maslak": "मसलक"
   },
   "options": {
     "gender": { "male": "पुरुष", "female": "स्त्री" },
@@ -191,7 +201,9 @@
     "muslimSect": { "sunni": "सुन्नी", "shia": "शिया" },
     "denomination": { "catholic": "कॅथलिक", "protestant": "प्रोटेस्टंट", "orthodox": "ऑर्थोडॉक्स" },
     "sikhPractice": { "amritdhari": "अमृतधारी", "keshdhari": "केशधारी", "sahajdhari": "सहजधारी" },
-    "jainSect": { "digambar": "दिगंबर", "shwetambar": "श्वेतांबर" }
+    "jainSect": { "digambar": "दिगंबर", "shwetambar": "श्वेतांबर" },
+    "gan": { "deva": "देव", "manushya": "मनुष्य", "rakshasa": "राक्षस" },
+    "nadi": { "adi": "आद्य", "madhya": "मध्य", "antya": "अंत्य" }
   },
   "relations": {
     "father": "वडील",
@@ -230,7 +242,8 @@
   ],
   "titles": {
     "biodata": "बायोडाटा",
-    "marriageBiodata": "विवाह बायोडाटा"
+    "marriageBiodata": "विवाह बायोडाटा",
+    "bioData": "बायो-डाटा"
   },
   "words": {
     "age": "वय",

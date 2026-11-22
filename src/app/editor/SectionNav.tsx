@@ -10,6 +10,7 @@ import en from "@/i18n/app/en.json";
 import { SECTION_ICONS, sectionTitle } from "./labels";
 import { useManage } from "./ManageProvider";
 import { sectionAnchor } from "./SectionCard";
+import { TOP_ID } from "./TopCard";
 
 // Moving around the form (BUILD_PLAN A7 Editor rule, mockups: editor, editor-phone). Desktop: the section rail,
 // each section with its completion dot and count, the one being read highlighted as you scroll; a click scrolls
@@ -135,6 +136,19 @@ export function SectionRail({ sections, current, onJump, canAdd = true }: NavPro
     <nav aria-label={t("editor.sections")} className="sticky top-14 max-h-[calc(100dvh-3.5rem)] overflow-y-auto px-2 py-4 xl:px-3" data-testid="section-rail">
       <h2 className="px-2.5 pb-2 text-[11.5px] font-bold tracking-[0.08em] text-ink-3 uppercase max-xl:sr-only">{t("editor.sections")}</h2>
       <ul className="space-y-0.5">
+        {/* Step 2.0: the top of the biodata (symbol, line, title) comes first. */}
+        <li>
+          <a
+            href={`#${sectionAnchor({ id: TOP_ID })}`}
+            aria-current={current === TOP_ID ? "location" : undefined}
+            title={t("top.title")}
+            onClick={(event) => onLink(event, TOP_ID, onJump)}
+            className={`flex min-h-10 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm leading-snug transition-colors max-xl:justify-center ${current === TOP_ID ? "bg-brand-soft font-semibold text-brand-ink" : "text-ink-2 hover:bg-sunken hover:text-ink"} ${focusRing}`}
+          >
+            <Icon name="diya" className="size-4 shrink-0 max-xl:size-5" />
+            <span className="line-clamp-2 min-w-0 flex-1 break-words max-xl:sr-only">{t("top.title")}</span>
+          </a>
+        </li>
         {sections.map((section) => {
           const on = section.id === current;
           const title = sectionTitle(section);
@@ -192,20 +206,20 @@ export function SectionJump({ sections, current, onJump }: NavProps) {
   return (
     <nav aria-label={t("editor.jump")} className="border-b border-line bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85" data-testid="section-jump">
       <ul ref={listRef} className="flex gap-2 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:px-6 [&::-webkit-scrollbar]:hidden">
-        {sections.map((section) => {
-          const on = section.id === current;
+        {[{ id: TOP_ID, label: t("editor.chip.top") }, ...sections.map((section) => ({ id: section.id, label: chipLabel(section) }))].map(({ id, label }) => {
+          const on = id === current;
           return (
-            <li key={section.id} className="shrink-0">
+            <li key={id} className="shrink-0">
               <a
-                href={`#${sectionAnchor(section)}`}
+                href={`#${sectionAnchor({ id })}`}
                 aria-current={on ? "location" : undefined}
-                onClick={(event) => onLink(event, section.id, onJump)}
+                onClick={(event) => onLink(event, id, onJump)}
                 className={`group flex h-11 items-center rounded-full outline-none`}
               >
                 <span
                   className={`flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium whitespace-nowrap transition-colors group-focus-visible:ring-[3px] group-focus-visible:ring-ring ${on ? "border-ink bg-ink text-page" : "border-line-strong bg-surface text-ink-2 hover:bg-sunken"}`}
                 >
-                  {chipLabel(section)}
+                  {label}
                 </span>
               </a>
             </li>

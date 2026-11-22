@@ -13,7 +13,8 @@ import type { LangCode } from "@/biodata/types";
 import { documentVariants, FIXTURE_TODAY, type DocVariant } from "../../../../test/fixtures/documents";
 import { pdfHarness, type PdfHarness } from "../pdf/harness";
 
-// The document engine's dev page (BUILD_PLAN Step 3.2): every fixture variant laid out at true size, plus the short
+// The document engine's dev page (BUILD_PLAN Step 3.2): every fixture variant laid out at true size (Step 4.3 adds
+// designs 3–10, each in English, Telugu and one more Indic language and in all three colours), plus the short
 // Classic Gold biodata in each of the other eight document languages (Step 4.2) to check glyphs and label widths.
 // When all are laid out, <body data-doc-ready> is set and window.__doc lets the e2e spec read each variant's page
 // count, the text it should print and the display list of its pages (the Download engine's input, D49), and
@@ -131,9 +132,11 @@ export function DocumentGallery() {
     window.__doc = {
       variants: variants.map((v) => {
         // What this template prints, plus every value of the document model (each must appear somewhere).
-        const printed = blockTexts(getTemplate(v.doc.templateId).blocks(v.doc, { photo: !!v.photo }), v.doc);
+        const template = getTemplate(v.doc.templateId);
+        const printed = blockTexts(template.blocks(v.doc, { photo: !!v.photo }), v.doc);
+        const aside = template.asideTexts?.(v.doc, { photo: !!v.photo }) ?? [];
         const values = v.doc.sections.flatMap((s) => s.items.map((i) => (i.kind === "row" ? i.value : i.text)));
-        return { id: v.id, length: v.length, ...layouts[v.id], expected: [...printed, ...values] };
+        return { id: v.id, length: v.length, ...layouts[v.id], expected: [...printed, ...aside, ...values] };
       }),
       displayList: (id) => readDisplayList(roots.current.get(id)!),
       pdf: (id) => pdfHarness(() => roots.current.get(id)!),

@@ -3,7 +3,8 @@ import { HeadingBar, type HeadingLook } from "../../blocks/HeadingBar";
 import { Paragraph, type ParagraphLook } from "../../blocks/Paragraph";
 import { Photo } from "../../blocks/Photo";
 import { Row, type RowLook } from "../../blocks/Row";
-import { Motif } from "../../motifs";
+import { isMotif, Motif } from "../../motifs";
+import { mixedFontStack, scriptFamilies } from "../../scripts";
 import { isLatin, type Palette } from "../../tokens";
 import type { BlockViewProps } from "../types";
 import { minimalSubtitle } from "./layout";
@@ -55,17 +56,20 @@ const paragraph = (doc: DocModel, p: Palette): ParagraphLook => ({
 });
 
 function Header({ doc, palette, photo }: Pick<BlockViewProps, "doc" | "palette" | "photo">) {
-  const latin = isLatin(doc.lang);
+  // Step 2.0: the invocation line and a title of the user's own print in their own script (scripts.ts).
+  const latin = isLatin(doc.lang) && !scriptFamilies(doc.title ?? "").length;
   const subtitle = minimalSubtitle(doc);
   return (
     // One band: the words on the left (motif and invocation, if chosen, above the title kicker, name and subtitle),
     // the photo on the right, centred against each other so no height is wasted.
     <div style={{ display: "flex", alignItems: "center", gap: 30, paddingBottom: "1.2em", borderBottom: `1px solid ${palette.rule}` }}>
         <div style={{ flex: "1 1 0", minWidth: 0 }}>
-          {doc.motif || doc.invocation ? (
+          {isMotif(doc.motif) || doc.invocation ? (
             <div style={{ display: "flex", alignItems: "center", gap: "0.7em", paddingBottom: "0.8em" }}>
               <Motif id={doc.motif} ink={palette.ink} base={palette.inkBase} size={44} />
-              {doc.invocation ? <div style={{ color: palette.label }}>{doc.invocation}</div> : null}
+              {doc.invocation ? (
+                <div style={{ color: palette.label, fontFamily: mixedFontStack(doc.lang, doc.invocation), minWidth: 0, overflowWrap: "anywhere" }}>{doc.invocation}</div>
+              ) : null}
             </div>
           ) : null}
           {doc.title ? (
@@ -77,6 +81,8 @@ function Header({ doc, palette, photo }: Pick<BlockViewProps, "doc" | "palette" 
                 letterSpacing: latin ? "0.3em" : 0,
                 textTransform: latin ? "uppercase" : undefined,
                 paddingBottom: "0.7em",
+                fontFamily: mixedFontStack(doc.lang, doc.title),
+                overflowWrap: "anywhere",
               }}
             >
               {doc.title}

@@ -2,8 +2,8 @@ import type { ComponentType, ReactNode } from "react";
 import type { LangCode } from "@/biodata/types";
 import { fontStack, LINE_HEIGHT, PAGE, type Box, type Palette } from "./tokens";
 
-// One A4 page (BUILD_PLAN A4): a fixed 794 × 1123 px box on the template's paper, the frame artwork behind, and
-// the content box at the template's margins. Marked data-page and lang, so the display-list reader
+// One A4 page (BUILD_PLAN A4): a fixed 794 × 1123 px box on the template's paper, the frame artwork behind, any
+// fixed page-1 content (a side panel), and the content box at the template's margins. Marked data-page and lang, so the display-list reader
 // (src/pdf/display-list.ts, the Download engine's input, D49) reads it unchanged; print prints one per sheet.
 
 export function Page({
@@ -13,6 +13,7 @@ export function Page({
   box,
   bodyPx,
   number,
+  decor,
   children,
 }: {
   lang: LangCode;
@@ -21,6 +22,8 @@ export function Page({
   box: Box;
   bodyPx: number;
   number: number;
+  /** Fixed content outside the content box (the Modern skeleton's side panel on page 1). */
+  decor?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -43,6 +46,7 @@ export function Page({
       }}
     >
       {Frame ? <Frame palette={palette} /> : null}
+      {decor}
       <div
         data-content
         style={{ position: "absolute", top: box.top, left: box.left, right: box.right, bottom: box.bottom, display: "flex", flexDirection: "column" }}

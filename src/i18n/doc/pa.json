@@ -26,7 +26,12 @@
       "relations.uncle": "Borrowed ਅੰਕਲ, as Punjabi families commonly say; ਫੁੱਫੜ / ਮਾਸੜ are specific.",
       "relations.aunt": "Borrowed ਆਂਟੀ; ਚਾਚੀ / ਮਾਮੀ / ਤਾਈ are specific.",
       "relations.cousin": "Borrowed ਕਜ਼ਨ; ਚਚੇਰਾ / ਮਮੇਰਾ / ਫੁਫੇਰਾ / ਮਸੇਰਾ ਭਰਾ are specific.",
-      "words.am": "Kept as AM/PM; ਸਵੇਰੇ / ਸ਼ਾਮ before the time is an alternative."
+      "words.am": "Kept as AM/PM; ਸਵੇਰੇ / ਸ਼ਾਮ before the time is an alternative.",
+      "fields.intiPeru": "Step 2.0 (Telugu chip): the family name a Telugu biodata prints before the given name (ఇంటి పేరు); drafted as the usual word for 'surname'.",
+      "fields.devak": "Step 2.0 (Marathi chip): the family's devak (clan totem); transliterated.",
+      "fields.gan": "Step 2.0: gana used in guna matching (Deva / Manushya / Rakshasa).",
+      "fields.maslak": "Step 2.0 (Muslim chip): school or jamaat (Hanafi, Deobandi, Barelvi…); transliterated.",
+      "titles.bioData": "Step 2.0: the hyphenated 'Bio-Data' spelling many printed biodatas use."
     }
   },
   "sections": {
@@ -99,7 +104,12 @@
     "denomination": "ਸੰਪਰਦਾ",
     "church": "ਚਰਚ",
     "sikhPractice": "ਸਿੱਖ ਰਹਿਤ",
-    "jainSect": "ਸੰਪਰਦਾ"
+    "jainSect": "ਸੰਪਰਦਾ",
+    "intiPeru": "ਉਪਨਾਮ",
+    "devak": "ਦੇਵਕ",
+    "gan": "ਗਣ",
+    "nadi": "ਨਾੜੀ",
+    "maslak": "ਮਸਲਕ"
   },
   "options": {
     "gender": { "male": "ਮਰਦ", "female": "ਔਰਤ" },
@@ -189,7 +199,9 @@
     "muslimSect": { "sunni": "ਸੁੰਨੀ", "shia": "ਸ਼ੀਆ" },
     "denomination": { "catholic": "ਕੈਥੋਲਿਕ", "protestant": "ਪ੍ਰੋਟੈਸਟੈਂਟ", "orthodox": "ਆਰਥੋਡਾਕਸ" },
     "sikhPractice": { "amritdhari": "ਅੰਮ੍ਰਿਤਧਾਰੀ", "keshdhari": "ਕੇਸਧਾਰੀ", "sahajdhari": "ਸਹਿਜਧਾਰੀ" },
-    "jainSect": { "digambar": "ਦਿਗੰਬਰ", "shwetambar": "ਸ਼ਵੇਤਾਂਬਰ" }
+    "jainSect": { "digambar": "ਦਿਗੰਬਰ", "shwetambar": "ਸ਼ਵੇਤਾਂਬਰ" },
+    "gan": { "deva": "ਦੇਵ", "manushya": "ਮਨੁੱਖ", "rakshasa": "ਰਾਕਸ਼ਸ" },
+    "nadi": { "adi": "ਆਦਿ", "madhya": "ਮੱਧ", "antya": "ਅੰਤ" }
   },
   "relations": {
     "father": "ਪਿਤਾ",
@@ -228,7 +240,8 @@
   ],
   "titles": {
     "biodata": "ਬਾਇਓਡਾਟਾ",
-    "marriageBiodata": "ਵਿਆਹ ਬਾਇਓਡਾਟਾ"
+    "marriageBiodata": "ਵਿਆਹ ਬਾਇਓਡਾਟਾ",
+    "bioData": "ਬਾਇਓ-ਡਾਟਾ"
   },
   "words": {
     "age": "ਉਮਰ",

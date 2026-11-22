@@ -30,7 +30,12 @@
       "relations.uncle": "മാമൻ, a general word for uncle in much of Kerala.",
       "relations.aunt": "Borrowed ആന്റി; no single neutral Malayalam word.",
       "relations.cousin": "Common borrowed word കസിൻ.",
-      "words.am": "Kept as AM/PM; രാവിലെ / വൈകിട്ട് before the time is an alternative."
+      "words.am": "Kept as AM/PM; രാവിലെ / വൈകിട്ട് before the time is an alternative.",
+      "fields.intiPeru": "Step 2.0 (Telugu chip): the family name a Telugu biodata prints before the given name (ఇంటి పేరు); drafted as the usual word for 'surname'.",
+      "fields.devak": "Step 2.0 (Marathi chip): the family's devak (clan totem); transliterated.",
+      "fields.gan": "Step 2.0: gana used in guna matching (Deva / Manushya / Rakshasa).",
+      "fields.maslak": "Step 2.0 (Muslim chip): school or jamaat (Hanafi, Deobandi, Barelvi…); transliterated.",
+      "titles.bioData": "Step 2.0: the hyphenated 'Bio-Data' spelling many printed biodatas use."
     }
   },
   "sections": {
@@ -103,7 +108,12 @@
     "denomination": "സഭ",
     "church": "ഇടവക",
     "sikhPractice": "സിഖ് ആചാരം",
-    "jainSect": "വിഭാഗം"
+    "jainSect": "വിഭാഗം",
+    "intiPeru": "വീട്ടുപേര്",
+    "devak": "ദേവക്",
+    "gan": "ഗണം",
+    "nadi": "നാഡി",
+    "maslak": "മസ്ലക്"
   },
   "options": {
     "gender": { "male": "പുരുഷൻ", "female": "സ്ത്രീ" },
@@ -193,7 +203,9 @@
     "muslimSect": { "sunni": "സുന്നി", "shia": "ഷിയ" },
     "denomination": { "catholic": "കത്തോലിക്ക", "protestant": "പ്രൊട്ടസ്റ്റന്റ്", "orthodox": "ഓർത്തഡോക്സ്" },
     "sikhPractice": { "amritdhari": "അമൃതധാരി", "keshdhari": "കേശധാരി", "sahajdhari": "സഹജധാരി" },
-    "jainSect": { "digambar": "ദിഗംബര", "shwetambar": "ശ്വേതാംബര" }
+    "jainSect": { "digambar": "ദിഗംബര", "shwetambar": "ശ്വേതാംബര" },
+    "gan": { "deva": "ദേവ", "manushya": "മനുഷ്യ", "rakshasa": "രാക്ഷസ" },
+    "nadi": { "adi": "ആദി", "madhya": "മധ്യ", "antya": "അന്ത്യ" }
   },
   "relations": {
     "father": "അച്ഛൻ",
@@ -232,7 +244,8 @@
   ],
   "titles": {
     "biodata": "ബയോഡാറ്റ",
-    "marriageBiodata": "വിവാഹ ബയോഡാറ്റ"
+    "marriageBiodata": "വിവാഹ ബയോഡാറ്റ",
+    "bioData": "ബയോ-ഡാറ്റ"
   },
   "words": {
     "age": "പ്രായം",

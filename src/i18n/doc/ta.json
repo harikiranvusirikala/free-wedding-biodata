@@ -28,7 +28,12 @@
       "months.0": "Gregorian months in Tamil spelling, not the Tamil calendar (சித்திரை, வைகாசி…).",
       "titles.marriageBiodata": "திருமண பயோடேட்டா; ஜாதகக் குறிப்பு / திருமண சுய விவரம் are alternatives.",
       "words.am": "Kept as AM/PM; காலை / மாலை before the time is an alternative.",
-      "words.ageValue": "{n} வயது ('n years of age')."
+      "words.ageValue": "{n} வயது ('n years of age').",
+      "fields.intiPeru": "Step 2.0 (Telugu chip): the family name a Telugu biodata prints before the given name (ఇంటి పేరు); drafted as the usual word for 'surname'.",
+      "fields.devak": "Step 2.0 (Marathi chip): the family's devak (clan totem); transliterated.",
+      "fields.gan": "Step 2.0: gana used in guna matching (Deva / Manushya / Rakshasa).",
+      "fields.maslak": "Step 2.0 (Muslim chip): school or jamaat (Hanafi, Deobandi, Barelvi…); transliterated.",
+      "titles.bioData": "Step 2.0: the hyphenated 'Bio-Data' spelling many printed biodatas use."
     }
   },
   "sections": {
@@ -101,7 +106,12 @@
     "denomination": "சபைப் பிரிவு",
     "church": "தேவாலயம்",
     "sikhPractice": "சீக்கிய நெறி",
-    "jainSect": "பிரிவு"
+    "jainSect": "பிரிவு",
+    "intiPeru": "குடும்பப் பெயர்",
+    "devak": "தேவக்",
+    "gan": "கணம்",
+    "nadi": "நாடி",
+    "maslak": "மஸ்லக்"
   },
   "options": {
     "gender": { "male": "ஆண்", "female": "பெண்" },
@@ -191,7 +201,9 @@
     "muslimSect": { "sunni": "சுன்னி", "shia": "ஷியா" },
     "denomination": { "catholic": "கத்தோலிக்கம்", "protestant": "புராட்டஸ்டன்ட்", "orthodox": "ஆர்த்தடாக்ஸ்" },
     "sikhPractice": { "amritdhari": "அம்ரித்தாரி", "keshdhari": "கேஷ்தாரி", "sahajdhari": "சகஜ்தாரி" },
-    "jainSect": { "digambar": "திகம்பரர்", "shwetambar": "சுவேதாம்பரர்" }
+    "jainSect": { "digambar": "திகம்பரர்", "shwetambar": "சுவேதாம்பரர்" },
+    "gan": { "deva": "தேவ", "manushya": "மனுஷ", "rakshasa": "ராட்சச" },
+    "nadi": { "adi": "ஆதி", "madhya": "மத்திய", "antya": "அந்திய" }
   },
   "relations": {
     "father": "தந்தை",
@@ -230,7 +242,8 @@
   ],
   "titles": {
     "biodata": "பயோடேட்டா",
-    "marriageBiodata": "திருமண பயோடேட்டா"
+    "marriageBiodata": "திருமண பயோடேட்டா",
+    "bioData": "பயோ-டேட்டா"
   },
   "words": {
     "age": "வயது",

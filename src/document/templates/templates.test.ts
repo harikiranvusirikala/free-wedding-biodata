@@ -107,8 +107,9 @@ describe("Minimal blocks", () => {
 });
 
 describe("template registry", () => {
-  it("has Classic Gold first with three colour variants each (D46)", () => {
-    expect(TEMPLATES.map((t) => t.id)).toEqual(["classic-gold", "minimal-ivory"]);
+  it("has Classic Gold first and Minimal Ivory last, with three colour variants each (D46)", () => {
+    expect(TEMPLATES[0].id).toBe("classic-gold");
+    expect(TEMPLATES[TEMPLATES.length - 1].id).toBe("minimal-ivory");
     for (const t of TEMPLATES) expect(t.colors).toHaveLength(3);
     expect(getTemplate("classic-gold").colors[0].id).toBe("gold");
   });
