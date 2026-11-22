@@ -11,7 +11,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const OUT = "test-results/motifs";
 const top = (page: Page) => page.locator('[data-section="top"]');
-const symbols = (page: Page) => top(page).getByRole("radiogroup", { name: "Symbol" });
+const symbols = (page: Page) => top(page).getByRole("radiogroup", { name: "Symbol", exact: true });
 
 async function openNewDraft(page: Page) {
   await page.goto("/editor?new=1");
@@ -19,19 +19,35 @@ async function openNewDraft(page: Page) {
   await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
 }
 
-test("the symbol picker: None first, Ganesha next, 47 symbols by tradition, 44 px targets, a grouped dialog", async ({ page }) => {
+test("the symbol picker: None and seven traditions, each showing its symbols (Hindu in its set order), large targets, a grouped dialog", async ({ page }) => {
   await openNewDraft(page);
-  const tiles = symbols(page).getByRole("radio");
-  await expect(tiles).toHaveCount(48);
-  await expect(tiles.first()).toHaveAccessibleName("No symbol");
-  await expect(tiles.first()).toHaveAttribute("aria-checked", "true");
-  await expect(tiles.nth(1)).toHaveAccessibleName("Ganesha");
+  const chips = symbols(page).getByRole("radio");
+  await expect(chips).toHaveCount(8);
+  await expect(chips.first()).toHaveAccessibleName("No symbol");
+  await expect(chips.first()).toHaveAttribute("aria-checked", "true");
+  await expect(chips.nth(1)).toHaveAccessibleName("Hindu symbols");
+  await expect(page.getByTestId("motif-tiles")).toHaveCount(0);
+  await chips.nth(1).click();
+  const hindu = top(page).getByRole("radiogroup", { name: "Hindu symbols" });
+  const tiles = hindu.getByRole("radio");
+  await expect(tiles.first()).toHaveAccessibleName("Ganesha");
+  await expect(hindu.getByRole("radio", { checked: true })).toHaveCount(0);
   await expect(page.getByTestId("motif-ganeshaOrnate")).toHaveCount(0);
-  for (const i of [0, 7, 47]) {
+  const count = await tiles.count();
+  expect(count).toBeGreaterThan(20);
+  for (const i of [0, 7, count - 1]) {
     const box = (await tiles.nth(i).boundingBox())!;
-    expect(box.height, `tile ${i} height`).toBeGreaterThanOrEqual(44);
-    expect(box.width, `tile ${i} width`).toBeGreaterThanOrEqual(44);
+    expect(box.height, `tile ${i} height`).toBeGreaterThanOrEqual(52);
+    expect(box.width, `tile ${i} width`).toBeGreaterThanOrEqual(52);
   }
+  // Each tradition shows only its own symbols; the total is the whole library.
+  let total = 0;
+  for (const i of [1, 2, 3, 4, 5, 6, 7]) {
+    await chips.nth(i).click();
+    total += await top(page).getByTestId("motif-tiles").getByRole("radio").count();
+  }
+  expect(total).toBe(47);
+  await expect(symbols(page).getByRole("radio", { name: "Muslim symbols" })).toBeVisible();
   await top(page).getByRole("button", { name: "See them larger" }).click();
   const dialog = page.getByTestId("motif-dialog");
   await expect(dialog).toBeVisible();
@@ -39,7 +55,12 @@ test("the symbol picker: None first, Ganesha next, 47 symbols by tradition, 44 p
   await expect(dialog.getByRole("region", { name: "Muslim" }).getByRole("button")).toHaveCount(5);
   await dialog.getByRole("region", { name: "Muslim" }).getByRole("button", { name: "Allah medallion" }).click();
   await expect(dialog).toBeHidden();
+  // The picker opens the chosen symbol's tradition and marks it with a dot.
   await expect(page.getByTestId("motif-allahMedallion")).toHaveAttribute("aria-checked", "true");
+  await expect(symbols(page).getByRole("radio", { name: "Muslim symbols" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByTestId("motif-view-muslim").getByTestId("motif-chosen-dot")).toBeVisible();
+  await symbols(page).getByRole("radio", { name: "Hindu symbols" }).click();
+  await expect(page.getByTestId("motif-view-muslim").getByTestId("motif-chosen-dot")).toBeVisible();
   await expect(page.getByTestId("top-summary")).toHaveText("Allah medallion · in the design's colours");
 });
 
@@ -71,6 +92,7 @@ test.describe("print and review", () => {
     test.setTimeout(180_000);
     await openNewDraft(page);
     await page.getByLabel("Name", { exact: true }).fill("Sai Teja Mandapati");
+    await top(page).getByRole("radio", { name: "Hindu symbols", exact: true }).click();
     await top(page).getByRole("radio", { name: "Ganesha", exact: true }).click();
     await top(page).getByLabel("Invocation line").selectOption("shriGaneshaya");
     await top(page).getByRole("radiogroup", { name: "Title" }).getByRole("radio", { name: "Marriage Biodata", exact: true }).click();

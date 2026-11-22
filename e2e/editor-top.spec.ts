@@ -41,7 +41,12 @@ test("a new draft has nothing at the top and no tradition fields (D21, D43)", as
   const card = top(page);
   await expect(card.getByRole("heading", { name: "Top of your biodata" })).toBeVisible();
   await expect(card.getByRole("radio", { name: "No symbol", exact: true })).toHaveAttribute("aria-checked", "true");
+  // Symbols show only after a tradition is opened (owner's request, 2026-11-22), and opening one picks nothing.
+  await expect(card.getByRole("radio", { name: "Ganesha", exact: true })).toHaveCount(0);
+  await card.getByRole("radio", { name: "Hindu symbols", exact: true }).click();
   await expect(card.getByRole("radio", { name: "Ganesha", exact: true })).toHaveAttribute("aria-checked", "false");
+  await card.getByRole("radio", { name: "No symbol", exact: true }).click();
+  await expect(card.getByRole("radio", { name: "Ganesha", exact: true })).toHaveCount(0);
   await expect(card.getByLabel("Invocation line")).toHaveValue("none");
   await expect(card.getByRole("radiogroup", { name: "Title" }).getByRole("radio", { name: "None", exact: true })).toHaveAttribute("aria-checked", "true");
   await expect(page.getByTestId("language-notice")).toContainText("Headings print in English");
@@ -62,6 +67,7 @@ test("a new draft has nothing at the top and no tradition fields (D21, D43)", as
 test("a symbol, an invocation line and a title are kept after a reload and printed (D21, D45)", async ({ page }) => {
   const id = await openNewDraft(page);
   const card = top(page);
+  await card.getByRole("radio", { name: "Hindu symbols", exact: true }).click();
   await card.getByRole("radio", { name: "Ganesha", exact: true }).click();
   await card.getByLabel("Invocation line").selectOption("shriGaneshaya");
   await expect(card.getByLabel("The line, as it prints")).toHaveValue("॥ श्री गणेशाय नमः ॥");
@@ -95,6 +101,7 @@ test("a symbol, an invocation line and a title are kept after a reload and print
 test("None puts each choice back, and a title of the user's own prints as typed", async ({ page }) => {
   const id = await openNewDraft(page);
   const card = top(page);
+  await card.getByRole("radio", { name: "Hindu symbols", exact: true }).click();
   await card.getByRole("radio", { name: "Om", exact: true }).click();
   await card.getByRole("radio", { name: "No symbol", exact: true }).click();
   await card.getByLabel("Invocation line").selectOption("own");

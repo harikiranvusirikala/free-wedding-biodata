@@ -9,7 +9,7 @@ import { accentCard, accentTile, cardTitle } from "@/components/ui/card";
 import { Dialog, DialogActions } from "@/components/ui/Dialog";
 import { field as fieldClass, fieldHint } from "@/components/ui/field";
 import { Icon } from "@/components/ui/icons";
-import { MOTIF_IDS, MOTIF_TRADITIONS, Motif, motifSections, motifTradition } from "@/document/motifs";
+import { MOTIF_IDS, MOTIF_TRADITIONS, Motif, motifSections, motifTradition, type MotifTradition } from "@/document/motifs";
 import { getPalette, getTemplate } from "@/document/templates";
 import type { Palette } from "@/document/tokens";
 import { getDocDictionary } from "@/i18n/doc";
@@ -56,8 +56,10 @@ function RadioTiles<T extends string>({
   }
   return (
     <div ref={group} role="radiogroup" aria-labelledby={labelId} onKeyDown={onKeyDown} className={className}>
-      {options.map((option) => {
+      {options.map((option, index) => {
         const checked = option.value === value;
+        // With nothing chosen in this group (a tradition's symbols before one is picked), Tab reaches the first.
+        const tabbable = checked || (index === 0 && !options.some((o) => o.value === value));
         return (
           <button
             key={option.value}
@@ -68,7 +70,7 @@ function RadioTiles<T extends string>({
             title={option.title ?? option.label}
             data-value={option.value}
             data-testid={option.testId}
-            tabIndex={checked ? 0 : -1}
+            tabIndex={tabbable ? 0 : -1}
             disabled={disabled}
             onClick={() => onChange(option.value)}
             className={`${option.className} ${focusRing}`}
@@ -83,12 +85,11 @@ function RadioTiles<T extends string>({
 }
 
 /**
- * A symbol tile. The twenty choices (None and nineteen symbols, in tradition order) sit in four rows of five on phones
- * and two rows of ten from tablets up (no ragged last row); on phones a tile is 44 px tall, from tablets up it is
- * square, and the drawing takes most of it so the details stay readable.
+ * A symbol tile: square (60 px or more on phones, five a row; eight a row from tablets up), the drawing or picture
+ * filling about 90 % of it so the details stay readable.
  */
 const TILE =
-  "flex h-11 min-w-0 items-center justify-center rounded-[10px] border transition-[border-color,box-shadow] disabled:opacity-55 sm:aspect-square sm:h-auto aria-checked:border-brand aria-checked:ring-2 aria-checked:ring-ring [&_svg]:h-[78%] [&_svg]:w-[78%] sm:[&_svg]:h-[72%] sm:[&_svg]:w-[72%]";
+  "flex aspect-square min-w-0 items-center justify-center rounded-[10px] border transition-[border-color,box-shadow] disabled:opacity-55 aria-checked:border-brand aria-checked:ring-2 aria-checked:ring-ring [&>img]:size-[90%] [&>svg]:size-[90%] sm:[&>img]:size-[86%] sm:[&>svg]:size-[86%]";
 const TILE_OFF = "border-line-strong hover:border-ink-3";
 
 const CHIP =
@@ -100,30 +101,52 @@ function MotifTile({ id, palette, size }: { id: string; palette: Palette; size: 
   return <Motif id={id} ink={palette.ink} base={palette.inkBase} paper={palette.paper} size={size} />;
 }
 
-const traditionName = (id: string) => t(`top.group.${motifTradition(id)}` as AppKey);
+type MotifView = "none" | MotifTradition;
+const viewOf = (id: string | null): MotifView => (id ? (motifTradition(id) ?? "none") : "none");
 
-/** The symbol tiles: None, then the whole library in its order (grouped by tradition), all at once. */
+/**
+ * The symbol, chosen like the title (owner's request, 2026-11-22): chips for None and each tradition, and the chosen
+ * tradition's symbols below in one grid, in the library's order. Opening a tradition only shows its symbols: nothing is picked or
+ * printed until a symbol is tapped (D21). None removes the symbol. The tradition holding the chosen symbol carries
+ * a dot, so it can be found again after looking at another one.
+ */
 function MotifPicker({ value, palette, readOnly, onChange }: { value: string | null; palette: Palette; readOnly: boolean; onChange: (id: string | null) => void }) {
   const labelId = useId();
   const [open, setOpen] = useState(false);
-  const options = [
-    {
-      value: "none",
-      label: t("top.motif.noneName"),
-      content: <span className="text-[13px] font-semibold text-ink-2">{t("top.motif.none")}</span>,
-      className: `${TILE} bg-surface ${value ? TILE_OFF : ""}`,
-      testId: "motif-none",
-    },
-    ...MOTIF_IDS.map((id) => ({
-      value: id,
-      label: motifName(id),
-      title: `${motifName(id)} · ${traditionName(id)}`,
-      content: <MotifTile id={id} palette={palette} size={30} />,
-      className: `${TILE} ${value === id ? "" : TILE_OFF}`,
-      style: { background: palette.paper },
-      testId: `motif-${id}`,
-    })),
-  ];
+  // The open tradition follows the chosen symbol when it changes from elsewhere (the dialog, Undo, another tab).
+  const [view, setView] = useState<MotifView>(() => viewOf(value));
+  const [seen, setSeen] = useState(value);
+  if (seen !== value) {
+    setSeen(value);
+    if (value) setView(viewOf(value));
+  }
+  const holding = viewOf(value);
+  const chips = (["none", ...MOTIF_TRADITIONS] as const).map((key) => {
+    const label = key === "none" ? t("top.motif.none") : t(`top.group.${key}` as AppKey);
+    const chosenHere = key !== "none" && key === holding;
+    return {
+      value: key as MotifView,
+      label: key === "none" ? t("top.motif.noneName") : t("top.motif.show", { tradition: label }),
+      content: (
+        <>
+          {label}
+          {chosenHere && <span aria-hidden className="size-1.5 rounded-full bg-brand" data-testid="motif-chosen-dot" />}
+        </>
+      ),
+      className: `${CHIP} ${key === view ? "" : CHIP_OFF}`,
+      testId: `motif-view-${key}`,
+    };
+  });
+  const ids = view === "none" ? [] : motifSections(view).flatMap((set) => set.ids);
+  const tiles = ids.map((id) => ({
+    value: id,
+    label: motifName(id),
+    content: <MotifTile id={id} palette={palette} size={44} />,
+    className: `${TILE} ${value === id ? "" : TILE_OFF}`,
+    style: { background: palette.paper },
+    testId: `motif-${id}`,
+  }));
+  const tilesId = useId();
   return (
     <div className="px-4 py-3.5 sm:px-5" data-testid="top-motif">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
@@ -136,12 +159,24 @@ function MotifPicker({ value, palette, readOnly, onChange }: { value: string | n
       </div>
       <RadioTiles
         labelId={labelId}
-        value={value ?? "none"}
-        options={options}
-        onChange={(v) => onChange(v === "none" ? null : v)}
+        value={view}
+        options={chips}
         disabled={readOnly}
-        className="mt-2 grid max-w-[37rem] grid-cols-5 gap-1.5 sm:grid-cols-10"
+        className="mt-2 flex flex-wrap gap-1.5"
+        onChange={(next) => {
+          setView(next);
+          if (next === "none") onChange(null);
+        }}
       />
+      {view !== "none" && (
+        <div className="mt-3" data-testid="motif-tiles">
+          <span id={tilesId} className="sr-only">
+            {t("top.motif.show", { tradition: t(`top.group.${view}` as AppKey) })}
+          </span>
+          {/* One grid in the library's order (Hindu: Ganesha, Ganesha in colour, Om, gods, auspicious); the dialog names the sets. */}
+          <RadioTiles labelId={tilesId} value={value ?? ""} options={tiles} onChange={onChange} disabled={readOnly} className="grid max-w-[37rem] grid-cols-5 gap-1.5 sm:grid-cols-8" />
+        </div>
+      )}
       <MotifDialog open={open} value={value} palette={palette} onClose={() => setOpen(false)} onChange={onChange} />
     </div>
   );

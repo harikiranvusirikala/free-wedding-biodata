@@ -263,6 +263,7 @@ test("top of your biodata, its pickers, the language notice and tradition chips,
     await shoot("editor-top-new", size.name);
   }
   await page.getByLabel("Name", { exact: true }).fill("Sai Teja Mandapati");
+  await card.getByRole("radio", { name: "Hindu symbols", exact: true }).click();
   await card.getByRole("radio", { name: "Ganesha", exact: true }).click();
   await card.getByLabel("Invocation line").selectOption("shriGaneshaya");
   await card.getByRole("radiogroup", { name: "Title" }).getByRole("radio", { name: "Marriage Biodata", exact: true }).click();

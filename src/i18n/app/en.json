@@ -664,6 +664,7 @@
   "top.motif.none": "None",
   "top.motif.noneName": "No symbol",
   "top.motif.all": "See them larger",
+  "top.motif.show": "{tradition} symbols",
   "top.motif.dialog.title": "Choose a symbol",
   "top.motif.dialog.text": "Our own drawings, in your design's colours. None is the default; nothing is chosen for you.",
   "top.motif.ganesha": "Ganesha",
