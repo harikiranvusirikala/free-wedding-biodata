@@ -92,7 +92,7 @@ function DownloadButtons({ root, profile }: { root: () => HTMLElement | undefine
         style={style}
         onClick={async () => {
           const { createPageImages } = await import("@/pdf");
-          (await createPageImages(root()!, { format: "jpeg" })).forEach((b, i) => save(b, pageImageFileName(profile, i + 1)));
+          (await createPageImages(root()!, { format: "jpeg" })).forEach((b, i, all) => save(b, pageImageFileName(profile, i + 1, "jpeg", all.length)));
         }}
       >
         Images

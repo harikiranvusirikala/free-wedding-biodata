@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createProfile, SAMPLE_PROFILE } from "./defaults";
-import { copyName, draftTitle, fullNameOf, isBlankDraft, renameDraft, shortName, type DraftNameWords } from "./draft-name";
+import { copyName, draftTitle, fullNameOf, isBlankDraft, renameDraft, titleName, type DraftNameWords } from "./draft-name";
 import { setFieldValue } from "./edits";
 import type { BiodataProfile } from "./types";
 
@@ -13,36 +13,29 @@ function withFullName(value: string): BiodataProfile {
   return setFieldValue(profile, field.id, value);
 }
 
-describe("shortName", () => {
+describe("titleName", () => {
   it.each([
-    ["Sai Teja Mandapati", "Sai Teja"],
-    ["Priya Sharma", "Priya"],
-    ["Lakshmi", "Lakshmi"],
-    ["  Asha   Rani  ", "Asha"],
-    ["K. Sai Teja", "Sai"],
-    ["K.S. Ravi Kumar Reddy", "Ravi Kumar"],
-    ["K", "K"],
-    ["సాయి తేజ మండపాటి", "సాయి తేజ"],
+    ["Sai Teja Mandapati", "Sai Teja Mandapati"],
+    ["Vusirikala Hari Kiran", "Vusirikala Hari Kiran"],
+    ["  Asha   Rani  ", "Asha Rani"],
+    ["K. Sai Teja", "K. Sai Teja"],
+    ["సాయి తేజ మండపాటి", "సాయి తేజ మండపాటి"],
     ["", ""],
     ["   ", ""],
-  ])("%j → %j", (full, short) => {
-    expect(shortName(full)).toBe(short);
-  });
-
-  it("falls back to the first word when the given names are very long", () => {
-    expect(shortName("Venkata Satya Naga Lakshmi Durga Prasanna Kumari Garu")).toBe("Venkata");
+  ])("%j → %j", (full, name) => {
+    expect(titleName(full)).toBe(name);
   });
 });
 
 describe("draftTitle", () => {
   it("follows the Full name until the draft has a name of its own", () => {
     expect(draftTitle({ draftName: "", fullName: "" }, WORDS)).toBe("Untitled biodata");
-    expect(draftTitle({ draftName: "", fullName: "Sai Teja Mandapati" }, WORDS)).toBe("Sai Teja's biodata");
+    expect(draftTitle({ draftName: "", fullName: "Sai Teja Mandapati" }, WORDS)).toBe("Sai Teja Mandapati's biodata");
     expect(draftTitle({ draftName: "For the Rao family", fullName: "Sai Teja Mandapati" }, WORDS)).toBe("For the Rao family");
   });
 
   it("treats a name of only spaces as no name", () => {
-    expect(draftTitle({ draftName: "   ", fullName: "Asha Rani" }, WORDS)).toBe("Asha's biodata");
+    expect(draftTitle({ draftName: "   ", fullName: "Asha Rani" }, WORDS)).toBe("Asha Rani's biodata");
   });
 
   it("reads the Full name from the draft", () => {
@@ -70,13 +63,13 @@ describe("renameDraft", () => {
     const named = renameDraft(withFullName("Asha Rani"), "Mine", later);
     const cleared = renameDraft(named, "   ", later);
     expect(cleared.draftName).toBe("");
-    expect(draftTitle({ draftName: cleared.draftName, fullName: fullNameOf(cleared) }, WORDS)).toBe("Asha's biodata");
+    expect(draftTitle({ draftName: cleared.draftName, fullName: fullNameOf(cleared) }, WORDS)).toBe("Asha Rani's biodata");
   });
 });
 
 describe("copyName", () => {
   it("adds (copy)", () => {
-    expect(copyName("Sai Teja's biodata", WORDS)).toBe("Sai Teja's biodata (copy)");
+    expect(copyName("Sai Teja Mandapati's biodata", WORDS)).toBe("Sai Teja Mandapati's biodata (copy)");
   });
 });
 

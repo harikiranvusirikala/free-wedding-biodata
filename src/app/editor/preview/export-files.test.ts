@@ -68,8 +68,8 @@ describe("saveBlob", () => {
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
       clicks.push({ href: this.href, download: this.download });
     });
-    saveBlob(new Blob(["%PDF"], { type: "application/pdf" }), "Marriage-Biodata-Sai.pdf");
-    expect(clicks).toEqual([{ href: "blob:test", download: "Marriage-Biodata-Sai.pdf" }]);
+    saveBlob(new Blob(["%PDF"], { type: "application/pdf" }), "Sai Teja Mandapati Biodata.pdf");
+    expect(clicks).toEqual([{ href: "blob:test", download: "Sai Teja Mandapati Biodata.pdf" }]);
     expect(document.querySelectorAll("a")).toHaveLength(0);
   });
 });
@@ -88,7 +88,7 @@ describe("sharing files", () => {
   });
 
   it("treats closing the share sheet as cancelled and a refused share as needing another tap", async () => {
-    const file = new File(["%PDF"], "Marriage-Biodata-Sai.pdf", { type: "application/pdf" });
+    const file = new File(["%PDF"], "Sai Teja Mandapati Biodata.pdf", { type: "application/pdf" });
     const share = vi.fn().mockRejectedValueOnce(new DOMException("closed", "AbortError")).mockRejectedValueOnce(new DOMException("no", "NotAllowedError")).mockResolvedValueOnce(undefined);
     vi.stubGlobal("navigator", { ...navigator, share, canShare: () => true });
     expect(await shareFiles([file])).toBe("cancelled");

@@ -57,19 +57,19 @@ async function actions(page: Page, isMobile: boolean) {
   return page.getByTestId("export-actions").filter({ visible: true });
 }
 
-test("Download PDF saves Marriage-Biodata-<FirstName>.pdf made from the latest edits, loading the engine only then", async ({ page, isMobile }) => {
+test("Download PDF saves <Full name> Biodata.pdf made from the latest edits, loading the engine only then", async ({ page, isMobile }) => {
   await shortDraft(page);
   expect(wasm, "the engine is not loaded with the editor").toEqual([]);
   // A change typed just before the click is in the file (the download waits for the preview to catch up).
   await page.getByLabel("Name", { exact: true }).fill("Ravi Kumar Mandapati");
   const bar = await actions(page, isMobile);
   const [download] = await Promise.all([page.waitForEvent("download"), bar.getByRole("button", { name: "Download PDF" }).click()]);
-  expect(download.suggestedFilename()).toBe("Marriage-Biodata-Ravi.pdf");
+  expect(download.suggestedFilename()).toBe("Ravi Kumar Mandapati Biodata.pdf");
   const pdf = await bytes(download);
   expect(pdf.subarray(0, 5).toString("latin1")).toBe("%PDF-");
   expect(pdf.length).toBeGreaterThan(10_000);
   expect(wasm.length, "HarfBuzz loads on the first download").toBeGreaterThan(0);
-  await expect(page.getByTestId("export-toast")).toContainText("Downloaded Marriage-Biodata-Ravi.pdf");
+  await expect(page.getByTestId("export-toast")).toContainText("Downloaded Ravi Kumar Mandapati Biodata.pdf");
   await expect(bar.getByRole("button", { name: "Download PDF" })).toBeEnabled();
 });
 
@@ -84,7 +84,7 @@ test("Save as image saves one 2480 px JPEG per page, or a PNG", async ({ page, i
   await bar.getByRole("button", { name: "Save as image" }).click();
   await page.getByRole("menuitem", { name: /^Save as JPEG/ }).click();
   await expect.poll(() => downloads.length, { timeout: 30_000 }).toBe(2);
-  expect(downloads.map((d) => d.suggestedFilename())).toEqual(["Marriage-Biodata-Sai-page-1.jpg", "Marriage-Biodata-Sai-page-2.jpg"]);
+  expect(downloads.map((d) => d.suggestedFilename())).toEqual(["Sai Teja Mandapati Biodata - page 1.jpg", "Sai Teja Mandapati Biodata - page 2.jpg"]);
   for (const d of downloads) expect(jpegSize(await bytes(d))).toEqual({ width: 2480, height: 3508 });
   await expect(page.getByTestId("export-toast")).toContainText("Downloaded 2 pictures, one per page");
 
@@ -94,7 +94,7 @@ test("Save as image saves one 2480 px JPEG per page, or a PNG", async ({ page, i
   await page.getByRole("menuitem", { name: /^Save as PNG/ }).click();
   await expect.poll(() => downloads.length, { timeout: 30_000 }).toBe(2);
   const png = await bytes(downloads[0]);
-  expect(downloads[0].suggestedFilename()).toBe("Marriage-Biodata-Sai-page-1.png");
+  expect(downloads[0].suggestedFilename()).toBe("Sai Teja Mandapati Biodata - page 1.png");
   expect(png.subarray(1, 4).toString("latin1")).toBe("PNG");
   expect(png.readUInt32BE(16)).toBe(2480);
 });
@@ -160,13 +160,13 @@ test("Share PDF hands the file to the share sheet where the browser takes files,
   await bar2.getByRole("button", { name: "Share PDF" }).click();
   await expect
     .poll(() => page.evaluate(() => (window as unknown as { __shared: unknown[] }).__shared))
-    .toEqual([[{ name: "Marriage-Biodata-Sai.pdf", type: "application/pdf", size: expect.any(Number), head: "%PDF-" }]]);
+    .toEqual([[{ name: "Sai Teja Mandapati Biodata.pdf", type: "application/pdf", size: expect.any(Number), head: "%PDF-" }]]);
   // Share as image, from the image menu: one JPEG per page.
   await bar2.getByRole("button", { name: "Save as image" }).click();
   await page.getByRole("menuitem", { name: /^Share as image/ }).click();
   await expect.poll(() => page.evaluate(() => (window as unknown as { __shared: { name: string }[][] }).__shared.length)).toBe(2);
   const images = await page.evaluate(() => (window as unknown as { __shared: { name: string; type: string }[][] }).__shared[1]);
-  expect(images.map((f) => [f.name, f.type])).toEqual([["Marriage-Biodata-Sai-page-1.jpg", "image/jpeg"]]);
+  expect(images.map((f) => [f.name, f.type])).toEqual([["Sai Teja Mandapati Biodata.jpg", "image/jpeg"]]);
 });
 
 test("the editor's page images match the Download engine run on the same draft's true-size pages", async ({ page, isMobile }) => {

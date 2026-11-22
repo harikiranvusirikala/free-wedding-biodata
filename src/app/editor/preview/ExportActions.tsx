@@ -163,7 +163,7 @@ export function useExport(source: ExportSource) {
       async () => {
         const profile = source.profile();
         const blobs = await makeImages(format);
-        const files = blobs.map((blob, i) => ({ blob, name: pageImageFileName(profile, i + 1, format) }));
+        const files = blobs.map((blob, i) => ({ blob, name: pageImageFileName(profile, i + 1, format, blobs.length) }));
         await saveBlobs(files);
         show("good", files.length === 1 ? t("export.done.image", { name: files[0].name }) : t("export.done.images", { count: files.length }));
       },
@@ -176,7 +176,7 @@ export function useExport(source: ExportSource) {
       async () => {
         const profile = source.profile();
         const blobs = await makeImages("jpeg");
-        const files = blobs.map((blob, i) => new File([blob], pageImageFileName(profile, i + 1, "jpeg"), { type: JPEG }));
+        const files = blobs.map((blob, i) => new File([blob], pageImageFileName(profile, i + 1, "jpeg", blobs.length), { type: JPEG }));
         await shareOrOffer(files, pdfTitle(profile), "export.ready.images");
       },
       "export.failed.share",

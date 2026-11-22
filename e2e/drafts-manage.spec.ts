@@ -62,7 +62,7 @@ test("a draft is named from the Full name, and two drafts switch through the men
   await newDraft(page);
   await expect(title(page)).toHaveText("Untitled biodata");
   await fullName(page).fill("Sai Teja Mandapati");
-  await expect(title(page)).toHaveText("Sai Teja's biodata");
+  await expect(title(page)).toHaveText("Sai Teja Mandapati's biodata");
   await expect(status(page)).toHaveText(SAVED);
   const first = idOf(page);
 
@@ -76,16 +76,16 @@ test("a draft is named from the Full name, and two drafts switch through the men
   await expect(status(page)).toHaveText(SAVED);
 
   await openMenu(page);
-  await expect(listed(page)).toHaveText([/Asha's biodata\s*Edited just now/, /Sai Teja's biodata\s*Edited just now/]);
+  await expect(listed(page)).toHaveText([/Asha Rani's biodata\s*Edited just now/, /Sai Teja Mandapati's biodata\s*Edited just now/]);
   await expect(listed(page).first()).toHaveAttribute("aria-checked", "true");
-  await listed(page).filter({ hasText: "Sai Teja's biodata" }).click();
+  await listed(page).filter({ hasText: "Sai Teja Mandapati's biodata" }).click();
   await expect(page).toHaveURL(`/editor?d=${first}`);
   await expect(fullName(page)).toHaveValue("Sai Teja Mandapati");
 
   // Switching writes what was just typed first, inside autosave's pause.
   await fullName(page).fill("Sai Teja M");
   await openMenu(page);
-  await listed(page).filter({ hasText: "Asha's biodata" }).click();
+  await listed(page).filter({ hasText: "Asha Rani's biodata" }).click();
   await expect(page).toHaveURL(`/editor?d=${second}`);
   await page.goto(`/editor?d=${first}`);
   await expect(fullName(page)).toHaveValue("Sai Teja M");
@@ -115,7 +115,7 @@ test("rename shows the name in the menu only, and an empty name goes back to the
   await expect(dialog.getByLabel("Draft name")).toHaveValue("For the Rao family");
   await dialog.getByLabel("Draft name").fill("");
   await dialog.getByRole("button", { name: "Save name" }).click();
-  await expect(title(page)).toHaveText("Sai Teja's biodata");
+  await expect(title(page)).toHaveText("Sai Teja Mandapati's biodata");
 });
 
 test("duplicate makes a copy with the same values under a new address", async ({ page }) => {
@@ -126,7 +126,7 @@ test("duplicate makes a copy with the same values under a new address", async ({
   await choose(page, "Duplicate");
   await expect(page).not.toHaveURL(`/editor?d=${original}`);
   await expect(page).toHaveURL(DRAFT_URL);
-  await expect(title(page)).toHaveText("Sai Teja's biodata (copy)");
+  await expect(title(page)).toHaveText("Sai Teja Mandapati's biodata (copy)");
   await expect(fullName(page)).toHaveValue("Sai Teja Mandapati");
   await expect(page.getByLabel("Place of Birth", { exact: true })).toHaveValue("Hyderabad");
 
@@ -135,7 +135,7 @@ test("duplicate makes a copy with the same values under a new address", async ({
   await expect(status(page)).toHaveText(SAVED);
   await openMenu(page);
   await expect(listed(page)).toHaveCount(2);
-  await listed(page).filter({ hasText: /^Sai Teja's biodata\s*Edited/ }).click();
+  await listed(page).filter({ hasText: /^Sai Teja Mandapati's biodata\s*Edited/ }).click();
   await expect(page).toHaveURL(`/editor?d=${original}`);
   await expect(page.getByLabel("Place of Birth", { exact: true })).toHaveValue("Hyderabad");
 });
@@ -145,7 +145,7 @@ test("delete asks first, then opens the newest remaining draft, and a new one af
   await newDraft(page, "Asha Rani");
 
   await choose(page, "Delete…");
-  const dialog = page.getByRole("dialog", { name: "Delete “Asha's biodata”?" });
+  const dialog = page.getByRole("dialog", { name: "Delete “Asha Rani's biodata”?" });
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText("It can't be undone");
   await dialog.getByRole("button", { name: "Cancel" }).click();
@@ -159,11 +159,11 @@ test("delete asks first, then opens the newest remaining draft, and a new one af
   await expect(page).toHaveURL(`/editor?d=${first}`);
   await expect(fullName(page)).toHaveValue("Sai Teja Mandapati");
   await openMenu(page);
-  await expect(listed(page)).toHaveText([/Sai Teja's biodata/]);
+  await expect(listed(page)).toHaveText([/Sai Teja Mandapati's biodata/]);
   await page.keyboard.press("Escape");
 
   await choose(page, "Delete…");
-  await page.getByRole("dialog", { name: "Delete “Sai Teja's biodata”?" }).getByRole("button", { name: "Delete draft" }).click();
+  await page.getByRole("dialog", { name: "Delete “Sai Teja Mandapati's biodata”?" }).getByRole("button", { name: "Delete draft" }).click();
   await expect(page).toHaveURL(DRAFT_URL);
   await expect(page).not.toHaveURL(`/editor?d=${first}`);
   await expect(title(page)).toHaveText("Untitled biodata");
@@ -214,7 +214,7 @@ test("the landing page offers Continue editing only when a draft exists, and Cre
   await expect(status(page)).toHaveText(SAVED);
 
   await page.goto("/");
-  const resume = page.getByRole("link", { name: "Continue editing Sai Teja's biodata" });
+  const resume = page.getByRole("link", { name: "Continue editing Sai Teja Mandapati's biodata" });
   await expect(resume).toBeVisible();
   await expect(resume).toHaveAttribute("href", `/editor?d=${first}`);
   await resume.click();
@@ -270,7 +270,7 @@ test("Delete all my local data works from the privacy page too", async ({ page }
 
 test("the drafts menu works from the keyboard", async ({ page }) => {
   await newDraft(page, "Sai Teja Mandapati");
-  const button = page.getByRole("banner").getByRole("button", { name: "Sai Teja's biodata" });
+  const button = page.getByRole("banner").getByRole("button", { name: "Sai Teja Mandapati's biodata" });
   await button.focus();
   await page.keyboard.press("Enter");
   await expect(menu(page)).toBeVisible();

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SAMPLE_PROFILE } from "./defaults";
-import { fileFirstName, pageImageFileName, pdfFileName, sanitizeFilePart } from "./filename";
+import { pageImageFileName, pdfFileName, sanitizeFileName } from "./filename";
 import type { BiodataProfile } from "./types";
 
 const withName = (fullName: string): BiodataProfile => {
@@ -9,39 +9,40 @@ const withName = (fullName: string): BiodataProfile => {
   return p;
 };
 
-describe("pdfFileName", () => {
-  it("uses the first name of the sample profile", () => {
-    expect(pdfFileName(SAMPLE_PROFILE)).toBe("Marriage-Biodata-Sai.pdf");
-    expect(pageImageFileName(SAMPLE_PROFILE, 1)).toBe("Marriage-Biodata-Sai-page-1.jpg");
-    expect(pageImageFileName(SAMPLE_PROFILE, 2, "png")).toBe("Marriage-Biodata-Sai-page-2.png");
+describe("download filenames: <Full name> Biodata", () => {
+  it("uses the whole Full name", () => {
+    expect(pdfFileName(SAMPLE_PROFILE)).toBe("Sai Teja Mandapati Biodata.pdf");
+    expect(pdfFileName(withName("Vusirikala Hari Kiran"))).toBe("Vusirikala Hari Kiran Biodata.pdf");
+    expect(pageImageFileName(SAMPLE_PROFILE, 1, "jpeg", 2)).toBe("Sai Teja Mandapati Biodata - page 1.jpg");
+    expect(pageImageFileName(SAMPLE_PROFILE, 2, "png", 2)).toBe("Sai Teja Mandapati Biodata - page 2.png");
+    expect(pageImageFileName(SAMPLE_PROFILE, 1, "jpeg", 1)).toBe("Sai Teja Mandapati Biodata.jpg");
+    expect(pageImageFileName(SAMPLE_PROFILE, 1)).toBe("Sai Teja Mandapati Biodata - page 1.jpg");
   });
 
-  it("skips initials and keeps Indian scripts whole", () => {
-    expect(fileFirstName("K. Sai Teja")).toBe("Sai");
-    expect(fileFirstName("K.S. Lakshmi")).toBe("Lakshmi");
-    expect(pdfFileName(withName("సాయి తేజ మండపాటి"))).toBe("Marriage-Biodata-సాయి.pdf");
-    expect(fileFirstName("श्रीकांत")).toBe("श्रीकांत");
+  it("keeps any script, initials, apostrophes and hyphens; tidies spaces", () => {
+    expect(pdfFileName(withName("సాయి తేజ మండపాటి"))).toBe("సాయి తేజ మండపాటి Biodata.pdf");
+    expect(pdfFileName(withName("  K.  Sai   Teja "))).toBe("K Sai Teja Biodata.pdf");
+    expect(pdfFileName(withName("Anita D'Souza-Rao"))).toBe("Anita D'Souza-Rao Biodata.pdf");
+    expect(sanitizeFileName("श्रीकांत")).toBe("श्रीकांत");
   });
 
-  it("sanitises anything unsafe in a filename", () => {
-    expect(pdfFileName(withName("../../etc/passwd"))).toBe("Marriage-Biodata-etc-passwd.pdf");
-    expect(pdfFileName(withName('Ra"vi<>:*?|'))).toBe("Marriage-Biodata-Ra-vi.pdf");
-    expect(pdfFileName(withName("Priya\u0000‮"))).toBe("Marriage-Biodata-Priya.pdf");
-    expect(pdfFileName(withName("🙂 Anu"))).toBe("Marriage-Biodata-Anu.pdf");
-    expect(sanitizeFilePart("Mary-Ann")).toBe("Mary-Ann");
+  it("drops anything unsafe on some system", () => {
+    expect(pdfFileName(withName("../../etc/passwd"))).toBe("etc passwd Biodata.pdf");
+    expect(pdfFileName(withName('Ra"vi<>:*?|'))).toBe("Ra vi Biodata.pdf");
+    expect(pdfFileName(withName("Priya\u0000\u202e"))).toBe("Priya Biodata.pdf");
+    expect(pdfFileName(withName("🙂 Anu"))).toBe("Anu Biodata.pdf");
   });
 
-  it("falls back to the plain name with no usable name", () => {
-    expect(pdfFileName(withName(""))).toBe("Marriage-Biodata.pdf");
-    expect(pdfFileName(withName("   ...  "))).toBe("Marriage-Biodata.pdf");
-    expect(pageImageFileName(withName(""), 3)).toBe("Marriage-Biodata-page-3.jpg");
+  it("falls back to Marriage Biodata without a name", () => {
+    expect(pdfFileName(withName(""))).toBe("Marriage Biodata.pdf");
+    expect(pdfFileName(withName("   ...  "))).toBe("Marriage Biodata.pdf");
+    expect(pageImageFileName(withName(""), 3, "jpeg", 3)).toBe("Marriage Biodata - page 3.jpg");
   });
 
-  it("keeps a very long name to 40 characters without splitting a cluster", () => {
-    const name = fileFirstName("A".repeat(80));
-    expect(name).toHaveLength(40);
-    const telugu = fileFirstName("క్ష".repeat(50));
-    expect([...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(telugu)]).toHaveLength(40);
-    expect(telugu.endsWith("క్ష")).toBe(true);
+  it("caps a very long name between letters", () => {
+    expect(sanitizeFileName("A".repeat(80))).toHaveLength(60);
+    const telugu = sanitizeFileName("క్ష".repeat(50));
+    expect(telugu.length % "క్ష".length).toBe(0);
+    expect(sanitizeFileName("Ab ".repeat(30))).not.toMatch(/\s$/);
   });
 });

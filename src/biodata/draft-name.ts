@@ -5,7 +5,7 @@ import type { BiodataProfile } from "./types";
 // document has no idea it exists (VISION D35, nothing printed but the user's content).
 //
 // The rule: a stored `draftName` of "" means "automatic". An automatic name follows the Full name as it is typed
-// ("Sai Teja Mandapati" → "Sai Teja's biodata"), or is "Untitled biodata" while there is none. Renaming stores the
+// ("Sai Teja Mandapati" → "Sai Teja Mandapati's biodata"), or is "Untitled biodata" while there is none. Renaming stores the
 // typed name, which then stays put whatever the Full name becomes; renaming to nothing goes back to automatic.
 // So nothing is written to the draft as the name changes, and an old draft picks the rule up with no migration.
 //
@@ -20,25 +20,13 @@ export interface DraftNameWords {
   copy: string;
 }
 
-/** A name longer than this is shortened to its first word in an automatic draft name. */
-const LONG_NAME = 32;
-
-/** "K." or "K" or "K.S.": an initial, skipped when there are other words. */
-const INITIALS = /^(\p{L}\.)+$|^\p{L}$/u;
-
 /**
- * The part of a Full name an automatic draft name uses: the given name(s) without the family name, so
- * "Sai Teja Mandapati" → "Sai Teja", "Priya Sharma" → "Priya", "Lakshmi" → "Lakshmi". Initials are skipped
- * ("K. Sai Teja" → "Sai"), and a very long result falls back to the first word. Not a judgement about
- * which word is the family name in every tradition, just a short, recognisable label; the user can rename it.
+ * The name an automatic draft name uses: the whole Full name as typed, spaces tidied ("Vusirikala  Hari Kiran" →
+ * "Vusirikala Hari Kiran"; owner's choice 2026-11-22, it used to be the given names only). The header and menus
+ * cut a name too long for them with an ellipsis.
  */
-export function shortName(fullName: string): string {
-  const words = fullName.trim().split(/\s+/u).filter(Boolean);
-  const named = words.filter((word) => !INITIALS.test(word));
-  const use = named.length ? named : words;
-  if (use.length === 0) return "";
-  const short = use.length <= 2 ? use[0] : use.slice(0, -1).join(" ");
-  return short.length > LONG_NAME ? use[0] : short;
+export function titleName(fullName: string): string {
+  return fullName.trim().split(/\s+/u).filter(Boolean).join(" ");
 }
 
 /** The Full name typed in the draft (the first field with the fullName key), or "". */
@@ -55,8 +43,8 @@ export function fullNameOf(profile: Pick<BiodataProfile, "sections">): string {
 export function draftTitle({ draftName, fullName }: { draftName: string; fullName: string }, words: DraftNameWords): string {
   const own = draftName.trim();
   if (own) return own;
-  const short = shortName(fullName);
-  return short ? words.named.replace("{name}", short) : words.untitled;
+  const name = titleName(fullName);
+  return name ? words.named.replace("{name}", name) : words.untitled;
 }
 
 /** A duplicate's name: "<name> (copy)", stored, so the copy keeps it even when its Full name changes. */

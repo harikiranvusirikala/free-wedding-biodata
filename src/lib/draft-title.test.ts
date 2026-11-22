@@ -7,9 +7,9 @@ const ago = (ms: number) => new Date(NOW.getTime() - ms).toISOString();
 describe("titleOf", () => {
   it("uses the app's words", () => {
     expect(titleOf({ draftName: "", fullName: "" })).toBe("Untitled biodata");
-    expect(titleOf({ draftName: "", fullName: "Sai Teja Mandapati" })).toBe("Sai Teja's biodata");
+    expect(titleOf({ draftName: "", fullName: "Sai Teja Mandapati" })).toBe("Sai Teja Mandapati's biodata");
     expect(titleOf({ draftName: "Mine", fullName: "Sai Teja Mandapati" })).toBe("Mine");
-    expect(copyTitleOf({ draftName: "", fullName: "Asha Rani" })).toBe("Asha's biodata (copy)");
+    expect(copyTitleOf({ draftName: "", fullName: "Asha Rani" })).toBe("Asha Rani's biodata (copy)");
   });
 });
 
