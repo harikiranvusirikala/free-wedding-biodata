@@ -9,7 +9,7 @@ import { accentCard, accentTile, cardTitle } from "@/components/ui/card";
 import { Dialog, DialogActions } from "@/components/ui/Dialog";
 import { field as fieldClass, fieldHint } from "@/components/ui/field";
 import { Icon } from "@/components/ui/icons";
-import { MOTIF_IDS, MOTIF_TRADITIONS, Motif, motifSections, motifTradition, type MotifTradition } from "@/document/motifs";
+import { MOTIF_IDS, MOTIF_TRADITIONS, Motif, motifInDesignColours, motifSections, motifTradition, type MotifTradition } from "@/document/motifs";
 import { getPalette, getTemplate } from "@/document/templates";
 import type { Palette } from "@/document/tokens";
 import { getDocDictionary } from "@/i18n/doc";
@@ -18,10 +18,10 @@ import en from "@/i18n/app/en.json";
 import type { Edit } from "./FieldRow";
 
 // "Top of your biodata" (BUILD_PLAN Step 2.0, VISION D21, D43, D45; mockup: editor), the form's first card: a
-// symbol (our own drawings, as small tiles in the design's colours), an invocation line and a title. Each starts at
-// None and nothing is ever chosen for the user or inferred from the Religion field. A picked line is copied in as
-// text, so it can be edited and prints exactly as shown. Memoised on the options, so typing elsewhere doesn't
-// re-render it.
+// symbol (drawings and pictures, as small tiles in the design's colours or, for colour pictures, their own), an
+// invocation line and a title. Each starts at None and nothing is ever chosen for the user or inferred from the
+// Religion field. A picked line is copied in as text, so it can be edited and prints exactly as shown. Memoised on
+// the options, so typing elsewhere doesn't re-render it.
 
 export const TOP_ID = "top";
 
@@ -402,7 +402,8 @@ function summary(options: ProfileOptions, lang: LangCode): string {
     parts.push(Object.hasOwn(titles, title.key) ? titles[title.key as keyof typeof titles] : title.key);
   } else if (title.kind === "custom" && title.text.trim()) parts.push(title.text.trim());
   if (!parts.length) return t("top.summary.none");
-  if (options.motif) parts.push(t("top.summary.colour"));
+  // Honest about colour: drawn symbols and the gold pictures take the design's colours; colour pictures don't.
+  if (options.motif) parts.push(t(motifInDesignColours(options.motif) ? "top.summary.colour" : "top.summary.ownColours"));
   return parts.join(" · ");
 }
 

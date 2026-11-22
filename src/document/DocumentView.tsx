@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { DocModel } from "@/biodata/document";
 import { blockPhoto, type PhotoInput, type PhotoPagesInput } from "./blocks/types";
 import { layoutDocument, loadDocumentFonts, loadElementFonts, type DocumentLayout } from "./measure";
+import { tintMotif } from "./motifs";
 import { Page } from "./Page";
 import { inputPageCounts } from "./photo-pages";
 import { PhotoPageSet } from "./PhotoPages";
@@ -57,6 +58,7 @@ export function DocumentView({ doc, photo, secondPhoto: secondInput, photoPages,
   const contentWidth = PAGE.width - box0.left - box0.right;
 
   const measureRef = useRef<HTMLDivElement>(null);
+  const ink = palette.ink;
   const [state, setState] = useState<{ layout: DocumentLayout; specs: typeof specs; doc: DocModel; photo?: PhotoInput; secondPhoto?: PhotoInput } | null>(null);
   const fresh = state?.specs === specs && state.doc === doc;
   const onLayoutRef = useRef(onLayout);
@@ -67,7 +69,9 @@ export function DocumentView({ doc, photo, secondPhoto: secondInput, photoPages,
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      await loadDocumentFonts(doc.lang);
+      // A gold symbol picture is recoloured in the design's ink first (motifs/tinted.ts): the pages then show the
+      // tinted one from their first paint, so nothing marked ready ever holds the untinted picture. Same size.
+      await Promise.all([loadDocumentFonts(doc.lang), tintMotif(doc.motif, ink)]);
       const root = measureRef.current;
       if (cancelled || !root) return;
       // Text in another script (a Telugu name on an English page) brings its own fonts: loaded before measuring.
@@ -85,7 +89,7 @@ export function DocumentView({ doc, photo, secondPhoto: secondInput, photoPages,
     return () => {
       cancelled = true;
     };
-  }, [doc, photo, secondPhoto, specs, steps, template, relaxSpacing]);
+  }, [doc, photo, secondPhoto, specs, steps, template, relaxSpacing, ink]);
 
   const shown = state;
   const { BlockView } = template;

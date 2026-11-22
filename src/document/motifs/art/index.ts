@@ -2,6 +2,8 @@
 // gold (scripts/motif-art.mts), the Ganesha and Om pictures, and the symbols from their sheet (scripts/motif-sheet.mts).
 // Pictures are imported as files, so Next gives each a URL; the PDF writer fetches them when it prints. Colour
 // pictures (the deity and Ganesha illustrations) keep their own colours: the document colour doesn't apply to them.
+// The gold ones are recoloured in the design's colours in the browser (../tone.ts, ../tinted.ts); the files stay
+// exactly as they are.
 import ganeshaLine from "./ganesha-line.png";
 import ganeshaOutline from "./ganesha-outline.png";
 import ganeshaStencil from "./ganesha-stencil.png";

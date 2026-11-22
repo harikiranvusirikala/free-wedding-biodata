@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import en from "@/i18n/app/en.json";
 import { IDENTITY } from "@/pdf/matrix";
 import { svgToPdf } from "@/pdf/svg-to-pdf";
-import { DRAWN_IDS, HINDU_SECTIONS, MOTIF_IDS, MOTIF_TRADITIONS, MOTIFS_AWAITING_REVIEW, Motif, PICTURE_IDS, isMotif, motifSections, motifTradition } from "./index";
+import { DRAWN_IDS, HINDU_SECTIONS, MOTIF_IDS, MOTIF_TRADITIONS, MOTIFS_AWAITING_REVIEW, Motif, PICTURE_IDS, TINTED_PICTURE_IDS, isMotif, motifInDesignColours, motifSections, motifTradition } from "./index";
 
 // The motif library (Step 2.0, redrawn 2026-11-22; VISION D21, D45, D47): every drawing renders in the template's
 // colours with only the SVG the PDF writer draws (src/pdf/svg-to-pdf.ts), no font glyphs, and None draws nothing.
@@ -68,12 +68,30 @@ describe("motif library", () => {
     for (const id of MOTIF_IDS) expect(Object.hasOwn(en, `top.motif.${id}`), id).toBe(true);
   });
 
-  it("shows each picture as an image of its own file", () => {
+  it("prints the single-colour pictures in the design's colours and keeps the colour pictures' own", () => {
+    // Measured (hues and saturation of the opaque pixels: one gold hue, no white) and checked by eye, 2026-11-22.
+    const tinted = ["ganesha", "ganeshaLine", "ganeshaOutline", "ganeshaStencil", "ganeshaSeatedRight", "ganeshaSeatedLeft", "ganeshaMandala", "ganeshaLotus", "ganeshaThrone", "ganeshaTrunk"];
+    tinted.push("omGold", "omMandala", "ganeshaNamah", "allahWreath", "allahMedallionSheet", "crossLatinSheet", "crossBuddedSheet", "ikOnkarDisc", "khandaSheet", "jainHand", "jainMotto", "dharmaLight", "dharmaSolid");
+    expect([...TINTED_PICTURE_IDS].sort()).toEqual(tinted.sort());
+    const colour = PICTURE_IDS.filter((id) => !TINTED_PICTURE_IDS.includes(id));
+    expect(colour.sort()).toEqual(["ganeshaLotusFrame", "ganeshaOrangeFrame", "ganeshaSeated", "ganeshaTrident", "omSeal", "ramaWithBow", "venkateswara"]);
+    for (const id of [...DRAWN_IDS, ...TINTED_PICTURE_IDS, "ganeshaOrnate"]) expect(motifInDesignColours(id), id).toBe(true);
+    for (const id of colour) expect(motifInDesignColours(id), id).toBe(false);
+  });
+
+  it("shows a colour picture as an image of its own file, and a gold one as an empty box until it is tinted", () => {
     for (const id of PICTURE_IDS) {
-      const svg = draw(id);
-      expect(svg, id).toMatch(/<img [^>]*src="[^"]+"/);
-      expect(svg, id).toContain('width="96" height="96"');
-      expect(svg, id).not.toContain("<svg");
+      const html = draw(id);
+      expect(html, id).not.toContain("<svg");
+      if (TINTED_PICTURE_IDS.includes(id)) {
+        // Rendered before the browser has recoloured it (the server, the first paint): never the gold original.
+        expect(html, id).not.toContain("<img");
+        expect(html, id).toContain("data-motif-pending");
+        expect(html, id).toContain("width:96px;height:96px");
+      } else {
+        expect(html, id).toMatch(/<img [^>]*src="[^"]+"/);
+        expect(html, id).toContain('width="96" height="96"');
+      }
     }
   });
 

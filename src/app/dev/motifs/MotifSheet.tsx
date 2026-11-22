@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { MOTIF_IDS, Motif, motifTradition } from "@/document/motifs";
+import { MOTIF_IDS, Motif, motifTradition, tintMotif } from "@/document/motifs";
 import { Page } from "@/document/Page";
 import { loadDocumentFonts } from "@/document/measure";
 import { getPalette, getTemplate } from "@/document/templates";
@@ -10,8 +10,9 @@ import { t, type AppKey } from "@/lib/i18n";
 import "@/document/document.css";
 import { pdfHarness, type PdfHarness } from "../pdf/harness";
 
-// See page.tsx. When the fonts are ready, <body data-motifs-ready> is set and window.__motifs(i) runs the PDF
-// writer and the page images on the i-th A4 page.
+// See page.tsx. When the fonts are ready and every gold picture is recoloured in each palette (no symbol is still
+// an empty box), <body data-motifs-ready> is set and window.__motifs(i) runs the PDF writer and the page images on
+// the i-th A4 page.
 
 declare global {
   interface Window {
@@ -24,6 +25,9 @@ const PALETTES: { name: string; palette: Palette }[] = [
   { name: "Royal Maroon", palette: getPalette(getTemplate("royal-maroon"), "maroon") },
   { name: "Executive Navy", palette: getPalette(getTemplate("executive-navy"), "navy") },
   { name: "Deepam, night", palette: getPalette(getTemplate("deepam"), "night") },
+  { name: "Peacock, teal", palette: getPalette(getTemplate("peacock"), "teal") },
+  { name: "Peacock, festive emerald", palette: getPalette(getTemplate("peacock"), "emerald") },
+  { name: "Minimal Ivory, ink", palette: getPalette(getTemplate("minimal-ivory"), "ink") },
 ];
 
 const name = (id: string) => t(`top.motif.${id}` as AppKey);
@@ -52,7 +56,10 @@ export function MotifSheet() {
   const pages = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let cancelled = false;
-    loadDocumentFonts("en").then(() => {
+    const tinted = Promise.all(PALETTES.flatMap(({ palette }) => MOTIF_IDS.map((id) => tintMotif(id, palette.ink))));
+    Promise.all([loadDocumentFonts("en"), tinted]).then(async () => {
+      // The symbols re-render with their tinted pictures as those arrive: wait until none is still pending.
+      while (!cancelled && document.querySelector("[data-motif-pending]")) await new Promise(requestAnimationFrame);
       if (cancelled) return;
       window.__motifs = (i) => pdfHarness(() => pages.current!.querySelectorAll("[data-sheet-page]")[i]);
       document.body.dataset.motifsReady = "1";
