@@ -397,7 +397,7 @@ For **Download PDF** the spike compares:
 
 ### Image export (D38)
 
-- **Save as image** produces one image per page: JPEG by default (small enough for WhatsApp), PNG on request, A4 proportions at about 1240 × 1754 px (150 dpi) so text stays sharp when zoomed on a phone. Files are named `Marriage-Biodata-FirstName-page-1.jpg`.
+- **Save as image** produces one image per page: JPEG by default (small enough for WhatsApp), PNG on request, A4 at 2480 × 3508 px (300 dpi, print quality), so it prints as sharply as the PDF and text stays crisp when zoomed on a phone (under the 16.7-megapixel canvas limit of older iPhones). Files are named `Marriage-Biodata-FirstName-page-1.jpg`.
 - It is drawn from the **same laid-out pages and the same shaping** as the PDF (the Download engine's display list drawn onto a canvas), never a separate layout, so the image and the PDF match.
 - Where `navigator.canShare({ files })` is true, **Share image** sends the page image(s) straight to WhatsApp (status or chat); elsewhere the image downloads.
 - Entirely client-side, no watermark, no site name, same omission of hidden/empty fields as the PDF.

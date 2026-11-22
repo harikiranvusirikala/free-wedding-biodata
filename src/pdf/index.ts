@@ -25,7 +25,7 @@ export interface CreatePdfOptions {
 
 export interface PageImageOptions {
   format: "jpeg" | "png";
-  /** Image width in px (default 1240: A4 at 150 dpi, 1240 × 1754, VISION D38). */
+  /** Image width in px (default 2480: A4 at 300 dpi, 2480 × 3508, print quality; VISION D38). */
   width?: number;
   /** JPEG quality (default 0.92). */
   quality?: number;
@@ -108,7 +108,7 @@ export async function createPageImages(pagesRoot: ParentNode, options: PageImage
   const type = options.format === "png" ? "image/png" : "image/jpeg";
   const out: Blob[] = [];
   for (const page of list.pages) {
-    const canvas = await drawPage(page, options.width ?? 1240);
+    const canvas = await drawPage(page, options.width ?? 2480);
     out.push(await canvasToBlob(canvas, type, options.format === "png" ? undefined : (options.quality ?? 0.92)));
     canvas.width = canvas.height = 0; // free the bitmap now (phones keep few canvases)
     options.onProgress?.(out.length, list.pages.length);
