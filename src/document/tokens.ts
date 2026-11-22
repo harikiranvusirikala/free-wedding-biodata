@@ -72,16 +72,29 @@ export const FONT_FAMILY: Record<LangCode, string> = {
  * metrics set line boxes and baselines. The PDF writer falls back per glyph with the same ranges (src/pdf, D49).
  */
 const INDIC_COMMON = "U+0020, U+00A0, U+0964-0965, U+200B-200D, U+25CC";
-export const FONT_UNICODE_RANGE: Readonly<Record<string, string>> = {
-  "Noto Sans Telugu": `U+0C00-0C7F, ${INDIC_COMMON}`,
-  "Noto Sans Devanagari": `U+0900-097F, U+1CD0-1CFF, U+A8E0-A8FF, ${INDIC_COMMON}`,
-  "Noto Sans Tamil": `U+0B80-0BFF, ${INDIC_COMMON}`,
-  "Noto Sans Kannada": `U+0C80-0CFF, ${INDIC_COMMON}`,
-  "Noto Sans Malayalam": `U+0D00-0D7F, ${INDIC_COMMON}`,
-  "Noto Sans Gujarati": `U+0A80-0AFF, ${INDIC_COMMON}`,
-  "Noto Sans Bengali": `U+0980-09FF, ${INDIC_COMMON}`,
-  "Noto Sans Gurmukhi": `U+0A00-0A7F, ${INDIC_COMMON}`,
+
+/** Each script font's own script blocks: the part of its unicode-range no other font is chosen for. */
+export const SCRIPT_RANGE: Readonly<Record<string, string>> = {
+  "Noto Sans Telugu": "U+0C00-0C7F",
+  "Noto Sans Devanagari": "U+0900-097F, U+1CD0-1CFF, U+A8E0-A8FF",
+  "Noto Sans Tamil": "U+0B80-0BFF",
+  "Noto Sans Kannada": "U+0C80-0CFF",
+  "Noto Sans Malayalam": "U+0D00-0D7F",
+  "Noto Sans Gujarati": "U+0A80-0AFF",
+  "Noto Sans Bengali": "U+0980-09FF",
+  "Noto Sans Gurmukhi": "U+0A00-0A7F",
 };
+
+export const FONT_UNICODE_RANGE: Readonly<Record<string, string>> = Object.fromEntries(
+  Object.entries(SCRIPT_RANGE).map(([family, own]) => [family, `${own}, ${INDIC_COMMON}`]),
+);
+
+/**
+ * The script blocks Noto Sans itself draws (its @font-face has no unicode-range): the Google Fonts build carries
+ * the whole Devanagari block (and U+A8FF), with the same glyphs and advances as Noto Sans Devanagari, so Hindi typed on a page
+ * whose fonts end in Noto Sans needs no extra font (scripts.ts). A test checks this against the TTF.
+ */
+export const NOTO_SANS_SCRIPT_RANGE = "U+0900-097F, U+A8FF";
 
 /** The CSS font stack for a document language: its script font first (limited to its script), then Noto Sans. */
 export function fontStack(lang: LangCode): string {

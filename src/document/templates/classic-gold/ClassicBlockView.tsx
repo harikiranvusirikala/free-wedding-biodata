@@ -94,7 +94,7 @@ function TopElement({ doc, palette }: { doc: DocModel; palette: Palette }) {
 
 function Rows({ rows, doc, palette, wide }: { rows: DocRow[]; doc: DocModel; palette: Palette; wide: boolean }) {
   const look = row(doc, palette, wide);
-  return rows.map((r) => <Row key={r.id} label={r.label} value={r.value} note={r.note} multiline={r.multiline} look={look} />);
+  return rows.map((r) => <Row lang={doc.lang} key={r.id} label={r.label} value={r.value} note={r.note} multiline={r.multiline} look={look} />);
 }
 
 export function ClassicBlockView({ block, doc, palette, photo, text, continued }: BlockViewProps) {
@@ -102,12 +102,13 @@ export function ClassicBlockView({ block, doc, palette, photo, text, continued }
     case "header":
       return <TopElement doc={doc} palette={palette} />;
     case "heading":
-      return <HeadingBar title={block.title} look={heading(doc, palette)} />;
+      return <HeadingBar lang={doc.lang} title={block.title} look={heading(doc, palette)} />;
     case "row":
-      return <Row label={block.row.label} value={block.row.value} note={block.row.note} multiline={block.row.multiline} look={row(doc, palette, block.wide)} />;
+      return <Row lang={doc.lang} label={block.row.label} value={block.row.value} note={block.row.note} multiline={block.row.multiline} look={row(doc, palette, block.wide)} />;
     case "paragraph":
       return (
         <Paragraph
+          lang={doc.lang}
           text={text ?? block.paragraph.text}
           label={block.showLabel && !continued ? block.paragraph.label : undefined}
           look={paragraph(doc, palette)}
@@ -124,12 +125,12 @@ export function ClassicBlockView({ block, doc, palette, photo, text, continued }
       return (
         <div style={{ display: "flex", alignItems: "flex-start", gap: PHOTO_GAP }}>
           <div style={{ flex: "1 1 0", minWidth: 0 }}>
-            <HeadingBar title={section.title} look={heading(doc, palette)} />
+            <HeadingBar lang={doc.lang} title={section.title} look={heading(doc, palette)} />
             {section.items.map((item) =>
               item.kind === "row" ? (
                 <Rows key={item.id} rows={[item]} doc={doc} palette={palette} wide={false} />
               ) : (
-                <Paragraph key={item.id} text={item.text} label={section.items.length > 1 ? item.label : undefined} look={paragraph(doc, palette)} />
+                <Paragraph lang={doc.lang} key={item.id} text={item.text} label={section.items.length > 1 ? item.label : undefined} look={paragraph(doc, palette)} />
               ),
             )}
           </div>

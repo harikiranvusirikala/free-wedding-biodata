@@ -11,6 +11,9 @@ import { expect, test, type Page } from "@playwright/test";
 //    all three colours, dark paper included): the PDF and JPEG page images are written to test-results/pdf/ next to Chrome's
 //    screenshots of the same pages (for the PDFKit side-by-side check), page counts match, sizes are sane, every
 //    line's width matches, times are logged (desktop and CPU ÷4), and nothing is requested from another origin.
+// 3. Values typed in other scripts than the page's (Step 4.2: a Telugu name and a Hindi address on an English page,
+//    bold English labels on a Kannada page, …): Chrome draws every text element with exactly the fonts, and as many
+//    glyphs in each, as the PDF does, those are our Noto fonts (never a system font), and nothing is drawn as tofu.
 
 const OUT = "test-results/pdf";
 
@@ -29,11 +32,14 @@ const NEW_DESIGNS = [
   ["executive-navy", "bn", "forest", "plum"],
   ["modern-two-column", "pa", "amber", "rose"],
 ] as const;
+/** Step 4.2: values in other scripts than the page's (test/fixtures/documents.ts mixedScriptVariants). */
+const MIXED = ["classic-gold-en-mixed", "minimal-ivory-en-mixed", "classic-gold-kn-mixed", "modern-two-column-ta-mixed"];
 const VARIANTS = [
   ...["classic-gold", "minimal-ivory"].flatMap((t) => ["en", "te"].flatMap((lang) => [`${t}-${lang}-short`, `${t}-${lang}-long`])),
   ...LANGS.filter((l) => l !== "en" && l !== "te").map((lang) => `classic-gold-${lang}-short`),
   ...NEW_DESIGNS.flatMap(([d, lang, c2, c3]) => [`${d}-en-short`, `${d}-en-long`, `${d}-te-short`, `${d}-${lang}-short`, `${d}-en-short-${c2}`, `${d}-en-short-${c3}`]),
   "executive-navy-en-split",
+  ...MIXED,
 ];
 
 function watchOffsite(page: Page): string[] {
@@ -171,4 +177,97 @@ test("real templates in ten languages: PDF and page images, page counts, sizes, 
   await writeFile(`${OUT}/timings.json`, JSON.stringify(report, null, 2));
   console.log("Download engine:", JSON.stringify(report));
   expect(offsite).toEqual([]);
+});
+
+type Line = { page: number; text: string; fonts: Record<string, number> };
+
+/** Removes from `lines` the first line, or run of consecutive lines, on `page` whose texts join (with spaces) to `text`. */
+function takeLines(lines: Line[], page: number, text: string): { fonts: Record<string, number>; lines: number } | undefined {
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].page !== page || !text.startsWith(lines[i].text)) continue;
+    let joined = lines[i].text;
+    let j = i;
+    while (joined.length < text.length && j + 1 < lines.length && lines[j + 1].page === page && text.startsWith(`${joined} ${lines[j + 1].text}`)) joined += ` ${lines[++j].text}`;
+    if (joined !== text) continue;
+    const fonts: Record<string, number> = {};
+    for (const l of lines.splice(i, j - i + 1)) for (const [f, n] of Object.entries(l.fonts)) fonts[f] = (fonts[f] ?? 0) + n;
+    return { fonts, lines: j - i + 1 };
+  }
+  return undefined;
+}
+
+test("values in other scripts: the same fonts and glyphs on screen as in the PDF", async ({ page }) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 900, height: 1200 });
+  await page.goto("/dev/document");
+  await expect(page.locator("body")).toHaveAttribute("data-doc-ready", "1", { timeout: 60_000 });
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("DOM.enable");
+  await cdp.send("CSS.enable");
+
+  type Fonts = Record<string, number>;
+  const byVariant: Record<string, { text: string; screen: Fonts; pdf?: { fonts: Fonts; lines: number } }[]> = {};
+  for (const id of MIXED) {
+    // Every element that holds text, in page order, with the text as drawn (text-transform applied).
+    const probes = await page.evaluate((v) => {
+      const out: { page: number; text: string }[] = [];
+      document.querySelectorAll(`[data-variant="${v}"] [data-page]`).forEach((pageEl, p) => {
+        for (const el of pageEl.querySelectorAll<HTMLElement>("*")) {
+          if (![...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent!.trim())) continue;
+          el.dataset.probe = String(out.length);
+          out.push({ page: p + 1, text: el.innerText.replace(/\s+/g, " ").trim() });
+        }
+      });
+      return out;
+    }, id);
+    const { root } = await cdp.send("DOM.getDocument", { depth: 0 });
+    const run = await page.evaluate((v) => window.__doc!.pdf(v).pdf(), id);
+    expect(run.warnings, `${id} warnings`).toEqual([]);
+    expect(run.mismatches, `${id} widths`).toEqual([]);
+
+    const lines = [...run.lines];
+    byVariant[id] = [];
+    for (const [i, probe] of probes.entries()) {
+      const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: root.nodeId, selector: `[data-variant="${id}"] [data-probe="${i}"]` });
+      const { fonts } = await cdp.send("CSS.getPlatformFontsForNode", { nodeId });
+      const screen: Fonts = {};
+      for (const f of fonts) {
+        // Only our self-hosted Noto fonts: a system font here would mean the PDF can't match the page.
+        expect.soft(f.isCustomFont, `${id} "${probe.text}" drawn with the system font ${f.familyName}`).toBe(true);
+        const name = (f as { postScriptName?: string }).postScriptName || f.familyName;
+        screen[name] = (screen[name] ?? 0) + f.glyphCount;
+      }
+      // A one-line element is one PDF line with the same text; a wrapped one is consecutive lines that join to it
+      // (lines are taken in page order). A space where a line wraps is drawn by neither, so it isn't compared.
+      const pdf = takeLines(lines, probe.page, probe.text);
+      byVariant[id].push({ text: probe.text, screen, pdf });
+      if (pdf) {
+        const wraps = pdf.lines - 1;
+        const glyphs = (f: Fonts) => Object.values(f).reduce((a, b) => a + b, 0);
+        expect.soft(Object.keys(pdf.fonts).sort(), `${id} "${probe.text}": fonts, PDF vs screen`).toEqual(Object.keys(screen).sort());
+        if (!wraps) expect.soft(pdf.fonts, `${id} "${probe.text}": glyphs per font, PDF vs screen`).toEqual(screen);
+        else expect.soft(glyphs(screen) - glyphs(pdf.fonts), `${id} "${probe.text}": glyphs, PDF vs screen`).toBeGreaterThanOrEqual(0);
+        if (wraps) expect.soft(glyphs(screen) - glyphs(pdf.fonts), `${id} "${probe.text}": glyphs, PDF vs screen`).toBeLessThanOrEqual(wraps);
+      }
+    }
+    expect.soft(byVariant[id].filter((p) => !p.pdf).map((p) => p.text), `${id} elements with no PDF lines`).toEqual([]);
+    // And the PDF uses exactly the fonts the page does.
+    const screenFonts = new Set(byVariant[id].flatMap((p) => Object.keys(p.screen)));
+    const pdfFonts = new Set(run.lines.flatMap((l) => Object.keys(l.fonts)));
+    expect.soft([...pdfFonts].sort(), `${id} fonts in the PDF`).toEqual([...screenFonts].sort());
+  }
+  await writeFile(`${OUT}/mixed-fonts.json`, JSON.stringify(byVariant, null, 2));
+
+  const fontsOf = (id: string, text: string) => byVariant[id].find((p) => p.text === text)?.screen;
+  // A Telugu name on an English page: Telugu letters in Noto Sans Telugu, the spaces in Noto Sans.
+  expect(Object.keys(fontsOf("classic-gold-en-mixed", "రవి తేజ మండపాటి") ?? {}).sort()).toEqual(["NotoSans-Regular", "NotoSansTelugu-Regular"]);
+  // A label typed in Telugu stays bold.
+  expect(Object.keys(fontsOf("classic-gold-en-mixed", "గోత్రం :") ?? {}).sort()).toEqual(["NotoSans-Bold", "NotoSansTelugu-Bold"]);
+  // A Tamil section title on an English page (letter spacing dropped, the Latin part in capitals).
+  expect(Object.keys(fontsOf("classic-gold-en-mixed", "குடும்பம் / FAMILY") ?? {}).sort()).toEqual(["NotoSans-Bold", "NotoSansTamil-Bold"]);
+  // Bold English labels on a Kannada page: Latin in Noto Sans Bold, never the Kannada font's lighter Latin.
+  expect(Object.keys(fontsOf("classic-gold-kn-mixed", "Blood group :") ?? {}).sort()).toEqual(["NotoSans-Bold", "NotoSansKannada-Bold"]);
+  expect(fontsOf("classic-gold-kn-mixed", "Blood group :")?.["NotoSans-Bold"]).toBe("Bloodgroup:".length);
+  // The Modern side panel: a Telugu name on a Tamil page, bold.
+  expect(Object.keys(fontsOf("modern-two-column-ta-mixed", "రవి తేజ మండపాటి") ?? {}).sort()).toEqual(["NotoSansTamil-Bold", "NotoSansTelugu-Bold"]);
 });

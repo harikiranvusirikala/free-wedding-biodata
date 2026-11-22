@@ -4,7 +4,8 @@ import { expect, test } from "@playwright/test";
 // The document engine (BUILD_PLAN Step 3.2) on /dev/document: every fixture variant (Classic Gold and Minimal
 // Ivory, English and Telugu, short / sample / long, the other colour variants, the short Classic Gold biodata in
 // Hindi, Tamil, Kannada, Malayalam, Marathi, Gujarati, Bengali and Punjabi, Step 4.2, and designs 3–10 in English,
-// Telugu, one more Indic language and all three colours, Step 4.3) laid out as A4 pages. Screenshots
+// Telugu, one more Indic language and all three colours, Step 4.3; values typed in other scripts, Step 4.2) laid out
+// as A4 pages. Screenshots
 // of each page go to test-results/screenshots/document-<variant>-p<n>.png to be looked at (A7); the checks are the
 // page counts under Auto text size (D31), that no block runs past its page's content box, that the display list
 // (the Download engine's input, D49) carries every printed string, and that nothing is requested off this site.
@@ -55,7 +56,7 @@ test("document pages: page counts, no overflow, display list text, screenshots, 
 
     // Auto text size: a typical biodata fits one page; the long one flows onto exactly two (D31).
     await expect(pages, v.id).toHaveCount(v.pages);
-    if (v.length === "short") expect.soft(v.pages, `${v.id} pages`).toBe(1);
+    if (v.length === "short" || v.length === "mixed") expect.soft(v.pages, `${v.id} pages`).toBe(1);
     if (v.length === "long" || v.length === "split") expect.soft(v.pages, `${v.id} pages`).toBe(2);
     if (v.length === "split") {
       // The long paragraph continues from the bottom of page 1 to the top of page 2, split between lines.

@@ -10,12 +10,13 @@ import { getDocDictionary } from "@/i18n/doc";
 import { readDisplayList, type DisplayList } from "@/pdf/display-list";
 import { pageImageFileName, pdfFileName } from "@/biodata/filename";
 import type { LangCode } from "@/biodata/types";
-import { documentVariants, FIXTURE_TODAY, type DocVariant } from "../../../../test/fixtures/documents";
+import { documentVariants, FIXTURE_TODAY, mixedScriptVariants, type DocVariant } from "../../../../test/fixtures/documents";
 import { pdfHarness, type PdfHarness } from "../pdf/harness";
 
 // The document engine's dev page (BUILD_PLAN Step 3.2): every fixture variant laid out at true size (Step 4.3 adds
 // designs 3–10, each in English, Telugu and one more Indic language and in all three colours), plus the short
-// Classic Gold biodata in each of the other eight document languages (Step 4.2) to check glyphs and label widths.
+// Classic Gold biodata in each of the other eight document languages (Step 4.2) to check glyphs and label widths,
+// and four biodatas with values typed in other scripts than the page's (Step 4.2, `mixedScriptVariants`).
 // When all are laid out, <body data-doc-ready> is set and window.__doc lets the e2e spec read each variant's page
 // count, the text it should print and the display list of its pages (the Download engine's input, D49), and
 // `pdf(id)` runs the Download engine on a variant (Step 4.1; the PDF and Images buttons download them by hand).
@@ -61,7 +62,7 @@ function galleryVariants(): DocVariant[] {
     profile.docLanguage = lang;
     return { ...base, id: `classic-gold-${lang}-short`, lang, profile };
   });
-  return [...all, ...more];
+  return [...all, ...more, ...mixedScriptVariants()];
 }
 
 /** Dev-only: download a variant as the Download engine makes it (the editor's buttons come in Step 4.1 part 2). */

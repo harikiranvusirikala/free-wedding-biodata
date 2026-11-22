@@ -77,6 +77,8 @@ export interface ShapedRun {
   width: number;
   clusters: number;
   codePoints: number;
+  /** Graphemes no font in the stack draws (a script we ship no font for): drawn with the first font's .notdef. */
+  missing: string[];
 }
 
 /** ISO 15924 tags HarfBuzz takes, for the scripts the app prints. */
@@ -117,10 +119,12 @@ export function shapeRun(hb: HarfBuzzModule, text: string, fonts: ShapingFont[],
     script: string | null;
   }
   const pieces: Piece[] = [];
+  const missing: string[] = [];
   for (const { segment, index } of segmenter.segment(text)) {
     const cps = [...segment];
-    const font =
-      fonts.find((f) => cps.every((c) => IGNORABLE.test(c) || f.covers(c.codePointAt(0)!))) ?? fonts[0];
+    const covering = fonts.find((f) => cps.every((c) => IGNORABLE.test(c) || f.covers(c.codePointAt(0)!)));
+    if (!covering && !missing.includes(segment)) missing.push(segment);
+    const font = covering ?? fonts[0];
     let offset = index;
     for (const c of cps) {
       const script = scriptOf(c);
@@ -163,7 +167,7 @@ export function shapeRun(hb: HarfBuzzModule, text: string, fonts: ShapingFont[],
     }
   }
   recordToUnicode(text, glyphs);
-  return { glyphs, width: pen, clusters, codePoints: [...text].length };
+  return { glyphs, width: pen, clusters, codePoints: [...text].length, missing };
 }
 
 /**

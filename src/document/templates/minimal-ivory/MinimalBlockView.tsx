@@ -4,7 +4,7 @@ import { Paragraph, type ParagraphLook } from "../../blocks/Paragraph";
 import { Photo } from "../../blocks/Photo";
 import { Row, type RowLook } from "../../blocks/Row";
 import { isMotif, Motif } from "../../motifs";
-import { mixedFontStack, scriptFamilies } from "../../scripts";
+import { mixedFontStack, scriptFamilies, textFontStack } from "../../scripts";
 import { isLatin, type Palette } from "../../tokens";
 import type { BlockViewProps } from "../types";
 import { minimalSubtitle } from "./layout";
@@ -89,9 +89,9 @@ function Header({ doc, palette, photo }: Pick<BlockViewProps, "doc" | "palette" 
             </div>
           ) : null}
           {doc.name ? (
-            <div style={{ color: palette.text, fontSize: "2.5em", lineHeight: 1.15, overflowWrap: "anywhere" }}>{doc.name}</div>
+            <div style={{ color: palette.text, fontSize: "2.5em", lineHeight: 1.15, overflowWrap: "anywhere", fontFamily: textFontStack(doc.lang, doc.name) }}>{doc.name}</div>
           ) : null}
-          {subtitle ? <div style={{ color: palette.label, paddingTop: "0.5em" }}>{subtitle}</div> : null}
+          {subtitle ? <div style={{ color: palette.label, paddingTop: "0.5em", fontFamily: textFontStack(doc.lang, subtitle) }}>{subtitle}</div> : null}
         </div>
         {photo ? <Photo photo={photo} width={PHOTO_WIDTH[photo.frame]} radius={2} /> : null}
     </div>
@@ -103,12 +103,13 @@ export function MinimalBlockView({ block, doc, palette, photo, text, continued }
     case "header":
       return <Header doc={doc} palette={palette} photo={photo} />;
     case "heading":
-      return <HeadingBar title={block.title} look={heading(doc, palette)} />;
+      return <HeadingBar lang={doc.lang} title={block.title} look={heading(doc, palette)} />;
     case "row":
-      return <Row label={block.row.label} value={block.row.value} note={block.row.note} multiline={block.row.multiline} look={row(doc, palette)} />;
+      return <Row lang={doc.lang} label={block.row.label} value={block.row.value} note={block.row.note} multiline={block.row.multiline} look={row(doc, palette)} />;
     case "paragraph":
       return (
         <Paragraph
+          lang={doc.lang}
           text={text ?? block.paragraph.text}
           label={block.showLabel && !continued ? block.paragraph.label : undefined}
           look={paragraph(doc, palette)}

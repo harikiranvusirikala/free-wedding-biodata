@@ -4,6 +4,7 @@ import { Paragraph, type ParagraphLook } from "../../blocks/Paragraph";
 import { Photo } from "../../blocks/Photo";
 import { Row, type RowLook } from "../../blocks/Row";
 import { TopElement } from "../../blocks/TopElement";
+import { hasIndicScript, textFontStack } from "../../scripts";
 import { mix } from "../../frames/geometry";
 import { SIDE_PANEL_WIDTH } from "../../frames/SidePanel";
 import type { AsideProps, BlockViewProps } from "../../templates/types";
@@ -13,7 +14,8 @@ import { modernSubtitle, SIDE_PAD, sideContact } from "./layout";
 // The Modern skeleton's drawings (VISION D34, D46): a crisp two-column page. The side panel (page 1) holds the
 // photo in a soft ring, the name large, designation · city, and the contact details as stacked label/value pairs;
 // the main column has small spaced headings in the accent colour over a thin accent rule, and label/value rows
-// with the colon aligned. No serif, no frame artwork: the colour panel is the design.
+// with the colon aligned. No serif, no frame artwork: the colour panel is the design. Text in another script than
+// the page's gets that script's font (scripts.ts).
 
 /** The photo inside the panel: the panel's inner width less the 4 px ring on each side. */
 const RING = 4;
@@ -71,11 +73,11 @@ export function ModernBlockView({ block, doc, palette, text, continued }: BlockV
     case "header":
       return <TopElement doc={doc} palette={palette} look={{ motifSize: 72, titleStyle: "rules", titleSize: 1.4 }} />;
     case "heading":
-      return <HeadingBar title={block.title} look={heading(doc, palette)} />;
+      return <HeadingBar lang={doc.lang} title={block.title} look={heading(doc, palette)} />;
     case "row":
-      return <Row label={block.row.label} value={block.row.value} note={block.row.note} multiline={block.row.multiline} look={row(doc, palette)} />;
+      return <Row lang={doc.lang} label={block.row.label} value={block.row.value} note={block.row.note} multiline={block.row.multiline} look={row(doc, palette)} />;
     case "paragraph":
-      return <Paragraph text={text ?? block.paragraph.text} label={block.showLabel && !continued ? block.paragraph.label : undefined} look={paragraph(doc, palette)} />;
+      return <Paragraph lang={doc.lang} text={text ?? block.paragraph.text} label={block.showLabel && !continued ? block.paragraph.label : undefined} look={paragraph(doc, palette)} />;
     default:
       // The photo is in the side panel: Modern has no lead or standalone photo block.
       return null;
@@ -83,12 +85,15 @@ export function ModernBlockView({ block, doc, palette, text, continued }: BlockV
 }
 
 /** Page 1's side panel content (the panel itself is the frame, drawn on every page). */
+const valueText = (item: { value: string; note?: string }) => (item.note ? `${item.value} (${item.note})` : item.value);
+
 export function ModernAside({ doc, palette, photo }: AsideProps) {
   const c = sideColors(palette);
   const latin = isLatin(doc.lang);
   const subtitle = modernSubtitle(doc);
   const contact = sideContact(doc);
   const upperLabels = doc.labelCase === "upper" && latin;
+  const font = (text: string) => textFontStack(doc.lang, text);
   return (
     <div
       data-aside
@@ -112,9 +117,13 @@ export function ModernAside({ doc, palette, photo }: AsideProps) {
         </div>
       ) : null}
       {doc.name ? (
-        <div style={{ fontSize: "1.75em", fontWeight: 700, lineHeight: 1.2, marginTop: photo ? "0.7em" : 0, overflowWrap: "anywhere" }}>{doc.name}</div>
+        <div style={{ fontSize: "1.75em", fontWeight: 700, lineHeight: 1.2, marginTop: photo ? "0.7em" : 0, overflowWrap: "anywhere", fontFamily: font(doc.name) }}>
+          {doc.name}
+        </div>
       ) : null}
-      {subtitle ? <div style={{ color: c.muted, fontSize: "0.92em", lineHeight: 1.4, marginTop: "0.45em", overflowWrap: "anywhere" }}>{subtitle}</div> : null}
+      {subtitle ? (
+        <div style={{ color: c.muted, fontSize: "0.92em", lineHeight: 1.4, marginTop: "0.45em", overflowWrap: "anywhere", fontFamily: font(subtitle) }}>{subtitle}</div>
+      ) : null}
       {contact ? (
         <div style={{ marginTop: doc.name || subtitle || photo ? "2em" : 0 }}>
           <div
@@ -122,8 +131,9 @@ export function ModernAside({ doc, palette, photo }: AsideProps) {
               color: c.muted,
               fontSize: latin ? "0.78em" : "0.9em",
               fontWeight: 700,
-              letterSpacing: latin ? "0.16em" : 0,
+              letterSpacing: latin && !hasIndicScript(contact.title) ? "0.16em" : 0,
               textTransform: latin ? "uppercase" : undefined,
+              fontFamily: font(contact.title),
               paddingBottom: "0.5em",
               marginBottom: "0.8em",
               borderBottom: `1px solid ${c.ring}`,
@@ -135,12 +145,12 @@ export function ModernAside({ doc, palette, photo }: AsideProps) {
             item.kind === "row" ? (
               <div key={item.id} style={{ paddingBottom: "0.65em" }}>
                 {item.label ? (
-                  <div style={{ color: c.muted, fontSize: "0.82em", fontWeight: 700, lineHeight: 1.35, textTransform: upperLabels ? "uppercase" : undefined, overflowWrap: "anywhere" }}>
+                  <div style={{ color: c.muted, fontSize: "0.82em", fontWeight: 700, lineHeight: 1.35, textTransform: upperLabels ? "uppercase" : undefined, overflowWrap: "anywhere", fontFamily: font(item.label) }}>
                     {item.label}
                   </div>
                 ) : null}
-                <div style={{ fontSize: "0.94em", lineHeight: 1.4, overflowWrap: "anywhere", whiteSpace: item.multiline ? "pre-line" : undefined }}>
-                  {item.note ? `${item.value} (${item.note})` : item.value}
+                <div style={{ fontSize: "0.94em", lineHeight: 1.4, overflowWrap: "anywhere", whiteSpace: item.multiline ? "pre-line" : undefined, fontFamily: font(valueText(item)) }}>
+                  {valueText(item)}
                 </div>
               </div>
             ) : null,

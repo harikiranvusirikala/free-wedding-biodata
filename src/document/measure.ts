@@ -8,15 +8,31 @@ import { BODY_PX, FONT_FAMILY, type TextStep } from "./tokens";
 // holding one [data-block] per block); after the fonts are loaded this reads their heights and line metrics and
 // hands them to the pure paginate()/autoFit(). The pages then render with exactly the measured blocks.
 
-/**
- * Loads the document's fonts (Regular and Bold) before anything is measured, plus `extra` families for text in
- * another script (an invocation line, Step 2.0: src/document/scripts.ts).
- */
-export async function loadDocumentFonts(lang: LangCode, extra: readonly string[] = []): Promise<void> {
+/** Loads the document's fonts (Regular and Bold) before anything is measured. */
+export async function loadDocumentFonts(lang: LangCode): Promise<void> {
   if (typeof document === "undefined" || !document.fonts) return;
-  const families = new Set([FONT_FAMILY[lang], "Noto Sans", ...extra]);
+  const families = new Set([FONT_FAMILY[lang], "Noto Sans"]);
   await Promise.all([...families].flatMap((family) => ["400", "700"].map((w) => document.fonts.load(`${w} 16px "${family}"`).catch(() => []))));
   await document.fonts.ready;
+}
+
+/**
+ * Loads the faces that text in another script uses (src/document/scripts.ts) before it is measured: every element
+ * under `root` with a font stack of its own asks for that stack at its own weight and style, for its own
+ * characters, so only the faces it draws with are fetched (a Telugu name on an English page loads Telugu Regular,
+ * not Bold, unless a bold label is Telugu too).
+ */
+export async function loadElementFonts(root: HTMLElement): Promise<void> {
+  if (typeof document === "undefined" || !document.fonts) return;
+  const wanted = new Map<string, Set<string>>();
+  for (const el of root.querySelectorAll<HTMLElement>('[style*="font-family"]')) {
+    const style = getComputedStyle(el);
+    const font = `${style.fontStyle} ${style.fontWeight} 16px ${style.fontFamily}`;
+    const chars = wanted.get(font) ?? new Set<string>();
+    for (const ch of el.textContent ?? "") chars.add(ch);
+    wanted.set(font, chars);
+  }
+  await Promise.all([...wanted].map(([font, chars]) => document.fonts.load(font, [...chars].join("")).catch(() => [])));
 }
 
 /** Heights (and, for paragraphs, line metrics) of the blocks rendered in one measuring column. */

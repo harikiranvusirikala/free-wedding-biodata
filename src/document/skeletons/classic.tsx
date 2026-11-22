@@ -91,11 +91,11 @@ export function classicSkeleton(look: ClassicLook): Pick<TemplateDef, "skeleton"
       case "header":
         return <TopElement doc={doc} palette={palette} look={look.top} />;
       case "heading":
-        return <HeadingBar title={block.title} look={heading} />;
+        return <HeadingBar lang={doc.lang} title={block.title} look={heading} />;
       case "row":
-        return <Row label={block.row.label} value={block.row.value} note={block.row.note} multiline={block.row.multiline} look={rowLook(doc, palette, block.wide, underline)} />;
+        return <Row lang={doc.lang} label={block.row.label} value={block.row.value} note={block.row.note} multiline={block.row.multiline} look={rowLook(doc, palette, block.wide, underline)} />;
       case "paragraph":
-        return <Paragraph text={text ?? block.paragraph.text} label={block.showLabel && !continued ? block.paragraph.label : undefined} look={paragraph} />;
+        return <Paragraph lang={doc.lang} text={text ?? block.paragraph.text} label={block.showLabel && !continued ? block.paragraph.label : undefined} look={paragraph} />;
       case "photo":
         return photoEl ? <div style={{ display: "flex", justifyContent: "flex-end" }}>{photoEl}</div> : null;
       case "lead": {
@@ -104,12 +104,12 @@ export function classicSkeleton(look: ClassicLook): Pick<TemplateDef, "skeleton"
         return (
           <div style={{ display: "flex", alignItems: "flex-start", gap: PHOTO_GAP }}>
             <div style={{ flex: "1 1 0", minWidth: 0 }}>
-              <HeadingBar title={section.title} look={heading} />
+              <HeadingBar lang={doc.lang} title={section.title} look={heading} />
               {section.items.map((item) =>
                 item.kind === "row" ? (
-                  <Row key={item.id} label={item.label} value={item.value} note={item.note} multiline={item.multiline} look={narrow} />
+                  <Row lang={doc.lang} key={item.id} label={item.label} value={item.value} note={item.note} multiline={item.multiline} look={narrow} />
                 ) : (
-                  <Paragraph key={item.id} text={item.text} label={section.items.length > 1 ? item.label : undefined} look={paragraph} />
+                  <Paragraph lang={doc.lang} key={item.id} text={item.text} label={section.items.length > 1 ? item.label : undefined} look={paragraph} />
                 ),
               )}
             </div>

@@ -13,6 +13,8 @@ export interface PdfRun {
   /** How many lines used a fallback font (per-glyph fallback). */
   fallbackRuns: number;
   runs: number;
+  /** Every line: its text and the fonts its glyphs are drawn with (PostScript-style names, e.g. NotoSansTelugu-Bold). */
+  lines: { page: number; text: string; fonts: Record<string, number> }[];
   warnings: string[];
 }
 
@@ -43,6 +45,7 @@ export function pdfHarness(root: () => ParentNode): PdfHarness {
       const mismatches: PdfRun["mismatches"] = [];
       const warnings: string[] = [];
       let runs = 0;
+      const lines: PdfRun["lines"] = [];
       let fallbackRuns = 0;
       const t0 = performance.now();
       const blob = await createPdf(root(), {
@@ -50,6 +53,7 @@ export function pdfHarness(root: () => ParentNode): PdfHarness {
         debug: {
           onRun: (m) => {
             runs++;
+            lines.push({ page: m.page, text: m.text, fonts: Object.fromEntries(m.fonts.map((f) => [`${f.family.replace(/\s+/g, "")}-${f.weight >= 600 ? "Bold" : "Regular"}`, f.glyphs])) });
             if (m.fallback) fallbackRuns++;
           },
           onMismatch: (m) => mismatches.push({ text: m.text, ratio: Math.round(m.ratio * 10000) / 10000, fontFamily: m.fontFamily, fontWeight: m.fontWeight }),
@@ -57,7 +61,7 @@ export function pdfHarness(root: () => ParentNode): PdfHarness {
         },
       });
       const ms = performance.now() - t0;
-      return { pdf: await toBase64(blob), bytes: blob.size, ms, mismatches, fallbackRuns, runs, warnings };
+      return { pdf: await toBase64(blob), bytes: blob.size, ms, mismatches, fallbackRuns, runs, lines, warnings };
     },
     async images(format, width) {
       const { createPageImages } = await import("@/pdf");

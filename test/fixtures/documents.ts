@@ -1,5 +1,5 @@
 import { SAMPLE_PROFILE } from "../../src/biodata/defaults";
-import type { BiodataProfile, LangCode } from "../../src/biodata/types";
+import type { BiodataProfile, Field, LangCode } from "../../src/biodata/types";
 
 // Document fixtures (BUILD_PLAN Step 3.2): the fictional sample profile in three lengths, for the /dev/document
 // page, its e2e screenshots and layout tests. Entirely made up (the 90000 number range is unassigned); nothing
@@ -7,9 +7,10 @@ import type { BiodataProfile, LangCode } from "../../src/biodata/types";
 //   short:  a typical one-page biodata (the sample with a few sections and fields hidden) and a motif;
 //   sample: SAMPLE_PROFILE exactly as it is (no motif, title or invocation: D21's defaults);
 //   long:   the sample plus long paragraphs and more family, a title and an invocation line, no photo;
-//   split:  a very long About me and Personal details only, so a paragraph must continue on page 2.
+//   split:  a very long About me and Personal details only, so a paragraph must continue on page 2;
+//   mixed:  the short biodata with values typed in other scripts than the page's (Step 4.2), one page.
 
-export type DocLength = "short" | "sample" | "long" | "split";
+export type DocLength = "short" | "sample" | "long" | "split" | "mixed";
 
 export interface DocVariant {
   id: string;
@@ -115,6 +116,37 @@ function makeLong(p: BiodataProfile, lang: LangCode): BiodataProfile {
   return p;
 }
 
+/**
+ * Values typed in other scripts than the page's (BUILD_PLAN Steps 2.0 and 4.2; the help page promises any script
+ * prints as typed): a Telugu name, a Kannada native place, a Hindi address, a Telugu label, a Gurmukhi note, a
+ * Tamil + English section title, Bengali in a family row, Malayalam and Gujarati in a paragraph, and a list of
+ * languages in four scripts. The sample's own English labels ("Blood group", "Company") stay, so an Indic page
+ * also shows bold English labels.
+ */
+function makeMixed(p: BiodataProfile): BiodataProfile {
+  const set = (key: string, change: Partial<Field>) => {
+    const field = fields(p).find((f) => f.key === key);
+    if (field) Object.assign(field, change);
+  };
+  set("fullName", { value: "రవి తేజ మండపాటి" });
+  set("nativePlace", { value: "ಉಡುಪಿ (Udupi)" });
+  set("address", { value: "फ्लैट 402, सैंपल रेजीडेंसी,\nहैदराबाद – 500081", multiline: true });
+  set("phone", { note: "ਪਿਤਾ ਜੀ" });
+  set("gotra", { label: "గోత్రం" });
+  set("partnerExpectations", { value: "Someone kind and family-minded. ദയയും ക്ഷമയും ഉള്ള ഒരാൾ. ગુજરાતી પણ ચાલે." });
+  const personal = p.sections.find((s) => s.key === "personal");
+  if (personal?.kind === "fields") {
+    personal.fields.push({ id: "mixed-languages", label: "Languages", type: "text", value: "తెలుగు, ಕನ್ನಡ, हिन्दी, English", visible: true });
+  }
+  const family = p.sections.find((s) => s.key === "family");
+  if (family?.kind === "family") {
+    family.title = "குடும்பம் / Family";
+    const mother = family.members.find((m) => m.relationKey === "mother");
+    if (mother) mother.details = "মন্ডপাটি লক্ষ্মী, Homemaker";
+  }
+  return p;
+}
+
 function makeSplit(p: BiodataProfile): BiodataProfile {
   for (const s of p.sections) if (s.key !== "aboutMe" && s.key !== "personal") s.visible = false;
   for (const f of fields(p)) if (f.key === "aboutMe") f.value = Array.from({ length: 7 }, () => LONG_ABOUT).join("\n\n");
@@ -152,7 +184,8 @@ export const NEW_DESIGNS: readonly { id: string; colors: readonly [string, strin
 
 function variant(templateId: string, colorId: string, lang: LangCode, length: DocLength, photo: DocVariant["photo"] = "3:4"): DocVariant {
   let profile = base(templateId, lang, colorId);
-  if (length === "short") profile = makeShort(profile);
+  if (length === "short" || length === "mixed") profile = makeShort(profile);
+  if (length === "mixed") profile = makeMixed(profile);
   if (length === "long") profile = makeLong(profile, lang);
   if (length === "split") profile = makeSplit(profile);
   const usedPhoto = length === "long" || length === "split" ? null : photo;
@@ -195,6 +228,20 @@ export function documentVariants(): DocVariant[] {
   }
   out.push(variant("executive-navy", "navy", "en", "split"));
   return out;
+}
+
+/**
+ * Step 4.2's mixed-script variants: an English page in Classic Gold and Minimal Ivory (the name as the large
+ * header), a Kannada page (bold English labels beside Telugu and Hindi values) and a Tamil page in the Modern
+ * skeleton (the name and contact in the side panel).
+ */
+export function mixedScriptVariants(): DocVariant[] {
+  return [
+    variant("classic-gold", "gold", "en", "mixed"),
+    variant("minimal-ivory", "ink", "en", "mixed"),
+    variant("classic-gold", "gold", "kn", "mixed"),
+    variant("modern-two-column", "teal", "ta", "mixed"),
+  ];
 }
 
 /** The fixed "today" for fixtures, so ages don't change from run to run. */

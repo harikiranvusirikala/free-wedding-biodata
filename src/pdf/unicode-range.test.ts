@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { FONT_UNICODE_RANGE } from "@/document/tokens";
+import { FONT_UNICODE_RANGE, NOTO_SANS_SCRIPT_RANGE, SCRIPT_RANGE } from "@/document/tokens";
 import { parseUnicodeRange, unicodeRangeTest } from "./unicode-range";
 
 describe("parseUnicodeRange", () => {
@@ -38,5 +38,24 @@ describe("FONT_UNICODE_RANGE", () => {
     expect(found.get("Noto Sans")).toEqual(new Set([""]));
     for (const [family, range] of Object.entries(FONT_UNICODE_RANGE)) expect(found.get(family), family).toEqual(new Set([range]));
     expect([...found.keys()].sort()).toEqual(["Noto Sans", ...Object.keys(FONT_UNICODE_RANGE)].sort());
+  });
+});
+
+describe("NOTO_SANS_SCRIPT_RANGE", () => {
+  it("is the only script block Noto Sans draws, in Regular and Bold (text in it needs no extra font)", async () => {
+    const hb = await import("harfbuzzjs");
+    const inNotoSans = unicodeRangeTest(NOTO_SANS_SCRIPT_RANGE);
+    for (const weight of ["Regular", "Bold"]) {
+      const face = new hb.Face(new hb.Blob(readFileSync(path.join(process.cwd(), `public/fonts/NotoSans-${weight}.ttf`))));
+      const cmap = new Set(face.collectUnicodes());
+      for (const [from, to] of parseUnicodeRange(NOTO_SANS_SCRIPT_RANGE)) {
+        for (let cp = from; cp <= to; cp++) expect(cmap.has(cp), `${weight} U+${cp.toString(16)}`).toBe(true);
+      }
+      // No other script font's own block: those always need their own font.
+      for (const [family, range] of Object.entries(SCRIPT_RANGE)) {
+        const extra = parseUnicodeRange(range).flatMap(([from, to]) => Array.from({ length: to - from + 1 }, (_, i) => from + i)).filter((cp) => !inNotoSans(cp) && cmap.has(cp));
+        expect(extra, `${weight}: ${family}`).toEqual([]);
+      }
+    }
   });
 });

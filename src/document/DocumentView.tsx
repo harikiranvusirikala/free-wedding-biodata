@@ -3,9 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DocModel } from "@/biodata/document";
 import type { PhotoInput } from "./blocks/types";
-import { layoutDocument, loadDocumentFonts, type DocumentLayout } from "./measure";
+import { layoutDocument, loadDocumentFonts, loadElementFonts, type DocumentLayout } from "./measure";
 import { Page } from "./Page";
-import { topElementFamilies } from "./scripts";
 import { getPalette, getTemplate } from "./templates";
 import { BODY_PX, fontStack, LINE_HEIGHT, PAGE, type TextStep } from "./tokens";
 import "./document.css";
@@ -49,9 +48,12 @@ export function DocumentView({ doc, photo, onLayout, className }: DocumentViewPr
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      await loadDocumentFonts(doc.lang, topElementFamilies(doc));
+      await loadDocumentFonts(doc.lang);
       const root = measureRef.current;
       if (cancelled || !root) return;
+      // Text in another script (a Telugu name on an English page) brings its own fonts: loaded before measuring.
+      await loadElementFonts(root);
+      if (cancelled) return;
       const pageHeight = (i: number) => {
         const box = template.pageBox(i, doc);
         return PAGE.height - box.top - box.bottom;
@@ -87,6 +89,12 @@ export function DocumentView({ doc, photo, onLayout, className }: DocumentViewPr
               ))}
             </div>
           ))}
+          {template.Aside ? (
+            // Page 1's fixed side panel isn't measured, but its text may need fonts of another script too.
+            <div data-measure-aside style={{ position: "relative", width: PAGE.width, height: PAGE.height, fontSize: BODY_PX[steps[0]], fontFamily: fontStack(doc.lang), lineHeight: LINE_HEIGHT }}>
+              <template.Aside doc={doc} palette={palette} photo={photo} />
+            </div>
+          ) : null}
         </div>
       ) : null}
       {shown ? (

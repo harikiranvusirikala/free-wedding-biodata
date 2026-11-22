@@ -44,7 +44,10 @@ async function write(list: DisplayList, options: WritePdfOptions = {}) {
   const ops = new TextDecoder("latin1").decode(decodePDFRawStream(contents).decode());
   const fontDict = pdfPage.node.Resources()!.lookupMaybe(PDFName.of("Font"), PDFDict);
   const baseFonts = fontDict ? fontDict.keys().map((k) => String(fontDict.lookup(k, PDFDict).get(PDFName.of("BaseFont")))) : [];
-  return { bytes, doc, ops, runs, warnings, baseFonts };
+  // The fonts each text run switches through, in order, by PostScript name without the subset tag.
+  const byName = new Map(fontDict ? fontDict.keys().map((k) => [k.asString().slice(1), String(fontDict.lookup(k, PDFDict).get(PDFName.of("BaseFont"))).replace(/^\/[A-Z]{6}\+/, "")]) : []);
+  const fontRuns = ops.split("BT").slice(1).map((run) => [...run.split("ET")[0].matchAll(/\/(F\d+) [\d.]+ Tf/g)].map((m) => byName.get(m[1])!));
+  return { bytes, doc, ops, runs, warnings, baseFonts, fontRuns };
 }
 
 const utf16 = (s: string) => Array.from({ length: s.length }, (_, i) => s.charCodeAt(i).toString(16).padStart(4, "0").toUpperCase()).join("");
@@ -82,6 +85,46 @@ describe("writePdf", () => {
     expect(baseFonts.map((f) => f.replace(/^\/[A-Z]{6}\+/, "")).sort()).toEqual(["NotoSans-Bold", "NotoSansKannada-Bold"]);
     expect(runs[0].fallback).toBe(true);
     expect(ops.match(/ Tf/g)!.length).toBeGreaterThan(2);
+  });
+
+  it("draws a value in other scripts with each script's font, as the element's stack says (Step 4.2)", async () => {
+    // An English page: a name in Telugu with an English initial, a place in Kannada and a word in Hindi, which
+    // Noto Sans draws itself (scripts.ts adds only the fonts a value needs: Telugu and Kannada).
+    const value = "K. రవి తేజ, ಬೆಂಗಳೂರು नमस्ते";
+    const { ops, baseFonts, fontRuns, runs, warnings } = await write(
+      page([text({ text: value, fontFamilies: ["Noto Sans", "Noto Sans Telugu", "Noto Sans Kannada"], spaceAfter: false })]),
+    );
+    expect(warnings).toEqual([]);
+    expect(baseFonts.map((f) => f.replace(/^\/[A-Z]{6}\+/, "")).sort()).toEqual(["NotoSans-Regular", "NotoSansKannada-Regular", "NotoSansTelugu-Regular"]);
+    // Latin and spaces in Noto Sans, each Indic word in its own font, Hindi back in Noto Sans.
+    expect(fontRuns[0]).toEqual([
+      "NotoSans-Regular", // "K. "
+      "NotoSansTelugu-Regular", // రవి
+      "NotoSans-Regular", // " "
+      "NotoSansTelugu-Regular", // తేజ
+      "NotoSans-Regular", // ", "
+      "NotoSansKannada-Regular", // ಬೆಂಗಳೂರು
+      "NotoSans-Regular", // " नमस्ते"
+    ]);
+    expect(runs[0].fallback).toBe(true);
+    expect(ops).toContain(`/Span << /ActualText <FEFF${utf16(value)}> >> BDC`);
+  });
+
+  it("keeps the bold weight in every fallback font: an English label and a Telugu word on a Kannada page", async () => {
+    const label = "Blood Group / రక్త వర్గం :";
+    const { fontRuns, ops } = await write(
+      page([text({ text: label, fontWeight: 700, fontFamilies: ["Noto Sans Kannada", "Noto Sans", "Noto Sans Telugu"] })], "kn"),
+    );
+    // The space comes from the page's script font (its unicode-range keeps it), the Latin from Noto Sans Bold.
+    expect(new Set(fontRuns[0])).toEqual(new Set(["NotoSans-Bold", "NotoSansKannada-Bold", "NotoSansTelugu-Bold"]));
+    expect(fontRuns[0][0]).toBe("NotoSans-Bold");
+    expect(ops).toContain(`/ActualText <FEFF${utf16(label)}>`);
+  });
+
+  it("reports characters no font draws (a script the app ships no font for)", async () => {
+    const { warnings } = await write(page([text({ text: "Ravi ଓଡ଼ିଆ" })]));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toMatch(/^No font draws ଓ \(U\+0B13\), .* on page 1/);
   });
 
   it("skips families it has no font for and still draws the text with the fallback", async () => {

@@ -36,6 +36,8 @@ export interface RunMeasure {
   glyphs: number;
   codePoints: number;
   fallback: boolean;
+  /** The fonts the run's glyphs are drawn with (family and weight) and how many glyphs each, in order of first use. */
+  fonts: { family: string; weight: number; glyphs: number }[];
   /** The line was justified (its spaces widened to the browser's width). */
   justified?: boolean;
 }
@@ -275,6 +277,13 @@ function shadingFor(context: PDFContext, g: LinearGradient): PDFRef {
   );
 }
 
+/** How many of a run's glyphs each font draws, in order of first use. */
+function glyphsPerFont(glyphs: { font: ShapingFont }[]): RunMeasure["fonts"] {
+  const out = new Map<ShapingFont, number>();
+  for (const g of glyphs) out.set(g.font, (out.get(g.font) ?? 0) + 1);
+  return [...out].map(([font, count]) => ({ family: font.family, weight: font.weight, glyphs: count }));
+}
+
 /** Writes the display list as an A4 vector PDF. */
 export async function writePdf(list: DisplayList, fonts: FontLoader, options: WritePdfOptions = {}): Promise<Uint8Array> {
   const hb: HarfBuzzModule = options.harfbuzz ?? (await import("harfbuzzjs"));
@@ -479,6 +488,10 @@ export async function writePdf(list: DisplayList, fonts: FontLoader, options: Wr
       }
       const primary = stack[0];
       const shaped = shapeRun(hb, text, stack, t.fontSize, t.letterSpacing, page.lang || "en");
+      if (shaped.missing.length) {
+        const chars = shaped.missing.map((g) => `${g} (${[...g].map((c) => `U+${c.codePointAt(0)!.toString(16).toUpperCase().padStart(4, "0")}`).join(" ")})`);
+        warn(`No font draws ${chars.join(", ")} on page ${pageIndex + 1}, in "${text}"`);
+      }
       const measure: RunMeasure = {
         page: pageIndex + 1,
         text,
@@ -491,6 +504,7 @@ export async function writePdf(list: DisplayList, fonts: FontLoader, options: Wr
         glyphs: shaped.glyphs.length,
         codePoints: shaped.codePoints,
         fallback: shaped.glyphs.some((g) => g.font !== primary),
+        fonts: glyphsPerFont(shaped.glyphs),
       };
       // Where the run starts: the browser's left edge, re-anchored for centred and right-aligned text so a tiny
       // width difference is split (or put) where the browser put it; a justified line spreads the difference over
