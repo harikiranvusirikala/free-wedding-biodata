@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { completionState, sectionCompletion } from "@/biodata/completion";
+import { completionState, profileCompletion, sectionCompletion } from "@/biodata/completion";
 import type { Section } from "@/biodata/types";
 import { focusRing } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
@@ -10,6 +10,8 @@ import en from "@/i18n/app/en.json";
 import { SECTION_ICONS, sectionTitle } from "./labels";
 import { useManage } from "./ManageProvider";
 import { sectionAnchor } from "./SectionCard";
+import { PhotoIcon } from "@/components/photo/icons";
+import { PHOTO_ID } from "./PhotoCard";
 import { TOP_ID } from "./TopCard";
 
 // Moving around the form (BUILD_PLAN A7 Editor rule, mockups: editor, editor-phone). Desktop: the section rail,
@@ -130,10 +132,33 @@ function CompletionDot({ section, className = "" }: { section: Section; classNam
   );
 }
 
+/**
+ * "Your biodata is 72% filled" (Step 2.3) at the head of the rail, with a bar; just the number on the icon rail.
+ * Informational only (§5): hidden lines and sections don't count, and nothing is ever required.
+ */
+function OverallCompletion({ sections }: { sections: readonly Section[] }) {
+  const { filled, total, percent } = profileCompletion({ sections: [...sections] });
+  const detail = t("editor.overallDetail", { filled, total });
+  return (
+    <div className="mb-3 px-1 xl:px-0" data-testid="overall-completion" title={detail}>
+      <div className="rounded-xl border border-line bg-page px-3 py-2.5 max-xl:hidden dark:bg-sunken/60">
+        <p className="text-[13px] leading-snug font-semibold text-ink">{t("editor.overall", { percent })}</p>
+        <div aria-hidden className="mt-2 h-1.5 overflow-hidden rounded-full bg-line">
+          <div className={`h-full rounded-full transition-[width] motion-reduce:transition-none ${percent === 100 ? "bg-good" : "bg-gold"}`} style={{ width: `${percent}%` }} />
+        </div>
+        <p className="sr-only">{detail}</p>
+      </div>
+      <p aria-hidden className="text-center text-xs font-semibold tabular-nums text-ink-2 xl:hidden">{t("editor.overallShort", { percent })}</p>
+      <p className="sr-only xl:hidden">{t("editor.overall", { percent })}</p>
+    </div>
+  );
+}
+
 /** The rail beside the form: names with dots and counts at 1280 px and up, icons with dots at 1024–1279. */
-export function SectionRail({ sections, current, onJump, canAdd = true }: NavProps & { canAdd?: boolean }) {
+export function SectionRail({ sections, hasPhoto, current, onJump, canAdd = true }: NavProps & { hasPhoto: boolean; canAdd?: boolean }) {
   return (
     <nav aria-label={t("editor.sections")} className="sticky top-14 max-h-[calc(100dvh-3.5rem)] overflow-y-auto px-2 py-4 xl:px-3" data-testid="section-rail">
+      <OverallCompletion sections={sections} />
       <h2 className="px-2.5 pb-2 text-[11.5px] font-bold tracking-[0.08em] text-ink-3 uppercase max-xl:sr-only">{t("editor.sections")}</h2>
       <ul className="space-y-0.5">
         {/* Step 2.0: the top of the biodata (symbol, line, title) comes first. */}
@@ -147,6 +172,25 @@ export function SectionRail({ sections, current, onJump, canAdd = true }: NavPro
           >
             <Icon name="diya" className="size-4 shrink-0 max-xl:size-5" />
             <span className="line-clamp-2 min-w-0 flex-1 break-words max-xl:sr-only">{t("top.title")}</span>
+          </a>
+        </li>
+        {/* Step 3.1: the photo, ticked once there is one. */}
+        <li>
+          <a
+            href={`#${sectionAnchor({ id: PHOTO_ID })}`}
+            aria-current={current === PHOTO_ID ? "location" : undefined}
+            title={t("photo.card.title")}
+            onClick={(event) => onLink(event, PHOTO_ID, onJump)}
+            className={`flex min-h-10 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm leading-snug transition-colors max-xl:justify-center ${current === PHOTO_ID ? "bg-brand-soft font-semibold text-brand-ink" : "text-ink-2 hover:bg-sunken hover:text-ink"} ${focusRing}`}
+          >
+            <PhotoIcon name="camera" className="size-4 shrink-0 max-xl:size-5" />
+            <span className="line-clamp-2 min-w-0 flex-1 break-words max-xl:sr-only">{t("photo.card.title")}</span>
+            {hasPhoto && (
+              <span className="shrink-0 max-xl:hidden" data-testid="rail-photo-done">
+                <Icon name="check" className="size-4 text-good" />
+                <span className="sr-only">, {t("photo.card.added")}</span>
+              </span>
+            )}
           </a>
         </li>
         {sections.map((section) => {
@@ -206,7 +250,7 @@ export function SectionJump({ sections, current, onJump }: NavProps) {
   return (
     <nav aria-label={t("editor.jump")} className="border-b border-line bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85" data-testid="section-jump">
       <ul ref={listRef} className="flex gap-2 overflow-x-auto px-4 py-1 [scrollbar-width:none] sm:px-6 [&::-webkit-scrollbar]:hidden">
-        {[{ id: TOP_ID, label: t("editor.chip.top") }, ...sections.map((section) => ({ id: section.id, label: chipLabel(section) }))].map(({ id, label }) => {
+        {[{ id: TOP_ID, label: t("editor.chip.top") }, { id: PHOTO_ID, label: t("editor.chip.photo") }, ...sections.map((section) => ({ id: section.id, label: chipLabel(section) }))].map(({ id, label }) => {
           const on = id === current;
           return (
             <li key={id} className="shrink-0">

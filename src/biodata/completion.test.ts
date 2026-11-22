@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { completionState, sectionCompletion } from "./completion";
+import { completionState, profileCompletion, sectionCompletion } from "./completion";
 import { SAMPLE_PROFILE, createProfile } from "./defaults";
-import type { FamilySection, FieldsSection } from "./types";
+import type { BiodataProfile, FamilySection, FieldsSection } from "./types";
 
 describe("section completion", () => {
   it("counts the visible rows and how many have something in them", () => {
@@ -44,5 +44,38 @@ describe("section completion", () => {
     expect(completionState({ filled: 0, total: 4 })).toBe("empty");
     expect(completionState({ filled: 2, total: 4 })).toBe("partial");
     expect(completionState({ filled: 4, total: 4 })).toBe("complete");
+  });
+});
+
+describe("profile completion (Your biodata is 72% filled)", () => {
+  it("adds up every visible section's rows", () => {
+    const fresh = createProfile();
+    const total = fresh.sections.reduce((sum, s) => sum + sectionCompletion(s).total, 0);
+    expect(profileCompletion(fresh)).toEqual({ filled: 0, total, percent: 0 });
+    const sample = profileCompletion(SAMPLE_PROFILE);
+    expect(sample.filled).toBe(SAMPLE_PROFILE.sections.reduce((sum, s) => sum + sectionCompletion(s).filled, 0));
+    expect(sample.percent).toBe(Math.floor((sample.filled / sample.total) * 100));
+    expect(sample.percent).toBeGreaterThan(80);
+    expect(sample.percent).toBeLessThan(100); // the community details are left empty
+  });
+
+  it("leaves hidden sections and hidden rows out", () => {
+    const profile = structuredClone(SAMPLE_PROFILE) as BiodataProfile;
+    const religion = profile.sections.find((s) => s.key === "religion") as FieldsSection;
+    const before = profileCompletion(profile);
+    religion.visible = false;
+    const after = profileCompletion(profile);
+    expect(after.total).toBe(before.total - sectionCompletion(religion).total);
+    for (const f of religion.fields) f.visible = false;
+    religion.visible = true;
+    expect(profileCompletion(profile).total).toBe(after.total);
+  });
+
+  it("rounds down, so 100% means every row is filled, and is 0% with nothing to fill", () => {
+    const profile = createProfile();
+    const personal = profile.sections.find((s) => s.key === "personal") as FieldsSection;
+    profile.sections = [{ ...personal, fields: personal.fields.slice(0, 3).map((f, i) => ({ ...f, value: i < 2 ? "x" : "" })) }];
+    expect(profileCompletion(profile)).toEqual({ filled: 2, total: 3, percent: 66 });
+    expect(profileCompletion({ sections: [] })).toEqual({ filled: 0, total: 0, percent: 0 });
   });
 });

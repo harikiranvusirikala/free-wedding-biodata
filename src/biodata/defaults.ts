@@ -573,3 +573,25 @@ function deepFreeze<T>(value: T): T {
 
 /** A complete fictional profile with fixed ids. Copy it (structuredClone) and give it a new id before saving. */
 export const SAMPLE_PROFILE: BiodataProfile = deepFreeze(buildSample());
+
+/**
+ * A new draft filled with the sample ("Open a sample", Step 2.3): a deep copy of SAMPLE_PROFILE with fresh ids for
+ * the draft, every section, field and member, revision 0 and the time now. It is always a new draft, so opening
+ * the sample never touches the one being edited. The sample has no photo.
+ */
+export function createSampleProfile({ newId = newUuid, now = systemClock }: { newId?: NewId; now?: Clock } = {}): BiodataProfile {
+  const copy = structuredClone(SAMPLE_PROFILE) as BiodataProfile;
+  const timestamp = now().toISOString();
+  return {
+    ...copy,
+    id: newId(),
+    revision: 0,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    sections: copy.sections.map((section) =>
+      section.kind === "fields"
+        ? { ...section, id: newId(), fields: section.fields.map((field) => ({ ...field, id: newId() })) }
+        : { ...section, id: newId(), members: section.members.map((member) => ({ ...member, id: newId() })) },
+    ),
+  };
+}

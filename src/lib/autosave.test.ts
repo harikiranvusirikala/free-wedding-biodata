@@ -274,6 +274,101 @@ describe("autosave: page lifecycle", () => {
   });
 });
 
+describe("autosave: photos (Step 3.1)", () => {
+  const picture = (id: string, bytes = "jpeg") => ({ id, blob: new Blob([bytes], { type: "image/jpeg" }), mimeType: "image/jpeg", width: 600, height: 800 });
+  const withPhoto = (profile: BiodataProfile, id: string | undefined): BiodataProfile =>
+    id ? { ...profile, photo: { id, frame: "3:4", crop: { x: 0.5, y: 0.5, zoom: 1, rotation: 0 } } } : { ...profile, photo: undefined };
+
+  it("writes a new picture in the same transaction as the profile that points at it", async () => {
+    const { db, repo, profile } = await realRepo();
+    await repo.create(profile);
+    const save = vi.spyOn(repo, "save");
+    const autosave = createAutosave({ repo, initial: profile, now });
+    autosave.update(withPhoto(profile, "p1"), { put: [picture("p1")] });
+    await autosave.flush();
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(save.mock.calls[0][1]).toEqual({ expectedRevision: 0, photos: { put: [expect.objectContaining({ id: "p1" })], delete: [] } });
+    expect((await db.photos.get("p1"))?.profileId).toBe(profile.id);
+    expect(((await repo.load(profile.id)) as { profile: BiodataProfile }).profile.photo?.id).toBe("p1");
+
+    // Later saves don't write the picture again; replacing it stores the new one and deletes the old one together.
+    autosave.update(renamed(autosave.getSnapshot().profile, "Typed"));
+    await autosave.flush();
+    expect(save.mock.calls[1][1]).toEqual({ expectedRevision: 1 });
+    autosave.update(withPhoto(autosave.getSnapshot().profile, "p2"), { put: [picture("p2")], delete: ["p1"] });
+    await autosave.flush();
+    expect(await db.photos.get("p1")).toBeUndefined();
+    expect(await db.photos.get("p2")).toBeDefined();
+  });
+
+  it("deletes a removed picture, and counts a photo change as an edit even if the profile object is the same", async () => {
+    const { db, repo, profile } = await realRepo();
+    await repo.create(profile);
+    const autosave = createAutosave({ repo, initial: profile, now });
+    autosave.update(withPhoto(profile, "p1"), { put: [picture("p1")] });
+    await autosave.flush();
+    const current = autosave.getSnapshot().profile;
+    autosave.update(withPhoto(current, undefined), { delete: ["p1"] });
+    expect(autosave.getSnapshot().unsaved).toBe(true);
+    await autosave.flush();
+    expect(await db.photos.get("p1")).toBeUndefined();
+    autosave.update(autosave.getSnapshot().profile, { delete: ["stray"] });
+    expect(autosave.getSnapshot().unsaved).toBe(true);
+    autosave.update(autosave.getSnapshot().profile);
+    await autosave.flush();
+    expect(autosave.getSnapshot().unsaved).toBe(false);
+  });
+
+  it("keeps photo writes pending after a failed save and sends them again", async () => {
+    const { repo, calls } = deferredRepo();
+    const profile = createProfile();
+    const autosave = createAutosave({ repo, initial: profile, now });
+    autosave.update(withPhoto(profile, "p1"), { put: [picture("p1")] });
+    const failed = autosave.flush();
+    calls[0].resolve({ ok: false, error: { kind: "quota", message: "full" } });
+    await failed;
+    const retry = autosave.flush();
+    expect(calls[1].options.photos?.put?.map((p) => p.id)).toEqual(["p1"]);
+    calls[1].resolve({ ok: true, profile: { ...calls[1].profile, revision: 1 } });
+    await retry;
+    autosave.update(renamed(autosave.getSnapshot().profile, "Next"));
+    const next = autosave.flush();
+    expect(calls[2].options.photos).toBeUndefined();
+    calls[2].resolve({ ok: true, profile: { ...calls[2].profile, revision: 2 } });
+    await next;
+  });
+
+  it("a picture removed while the save that adds it is in flight is deleted by the next save", async () => {
+    const { repo, calls, succeed } = deferredRepo();
+    const profile = createProfile();
+    const autosave = createAutosave({ repo, initial: profile, now });
+    autosave.update(withPhoto(profile, "p1"), { put: [picture("p1")] });
+    const first = autosave.flush();
+    expect(calls[0].options.photos).toEqual({ put: [expect.objectContaining({ id: "p1" })], delete: [] });
+    autosave.update(withPhoto(profile, undefined), { delete: ["p1"] });
+    succeed(0);
+    await first;
+    const second = autosave.flush();
+    expect(calls[1].options.photos).toEqual({ put: [], delete: ["p1"] });
+    succeed(1);
+    await second;
+    expect(autosave.getSnapshot().unsaved).toBe(false);
+  });
+
+  it("a picture added and removed before any save is only deleted, never written", async () => {
+    const { repo, calls, succeed } = deferredRepo();
+    const profile = createProfile();
+    const autosave = createAutosave({ repo, initial: profile, now });
+    autosave.update(withPhoto(profile, "p1"), { put: [picture("p1")] });
+    autosave.update(withPhoto(profile, "p2"), { put: [picture("p2")], delete: ["p1"] });
+    const flushed = autosave.flush();
+    expect(calls[0].options.photos).toEqual({ put: [expect.objectContaining({ id: "p2" })], delete: ["p1"] });
+    expect(calls[0].profile.photo?.id).toBe("p2");
+    succeed(0);
+    await flushed;
+  });
+});
+
 describe("useAutosave", () => {
   it("re-renders with the latest profile and status", async () => {
     const { repo, succeed } = deferredRepo();

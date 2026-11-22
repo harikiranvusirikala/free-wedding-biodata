@@ -3,16 +3,19 @@
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   insertField,
+  insertMember,
   insertSection,
   locateField,
+  locateMember,
   removeField,
+  removeMember,
   removeSection,
   renameField,
   renameSection,
   resetFieldLabel,
   resetSectionTitle,
 } from "@/biodata/edits";
-import type { BiodataProfile, Field, Section } from "@/biodata/types";
+import type { BiodataProfile, FamilyMember, Field, Section } from "@/biodata/types";
 import { button, iconButton, textLink } from "@/components/ui/button";
 import { Dialog, DialogActions } from "@/components/ui/Dialog";
 import { field as fieldClass, fieldHint, fieldLabel as fieldLabelClass } from "@/components/ui/field";
@@ -22,7 +25,8 @@ import { t } from "@/lib/i18n";
 import { AddFieldDialog } from "./AddFieldDialog";
 import { AddSectionDialog } from "./AddSectionDialog";
 import type { Edit } from "./FieldRow";
-import { defaultFieldLabel, defaultSectionTitle, fieldLabel, sectionTitle } from "./labels";
+import { defaultFieldLabel, defaultSectionTitle, fieldLabel, memberLabel, sectionTitle } from "./labels";
+import { MemberDialog } from "./MemberDialog";
 
 // Field and section management (BUILD_PLAN Step 2.2, VISION §6): the dialogs the ⋯ menus and the Add buttons open
 // (rename, remove, add a field, add a section) and the toast that follows a change, with Undo after a removal.
@@ -38,7 +42,11 @@ export type ManageDialog =
   | { kind: "renameSection"; sectionId: string }
   | { kind: "removeSection"; sectionId: string }
   | { kind: "addField"; sectionId: string }
-  | { kind: "addSection" };
+  | { kind: "addSection" }
+  /** Step 2.3: family members and references (D28, D44). */
+  | { kind: "addMember"; sectionId: string }
+  | { kind: "editRelation"; memberId: string }
+  | { kind: "removeMember"; memberId: string };
 
 export interface Manage {
   /** The latest profile (menus read it as they open, so rows needn't re-render when other parts change). */
@@ -64,6 +72,7 @@ export function useManage(): Manage {
 /** The id of a field's ⋯ button and a section's ⋯ button (Menu `id` + "-button"), for putting the focus back. */
 export const fieldMenuId = (fieldId: string) => `field-menu-${fieldId}`;
 export const sectionMenuId = (sectionId: string) => `section-menu-${sectionId}`;
+export const memberMenuId = (memberId: string) => `member-menu-${memberId}`;
 
 const TOAST_MS = 6000;
 
@@ -73,6 +82,11 @@ const afterRender = (run: () => void) => requestAnimationFrame(() => requestAnim
 function findField(profile: BiodataProfile, fieldId: string): Field | undefined {
   const at = locateField(profile, fieldId);
   return at?.section.fields[at.index];
+}
+
+function findMember(profile: BiodataProfile, memberId: string): FamilyMember | undefined {
+  const at = locateMember(profile, memberId);
+  return at?.section.members[at.index];
 }
 
 export function ManageProvider({
@@ -145,11 +159,35 @@ export function ManageProvider({
     });
   }
 
+  /** Removes a family member, with Undo putting them back at their place; the focus goes to the list's title. */
+  function confirmRemoveMember(memberId: string) {
+    const at = locateMember(current(), memberId);
+    close();
+    if (!at) return;
+    const removed = at.section.members[at.index];
+    const sectionId = at.section.id;
+    const label = memberLabel(removed);
+    edit((p) => removeMember(p, memberId));
+    focusSoon(`section-${sectionId}-title`);
+    notify(t("manage.removed", { label }), () => {
+      edit((p) => insertMember(p, sectionId, at.index, removed));
+      notify(t("manage.back.done", { label }));
+      focusSoon(memberMenuId(memberId) + "-button");
+    });
+  }
+
   const field = dialog && (dialog.kind === "renameField" || dialog.kind === "removeField") ? findField(profile, dialog.fieldId) : undefined;
+  const member = dialog && (dialog.kind === "editRelation" || dialog.kind === "removeMember") ? findMember(profile, dialog.memberId) : undefined;
   const section: Section | undefined =
-    dialog && (dialog.kind === "renameSection" || dialog.kind === "removeSection" || dialog.kind === "addField")
+    dialog && (dialog.kind === "renameSection" || dialog.kind === "removeSection" || dialog.kind === "addField" || dialog.kind === "addMember")
       ? profile.sections.find((s) => s.id === dialog.sectionId)
       : undefined;
+  const memberMode =
+    dialog?.kind === "addMember" && section?.kind === "family"
+      ? ({ kind: "add", section } as const)
+      : dialog?.kind === "editRelation" && member
+        ? ({ kind: "edit", member } as const)
+        : undefined;
 
   return (
     <ManageContext.Provider value={manage}>
@@ -241,6 +279,31 @@ export function ManageProvider({
         onClose={close}
         onAdded={(sectionId) => manage.jump(sectionId)}
       />
+
+      <MemberDialog
+        open={!!memberMode}
+        mode={memberMode}
+        edit={edit}
+        onClose={close}
+        onDone={(memberId) => focusSoon(`member-${memberId}`)}
+      />
+
+      <Dialog
+        open={dialog?.kind === "removeMember" && !!member}
+        onClose={close}
+        title={member ? t("member.removeTitle", { label: memberLabel(member) }) : ""}
+        description={t("member.removeText")}
+      >
+        <DialogActions>
+          <button type="button" className={button("secondary")} onClick={close}>
+            {t("ui.cancel")}
+          </button>
+          <button type="button" className={button("danger")} onClick={() => member && confirmRemoveMember(member.id)}>
+            <Icon name="trash" className="size-4" />
+            {t("manage.removeConfirm")}
+          </button>
+        </DialogActions>
+      </Dialog>
 
       {toast && <UndoToast key={toast.id} text={toast.text} undo={toast.undo} onDone={() => setToast(null)} />}
     </ManageContext.Provider>

@@ -6,7 +6,9 @@ import {
   CUSTOM_FIELD_TYPES,
   changeFieldType,
   locateField,
+  locateMember,
   missingDefaults,
+  moveMember,
   moveField,
   moveFieldToSection,
   moveSection,
@@ -14,15 +16,16 @@ import {
   sectionDefOf,
   setFieldMultiline,
   setFieldVisible,
+  setMemberVisible,
   setSectionVisible,
 } from "@/biodata/edits";
-import type { Field, FieldType, Section } from "@/biodata/types";
+import type { FamilyMember, Field, FieldType, Section } from "@/biodata/types";
 import { iconButton } from "@/components/ui/button";
 import { Icon, type IconName } from "@/components/ui/icons";
 import { Menu, MenuLabel, MenuSeparator, dangerMenuItem, menuItem } from "@/components/ui/Menu";
 import { t } from "@/lib/i18n";
-import { fieldLabel, sectionTitle } from "./labels";
-import { fieldMenuId, sectionMenuId, useManage } from "./ManageProvider";
+import { fieldLabel, memberLabel, sectionTitle } from "./labels";
+import { fieldMenuId, memberMenuId, sectionMenuId, useManage } from "./ManageProvider";
 
 // The ⋯ menus on field rows and section cards (BUILD_PLAN Step 2.2, VISION §6, mockup: editor). WAI-ARIA menus
 // (ui/Menu): arrows move, Enter picks, Escape closes. "Change type" and "Move to section" open a list in the same
@@ -271,6 +274,81 @@ function FieldMenuItems({ field, close }: { field: Field; close: () => void }) {
         {t("manage.remove")}
       </Item>
     </Views>
+  );
+}
+
+/** A family member's ⋯ menu (Step 2.3, D28): change the relation, move, hide or remove the row. */
+export function MemberMenu({ member, readOnly }: { member: FamilyMember; readOnly: boolean }) {
+  const label = memberLabel(member);
+  return (
+    <Menu
+      id={memberMenuId(member.id)}
+      label={t("member.menu", { label })}
+      buttonLabel={t("member.menu", { label })}
+      buttonTitle={t("member.menu", { label })}
+      button={<Icon name="more" className="size-[18px]" />}
+      buttonClassName={menuButton}
+      disabled={readOnly}
+      menuClassName="w-64"
+      autoPlace={{ reserve: reserve() }}
+    >
+      {(close) => <MemberMenuItems member={member} close={close} />}
+    </Menu>
+  );
+}
+
+function MemberMenuItems({ member, close }: { member: FamilyMember; close: () => void }) {
+  const manage = useManage();
+  const at = locateMember(manage.current(), member.id);
+  const index = at?.index ?? 0;
+  const count = at?.section.members.length ?? 0;
+  const id = member.id;
+
+  function move(step: -1 | 1) {
+    close();
+    manage.edit((p) => moveMember(p, id, step));
+    manage.focusSoon(`${memberMenuId(id)}-button`);
+  }
+
+  return (
+    <>
+      <Item
+        icon="edit"
+        onClick={() => {
+          close();
+          manage.open({ kind: "editRelation", memberId: id });
+        }}
+      >
+        {t("member.editRelation")}
+      </Item>
+      <MenuSeparator />
+      <Item icon="arrowUp" disabled={index === 0} onClick={() => move(-1)}>
+        {t("manage.moveUp")}
+      </Item>
+      <Item icon="arrowDown" disabled={index >= count - 1} onClick={() => move(1)}>
+        {t("manage.moveDown")}
+      </Item>
+      <MenuSeparator />
+      <Item
+        icon={member.visible ? "eyeOff" : "eye"}
+        onClick={() => {
+          close();
+          manage.edit((p) => setMemberVisible(p, id, !member.visible));
+        }}
+      >
+        {t(member.visible ? "manage.hide" : "manage.show")}
+      </Item>
+      <Item
+        icon="trash"
+        danger
+        onClick={() => {
+          close();
+          manage.open({ kind: "removeMember", memberId: id });
+        }}
+      >
+        {t("manage.remove")}
+      </Item>
+    </>
   );
 }
 

@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui/icons";
 import { t, type AppKey } from "@/lib/i18n";
 import en from "@/i18n/app/en.json";
 import { ChoiceValue } from "./ChoiceInput";
-import { FieldMenu } from "./ManageMenus";
+import { FieldMenu, MemberMenu } from "./ManageMenus";
 import { DateValue, HeightValue, ParagraphValue, TextValue, TimeValue } from "./FieldInputs";
 import { choicesFor, fieldLabel, memberLabel } from "./labels";
 
@@ -185,18 +185,35 @@ export const FieldRow = memo(function FieldRow({ field, edit, readOnly, dateForm
   );
 });
 
-/** Keeps member rows' inputs in line with field rows until members get their own ⋯ menu (Step 2.3). */
-const MENU_SPACE = <span aria-hidden className="size-9 shrink-0 pointer-coarse:size-11" />;
-
-/** A family member (D28): the relation as the label, the details typed beside it. Relations are edited in 2.3. */
-export const MemberRow = memo(function MemberRow({ member, edit, readOnly }: { member: FamilyMember; edit: Edit; readOnly: boolean }) {
+/** A family member (D28): the relation as the label, the details typed beside it, and the row's ⋯ menu (Step 2.3). */
+export const MemberRow = memo(function MemberRow({
+  member,
+  edit,
+  readOnly,
+  placeholder,
+}: {
+  member: FamilyMember;
+  edit: Edit;
+  readOnly: boolean;
+  /** What to write: a family member's or a reference's details. */
+  placeholder: string;
+}) {
   const id = `member-${member.id}`;
   const memberId = member.id;
   const commit = useCallback((details: string) => edit((p) => setMemberDetails(p, memberId, details)), [edit, memberId]);
   const onVisible = useCallback((visible: boolean) => edit((p) => setMemberVisible(p, memberId, visible)), [edit, memberId]);
   return (
-    <RowShell inputId={id} label={memberLabel(member)} visible={member.visible} readOnly={readOnly} onVisible={onVisible} hintId={`${id}-hint`} testId={`member-${member.relationKey ?? member.id}`} menu={MENU_SPACE}>
-      <TextValue id={id} kind="text" wrap value={member.details} readOnly={readOnly} dim={!member.visible} onCommit={commit} placeholder={t("editor.member.placeholder")} />
+    <RowShell
+      inputId={id}
+      label={memberLabel(member)}
+      visible={member.visible}
+      readOnly={readOnly}
+      onVisible={onVisible}
+      hintId={`${id}-hint`}
+      testId={`member-${member.relationKey ?? member.id}`}
+      menu={<MemberMenu member={member} readOnly={readOnly} />}
+    >
+      <TextValue id={id} kind="text" wrap value={member.details} readOnly={readOnly} dim={!member.visible} onCommit={commit} placeholder={placeholder} />
     </RowShell>
   );
 });

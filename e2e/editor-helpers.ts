@@ -75,3 +75,32 @@ export function storedField(profile: BiodataProfile, key: string) {
 export function storedMember(profile: BiodataProfile, relationKey: string) {
   return profile.sections.flatMap((s) => (s.kind === "family" ? s.members : [])).find((m) => m.relationKey === relationKey);
 }
+
+/** A PNG drawn in the page (never a real person's photo): a warm gradient, a green circle, two coloured corners. */
+export async function drawnPng(page: Page, width: number, height: number): Promise<Buffer> {
+  const base64 = await page.evaluate(
+    ([w, h]) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const c = canvas.getContext("2d")!;
+      const g = c.createLinearGradient(0, 0, w, h);
+      g.addColorStop(0, "#f6d7a7");
+      g.addColorStop(1, "#7a4b3a");
+      c.fillStyle = g;
+      c.fillRect(0, 0, w, h);
+      c.fillStyle = "#3d6b5c";
+      c.beginPath();
+      c.arc(w / 2, h / 2.6, Math.min(w, h) / 6, 0, Math.PI * 2);
+      c.fill();
+      const s = Math.min(w, h) / 8;
+      c.fillStyle = "#c0392b";
+      c.fillRect(0, 0, s, s);
+      c.fillStyle = "#2463c2";
+      c.fillRect(w - s, 0, s, s);
+      return canvas.toDataURL("image/png").split(",")[1];
+    },
+    [width, height],
+  );
+  return Buffer.from(base64, "base64");
+}

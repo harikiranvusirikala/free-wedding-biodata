@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo } from "react";
+import { setPhoto } from "@/biodata/edits";
 import type { BiodataProfile } from "@/biodata/types";
+import type { PhotoChange } from "@/components/photo/PhotoField";
 import { cardTitle, noteCard } from "@/components/ui/card";
 import { focusRing, textLink } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
@@ -18,6 +20,7 @@ import { SectionCard } from "./SectionCard";
 import { SectionJump, SectionRail, useCurrentSection } from "./SectionNav";
 import { StorageCard } from "./StorageCard";
 import { LanguageNotice } from "./LanguageNotice";
+import { PHOTO_ID, PhotoCard } from "./PhotoCard";
 import { TOP_ID, TopCard } from "./TopCard";
 import { doneTraditions, showsTraditions } from "./TraditionChips";
 
@@ -30,8 +33,8 @@ import { doneTraditions, showsTraditions } from "./TraditionChips";
 export function DraftEditor({ controller, repo, db }: { controller: AutosaveController; repo: ProfileRepo; db: BiodataDb }) {
   const { profile, status } = useAutosave(controller);
   const conflict = status.state === "error" && status.kind === "conflict";
-  // The top card comes first in the form and the rail (Step 2.0), then the sections.
-  const ids = useMemo(() => [TOP_ID, ...profile.sections.map((s) => s.id)], [profile.sections]);
+  // The top card comes first in the form and the rail (Step 2.0), then the photo (Step 3.1), then the sections.
+  const ids = useMemo(() => [TOP_ID, PHOTO_ID, ...profile.sections.map((s) => s.id)], [profile.sections]);
   const traditionsDone = useMemo(() => doneTraditions({ sections: profile.sections }), [profile.sections]);
   const { current: currentSection, jump } = useCurrentSection(ids);
 
@@ -42,6 +45,21 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
     [controller],
   );
   const current = useCallback(() => controller.getSnapshot().profile, [controller]);
+
+  // The photo (Step 3.1): its picture is read from the database, and a new or removed picture is written in the
+  // same transaction as the profile that points at it (D9), through autosave.
+  const loadBlob = useCallback(async (id: string) => {
+    const result = await repo.getPhoto(id);
+    return result.ok ? result.value?.blob : undefined;
+  }, [repo]);
+  const onPhotoChange = useCallback(
+    (change: PhotoChange) =>
+      controller.update(setPhoto(controller.getSnapshot().profile, change.photo), {
+        put: change.put ? [change.put] : undefined,
+        delete: change.delete ? [change.delete] : undefined,
+      }),
+    [controller],
+  );
 
   useEffect(() => {
     const detach = controller.attachLifecycle(window);
@@ -86,7 +104,7 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
           <h1 className="sr-only">{t("editor.title")}</h1>
           <div className="flex-1 lg:grid lg:grid-cols-[4rem_minmax(27.5rem,36.25rem)_minmax(0,1fr)] xl:grid-cols-[14.5rem_minmax(27.5rem,36.25rem)_minmax(0,1fr)]">
             <div className="border-r border-line bg-surface max-lg:hidden">
-              <SectionRail sections={profile.sections} current={currentSection} onJump={jump} canAdd={!conflict} />
+              <SectionRail sections={profile.sections} hasPhoto={!!profile.photo} current={currentSection} onJump={jump} canAdd={!conflict} />
             </div>
             {/* Sticky here, not inside: the chips stay under the header for the whole form. */}
             <div className="sticky top-14 z-20 lg:hidden">
@@ -103,6 +121,7 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
                 readOnly={conflict}
               />
               <LanguageNotice lang={profile.docLanguage} edit={edit} readOnly={conflict} />
+              <PhotoCard photo={profile.photo} loadBlob={loadBlob} onChange={onPhotoChange} readOnly={conflict} />
               {profile.sections.map((section) => (
                 <SectionCard
                   key={section.id}

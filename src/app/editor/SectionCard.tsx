@@ -15,8 +15,9 @@ import { TraditionChips } from "./TraditionChips";
 
 // A section of the biodata as a card (mockup: editor): its title, how much is filled ("3 of 9 filled",
 // informational only, §5), its ⋯ menu (rename, move, hide, restore default fields, remove: Step 2.2), a row per
-// field, or per family member, in order, and "Add a field" at the foot. Memoised on the section object: edits
-// share unchanged sections (edits.ts), so typing re-renders only the card being typed in.
+// field, or per family member, in order, and "Add a field" (or "Add a family member", Step 2.3) at the foot.
+// Memoised on the section object: edits share unchanged sections (edits.ts), so typing re-renders only the card
+// being typed in.
 
 export const sectionAnchor = (section: Pick<Section, "id">) => `section-${section.id}`;
 
@@ -74,7 +75,7 @@ export const SectionCard = memo(function SectionCard({
       {!section.visible && <p className="border-b border-line bg-sunken/60 px-4 py-2 text-[13px] text-pretty text-ink-3 sm:px-5">{t("manage.section.hiddenTip")}</p>}
       {empty ? (
         <p className="px-4 py-5 text-sm text-pretty text-ink-3 sm:px-5" data-testid="section-empty">
-          {t(section.kind === "fields" ? "manage.section.empty" : "manage.section.emptyList")}
+          {t(section.kind === "fields" ? "manage.section.empty" : section.key === "references" ? "manage.section.emptyReferences" : "manage.section.emptyList")}
         </p>
       ) : (
         <div className={cardRows}>
@@ -82,22 +83,28 @@ export const SectionCard = memo(function SectionCard({
             ? section.fields.map((field) => (
                 <FieldRow key={field.id} field={field} edit={edit} readOnly={readOnly} dateFormat={dateFormat} heightFormat={heightFormat} />
               ))
-            : section.members.map((member) => <MemberRow key={member.id} member={member} edit={edit} readOnly={readOnly} />)}
+            : section.members.map((member) => (
+                <MemberRow
+                  key={member.id}
+                  member={member}
+                  edit={edit}
+                  readOnly={readOnly}
+                  placeholder={t(section.key === "references" ? "member.placeholder.reference" : "member.placeholder.family")}
+                />
+              ))}
         </div>
       )}
-      {section.kind === "fields" && (
-        <div className="flex flex-wrap items-center gap-2 rounded-b-2xl border-t border-line bg-sunken/50 px-4 py-3 sm:px-5">
-          <button
-            type="button"
-            className={button("secondary", "sm")}
-            disabled={readOnly}
-            onClick={() => manage.open({ kind: "addField", sectionId: section.id })}
-          >
-            <Icon name="plus" className="size-4" />
-            {t("manage.addField")}
-          </button>
-        </div>
-      )}
+      <div className="flex flex-wrap items-center gap-2 rounded-b-2xl border-t border-line bg-sunken/50 px-4 py-3 sm:px-5">
+        <button
+          type="button"
+          className={button("secondary", "sm")}
+          disabled={readOnly}
+          onClick={() => manage.open(section.kind === "fields" ? { kind: "addField", sectionId: section.id } : { kind: "addMember", sectionId: section.id })}
+        >
+          <Icon name="plus" className="size-4" />
+          {t(section.kind === "fields" ? "manage.addField" : section.key === "references" ? "member.addReference" : "member.add")}
+        </button>
+      </div>
     </section>
   );
 });

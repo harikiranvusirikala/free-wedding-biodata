@@ -9,6 +9,7 @@ import {
   SAMPLE_PROFILE,
   TRADITION_FIELD_SETS,
   createProfile,
+  createSampleProfile,
   createSection,
   optionsFor,
   type FieldKey,
@@ -207,5 +208,35 @@ describe("SAMPLE_PROFILE", () => {
   it("can't be changed by accident", () => {
     expect(Object.isFrozen(SAMPLE_PROFILE.sections[0])).toBe(true);
     expect(Object.isFrozen(structuredClone(SAMPLE_PROFILE))).toBe(false);
+  });
+});
+
+describe("createSampleProfile (Open a sample)", () => {
+  const ids = (profile: BiodataProfile) => [
+    profile.id,
+    ...profile.sections.flatMap((s) => [s.id, ...(s.kind === "fields" ? s.fields.map((f) => f.id) : s.members.map((m) => m.id))]),
+  ];
+
+  it("is a new, never-saved draft with the sample's content and fresh ids everywhere", () => {
+    const sample = createSampleProfile({ newId: counter(), now: () => NOW });
+    expect(profileSchema.parse(sample)).toEqual(sample);
+    expect(sample.revision).toBe(0);
+    expect(sample.createdAt).toBe(NOW.toISOString());
+    expect(sample.updatedAt).toBe(NOW.toISOString());
+    expect(sample.draftName).toBe(SAMPLE_PROFILE.draftName);
+    const fresh = ids(sample);
+    expect(new Set(fresh).size).toBe(fresh.length);
+    for (const id of ids(SAMPLE_PROFILE)) expect(fresh).not.toContain(id);
+    // The same content in the same order, ids aside.
+    const strip = (profile: BiodataProfile) => JSON.parse(JSON.stringify(profile, (key, value) => (key === "id" || key === "createdAt" || key === "updatedAt" ? undefined : value)));
+    expect(strip(sample)).toEqual(strip(SAMPLE_PROFILE));
+  });
+
+  it("is a copy: changing it leaves the shared sample alone, and two copies never share ids", () => {
+    const a = createSampleProfile();
+    const b = createSampleProfile();
+    (a.sections[0] as { title?: string }).title = "Changed";
+    expect(SAMPLE_PROFILE.sections[0].title).toBeUndefined();
+    expect(ids(a).some((id) => ids(b).includes(id))).toBe(false);
   });
 });

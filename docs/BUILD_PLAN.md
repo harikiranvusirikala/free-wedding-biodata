@@ -347,13 +347,21 @@ Every screen is built **production-quality the first time**, to the standard of 
 - **Tradition chips** (in Religion, else Horoscope; at most 4 fields each, added once, Undo): Telugu (Intiperu, Lagnam, Dosham), Tamil (Kuladeivam, Lagnam, Dosham), Marathi (Devak, Kuldevta, Gan, Nadi), Hindu – other (Lagnam, Dosham, Kula Devata), Muslim (Sect, Maslak), Christian (Denomination, Church / Parish), Sikh (Practice, Gotra), Jain (Sect, Gotra). No Allah medallion (needs vector calligraphy). `/dev/draft` renders a stored draft for e2e.
 - **Open:** values typed in another script still print in the page's font only (the help page promises any script): fix with per-value script detection in 4.1 part 2.
 
+### Step 2.3: Family members and sample profile (built 2026-11-22)
+
+- **Built:** pure edits `addMember`, `editMemberRelation`, `moveMember`, `removeMember`/`insertMember`, `locateMember`, `setPhoto` (`src/biodata/edits.ts`). Each member row has a ⋯ menu (Change relation…, Move up/down, Hide/Show, Remove with confirm and Undo). `MemberDialog`: Add a family member / Add a reference / Change relation, with 19 relation pills (`RELATION_KEYS`) or a typed relation; typing a suggestion's name counts as picking it.
+- **D44:** member details accept line breaks (Enter adds one) and print one line per number; References can hold several contacts. The same relation may be added twice (two elder sisters).
+- **Sample:** `createSampleProfile()` (fresh ids); "Open a sample" in the drafts menu always creates a new draft and never touches the open one.
+- **Completion:** `profileCompletion()`, "Your biodata is N% filled" in the rail, rounded down; hidden lines and hidden sections don't count.
+- **Deviations:** there is no empty-draft state, so the sample is offered only in the drafts menu; the percentage shows only with the rail (≥ 1024 px), not on phones and tablets; "(Late)" is typed as part of the relation; no new relation keys. Built by one subagent together with 3.1's editor integration.
+
 ## Phase 3 — Photo and live preview
 
 - **3.1** Photo: pick, validate, downscale (≤ 3000 px long edge), own cropper (drag, pinch, zoom slider, rotate) with a 3:4 or tall 2:3 frame, replace, remove, optional second photo, empty-state tips, and a low-resolution warning below ~200 dpi at the chosen frame size (VISION D12, D40, D47).
 - **3.2** Document primitives, tokens, `toDocument`, `paginate` (with D31 Auto text size: try the template's sizes largest first until one page fits, floor 9 pt), the **Classic skeleton** (D34); **Classic Gold first**, matched against the owner's reference side by side (original foliage and Ganesha artwork, D21/D29), then Minimal Ivory; document labels en + te.
 - **3.3** Preview pane (desktop sticky, tablet collapsible; on phones the floating Preview pill and bottom sheet with preview, design/colour chips, text size and Download / Share / Save image, VISION D45), zoom, fit, page count, template/colour/document-language pickers, text size (Auto, XS–XL) and label case (D31), title and motif pickers.
 
-### Step 3.1: Photo (component built 2026-11-21; editor integration: next)
+### Step 3.1: Photo (component built 2026-11-21; in the editor 2026-11-22)
 
 - **Built:** `src/biodata/photo-crop.ts` (pure: clamp, pan, zoom around a point, rotate, `effectiveDpi`, CSS placement), `src/lib/photos.ts` (check, decode upright, ≤ 3000 px JPEG 0.9, `renderCrop`/`renderCropDataUrl`), `src/components/photo/` (`PhotoField`, `Cropper`, `CropImage`), dev-only `/dev/photo`, `e2e/photo.spec.ts`.
 - **Crop:** frame centre in source fractions; zoom 1–5; quarter turns clockwise; the frame is always covered.
@@ -362,7 +370,9 @@ Every screen is built **production-quality the first time**, to the standard of 
 - **Low-resolution warning** below 200 dpi at Classic Gold's printed width (53 mm for 3:4, 49 mm for 2:3), in the card and live in the cropper (D47).
 - **Contract:** `PhotoField` emits `{ photo, put, delete }`, mapping straight onto `profile-repo` `save(…, { photos: { put, delete } })`; it opens the cropper after picking. The document gets `renderCropDataUrl(blob, crop, frame, printPixels(mm))` (a JPEG data URL).
 - **Deviations:** second photo, photo pages and the horoscope chart wait for 4.2b; photo icons live in `src/components/photo/icons.tsx` (move to the kit later). Built by a subagent in parallel with 2.1.
-- **Next:** wire into the editor and the document's photo input.
+- **In the editor (2026-11-22):** `PhotoCard` after the Top card, with Photo in the rail and the chips. `autosave.update(profile, { put, delete })` saves each picture in the same transaction as the profile; queued photo writes are cleared only by a save that succeeds. e2e: reload restores the photo, Remove deletes it, Change swaps it in one save, Duplicate copies it.
+- **Document photo:** `src/lib/document-photo.ts`: `useDocumentPhoto(profile.photo, loadBlob)` → `{ photo?, ready }` for `<DocumentView photo>` (keeps the previous picture while a new crop is drawn; stable between redraws); pure `loadDocumentPhoto`, `documentPhotoKey`, `documentPhotoPixels()` (56 mm at 300 dpi = 661 px). `/dev/draft` shows the stored photo.
+- **Deviation:** the photo is its own card, not in the Personal details header (mockup). `PhotoField`'s low-resolution warning still uses Classic Gold's frame size; pass `printWidthMm` per design in 3.3.
 
 ### Step 3.2: Document engine and first two templates (built 2026-11-21)
 
@@ -436,8 +446,8 @@ Every screen is built **production-quality the first time**, to the standard of 
 | 2.0 | Editor opening: top element card, language notice, tradition chips | Done 2026-11-22 (committed with 4.3). Unit 512, e2e 148 passed (46 skips by design); top card, symbol and language dialogs and the printed page in en/te reviewed at 3 sizes × Day/Night. Paused overnight by the daily API budget and resumed. See the Step 2.0 section |
 | 2.1 | Editor inputs | Done 2026-11-21. Unit 419 at the time (25 new), e2e 118 passed (6 new in `editor-inputs.spec.ts`); editor screens (sample and empty draft, desktop, 1180 px, tablet, phone, Day/Night, open combobox, conflict) reviewed (fixed: sticky chips, wrapping family details, cut rail names, duplicate phone hint, faint Night dots). See the Step 2.1 section |
 | 2.2 | Field and section management | Done 2026-11-21. Unit 470 at the time (30 new), e2e 137 passed (45 skips by design); field/section menus, Move to section, Add a field/section, remove dialog, Undo toast, hidden and empty sections reviewed on phone and desktop, Day/Night (fixed: type cards wrapping, toast covering shots, phone keyboard opening on Add a section). See the Step 2.2 section |
-| 2.3 | Family members and sample profile | Not started |
-| 3.1 | Photo | Component done 2026-11-21 (unit 419 at the time, 37 new; e2e 118 passed, 7 new on `/dev/photo`; photo screens reviewed at 3 sizes × Day/Night, fixed: Done off-screen on phones, 360 px overflow, Remove contrast in Night, slider focus ring). Editor integration next |
+| 2.3 | Family members and sample profile | Done 2026-11-22 (with 3.1's editor integration). Unit 537 (25 new), e2e 167 passed (49 skips by design; new `editor-family`, `editor-photo`); family list, member menu, add-member dialog, References with two numbers, photo card empty/filled, the 1180 px rail and printed pages with the photo reviewed on phone and desktop, Day/Night (fixed: a menu-name clash, a multi-line check measuring one element twice). See the Step 2.3 section |
+| 3.1 | Photo | Component done 2026-11-21 (unit 419 at the time, 37 new; e2e 118 passed, 7 new on `/dev/photo`; photo screens reviewed at 3 sizes × Day/Night, fixed: Done off-screen on phones, 360 px overflow, Remove contrast in Night, slider focus ring). In the editor 2026-11-22 (committed with 2.3) |
 | 3.2 | Document engine and first two templates | Done 2026-11-21 (ahead of Phase 2, since it depends only on 1.2). Unit 304 at the time (58 new), e2e 68 passed (+32 skips by design); document screenshots for both templates × en/te × short/sample/long/split reviewed (fixed: Minimal's header band, a third page on long variants, a lone row opening page 2, and a paragraph-split bug with blank lines that overflowed 167 px). See the Step 3.2 section |
 | 3.3 | Live preview | Not started |
 | 4.1 | Download, Share, image export, Print | Part 1 (the engine, `src/pdf/`) done 2026-11-21: unit 470 at the time (50 PDF/filename tests), e2e 137 passed; PDFs match Chrome in ten languages. Part 2 (editor buttons) after 3.3 |

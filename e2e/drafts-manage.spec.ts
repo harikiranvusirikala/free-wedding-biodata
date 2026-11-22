@@ -291,6 +291,8 @@ test("the drafts menu works from the keyboard", async ({ page }) => {
   await page.keyboard.press("ArrowDown");
   await expect(menu(page).getByRole("menuitem", { name: "New draft" })).toBeFocused();
   await page.keyboard.press("ArrowDown");
+  await expect(menu(page).getByRole("menuitem", { name: /^Open a sample/ })).toBeFocused(); // Step 2.3
+  await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   const dialog = page.getByRole("dialog", { name: "Rename this draft" });
   await expect(dialog.getByLabel("Draft name")).toBeFocused();

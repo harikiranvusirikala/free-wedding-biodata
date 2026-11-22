@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { openStoredDraft, sampleDraft } from "./editor-helpers";
+import { drawnPng, openStoredDraft, sampleDraft } from "./editor-helpers";
 
 // The A7 quality gate (BUILD_PLAN A7): every screen at phone, tablet and desktop size, Day and Night, saved in
 // test-results/screenshots/ to be looked at before committing; and nothing scrolls sideways at 360 px.
@@ -300,6 +300,69 @@ test("top of your biodata, its pickers, the language notice and tradition chips,
     await page.goto(`/dev/draft?d=${id}`);
     await expect(page.locator("body[data-doc-ready]")).toHaveCount(1);
     await page.locator("[data-page]").first().screenshot({ path: `test-results/screenshots/document-top-${lang}.png`, animations: "disabled" });
+  }
+});
+
+// Family members, References and the photo in the editor (Steps 2.3, 3.1), shot as they are at phone and desktop
+// size, Day and Night: the family list with its rows' ⋯ menus, a member's menu, the Add a family member dialog,
+// References with two phone numbers, and the photo card empty and with a (drawn) photo.
+test("family list, add-member dialog, references and the photo card, Day and Night", async ({ page, isMobile }) => {
+  test.skip(isMobile, "sizes are set here, so one project is enough");
+  test.setTimeout(120_000);
+  await openSample(page);
+  const shoot = async (name: string, size: string) => {
+    for (const theme of THEMES) {
+      await page.emulateMedia({ colorScheme: theme });
+      await expect(page.locator("html")).toHaveClass(theme === "dark" ? /dark/ : /^(?!.*dark)/);
+      await page.screenshot({ path: `test-results/screenshots/${name}-${size}-${theme === "light" ? "day" : "night"}.png`, animations: "disabled" });
+    }
+  };
+  const top = (selector: string) => page.locator(selector).evaluate((el) => el.scrollIntoView({ block: "start" }));
+  const reference = page.locator('[data-section="references"] [data-testid="member-maternalUncle"] textarea');
+  await reference.fill("Pothuri Srinivas, Textile Business, Vijayawada\n+91 90000 00003\n+91 90000 00004");
+  await expect(page.getByTestId("save-status")).toHaveText(/Saved on this device · \d/);
+
+  for (const size of SIZES.filter((s) => s.name !== "tablet")) {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await page.emulateMedia({ colorScheme: "light" });
+    await top('[data-section="photo"]');
+    await shoot("editor-photo-empty", size.name);
+    await top('[data-section="family"]');
+    await shoot("editor-family", size.name);
+    await page.getByRole("button", { name: "Options for “Sister (Elder)”", exact: true }).click();
+    await expect(page.getByRole("menu")).toBeVisible();
+    await shoot("editor-member-menu", size.name);
+    await page.keyboard.press("Escape");
+    await page.locator('[data-section="family"]').getByRole("button", { name: "Add a family member" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add a family member" });
+    await dialog.getByRole("radio", { name: "Brother (Younger)", exact: true }).check();
+    await dialog.getByLabel("Details").fill("Kiran Mandapati, B.Tech student, Hyderabad");
+    await shoot("editor-add-member", size.name);
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await top('[data-section="references"]');
+    await shoot("editor-references", size.name);
+  }
+
+  await page.locator('[data-section="photo"]').getByTestId("photo-input").setInputFiles({ name: "drawn.png", mimeType: "image/png", buffer: await drawnPng(page, 1500, 2000) });
+  await page.getByRole("dialog", { name: "Crop your photo" }).getByRole("button", { name: "Done" }).click();
+  await expect(page.getByTestId("save-status")).toHaveText(/Saved on this device · \d/);
+  for (const size of SIZES.filter((s) => s.name !== "tablet")) {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await top('[data-section="photo"]');
+    await expect(page.locator('[data-section="photo"]').getByTestId("photo-thumb")).toHaveAttribute("data-crop", /zoom/);
+    await shoot("editor-photo", size.name);
+  }
+  // The rail at 1180 px (icons, with the share filled as a number) and the printed page with the photo.
+  await page.setViewportSize({ width: 1180, height: 820 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shoot("editor-photo-laptop", "1180");
+  const id = new URL(page.url()).searchParams.get("d")!;
+  await page.setViewportSize({ width: 900, height: 1200 });
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto(`/dev/draft?d=${id}`);
+  await expect(page.locator("body[data-doc-ready]")).toHaveCount(1);
+  for (const [i, pageEl] of (await page.locator("[data-page]").all()).entries()) {
+    await pageEl.screenshot({ path: `test-results/screenshots/document-sample-photo-${i + 1}.png`, animations: "disabled" });
   }
 });
 

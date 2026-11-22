@@ -14,7 +14,7 @@ import {
   type Tradition,
 } from "./defaults";
 import { dateToText, heightToInches, parseDateText, parseTimeText, splitInches, timeToText } from "./inputs";
-import type { BiodataProfile, FamilyMember, FamilySection, Field, FieldType, FieldsSection, LangCode, ProfileOptions, Section } from "./types";
+import type { BiodataProfile, FamilyMember, FamilySection, Field, FieldType, FieldsSection, LangCode, MainPhoto, ProfileOptions, Section } from "./types";
 
 // Every change to a profile is a small pure function: (profile, …) → new profile (VISION D6). Nothing is mutated,
 // so React sees a new object exactly when something changed, undo is "keep the old one", and each edit is a
@@ -643,4 +643,128 @@ export function removeFields(profile: BiodataProfile, fieldIds: readonly string[
     return { ...section, fields: section.fields.filter((f) => !ids.has(f.id)) };
   });
   return changed ? touch(profile, sections, now) : profile;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Family members (BUILD_PLAN Step 2.3, VISION §6 "Repeated family members", D28) and References (D44): a relation
+// list is an array of members with stable ids, so adding, reordering and removing never touch the other rows. A
+// relation is picked (a `relationKey`, printed in the document language) or typed (printed as typed), never both.
+
+/** A member's relation: a picked suggestion's key, or the words typed. */
+export type MemberRelation = { relationKey: string } | { relation: string };
+
+/** The relation list holding a member, with the member's index in it. */
+export function locateMember(profile: BiodataProfile, memberId: string): { section: FamilySection; index: number } | undefined {
+  for (const section of profile.sections) {
+    if (section.kind !== "family") continue;
+    const index = section.members.findIndex((member) => member.id === memberId);
+    if (index >= 0) return { section, index };
+  }
+  return undefined;
+}
+
+/** Replaces one relation list by id; `change` returns the new member list (or the same list for no change). */
+function updateMembers(
+  profile: BiodataProfile,
+  sectionId: string,
+  change: (members: FamilyMember[]) => FamilyMember[],
+  now: Clock,
+): BiodataProfile {
+  return updateSection(
+    profile,
+    sectionId,
+    (section) => {
+      if (section.kind !== "family") return section;
+      const members = change(section.members);
+      return members === section.members ? section : { ...section, members };
+    },
+    now,
+  );
+}
+
+/** The member's relation fields for a picked or typed relation; undefined when nothing usable was given. */
+function relationFields(relation: MemberRelation): Pick<FamilyMember, "relationKey" | "relation"> | undefined {
+  if ("relationKey" in relation) return relation.relationKey ? { relationKey: relation.relationKey, relation: "" } : undefined;
+  return relation.relation.trim() ? { relation: relation.relation } : undefined;
+}
+
+/**
+ * A person added to a relation list (Family or References), shown, at the end. Details may hold several lines
+ * (a second phone number, D44). Refused without a relation, or for a section that holds fields.
+ */
+export function addMember(
+  profile: BiodataProfile,
+  sectionId: string,
+  input: MemberRelation & { details?: string },
+  newId: NewId = newUuid,
+  now: Clock = systemClock,
+) {
+  const relation = relationFields(input);
+  if (!relation) return profile;
+  return updateMembers(profile, sectionId, (members) => [...members, { id: newId(), ...relation, details: input.details ?? "", visible: true }], now);
+}
+
+/** A new relation for a member: picking one clears the typed words, typing one clears the picked key (D33). */
+export function editMemberRelation(profile: BiodataProfile, memberId: string, relation: MemberRelation, now: Clock = systemClock) {
+  const next = relationFields(relation);
+  if (!next) return profile;
+  return updateMember(
+    profile,
+    memberId,
+    (member) => {
+      if (member.relationKey === next.relationKey && (next.relationKey !== undefined || member.relation === next.relation)) return member;
+      const base = without(member, "relationKey");
+      return { ...base, ...next };
+    },
+    now,
+  );
+}
+
+/** One place up (-1) or down (+1) in its list; a no-op at either end. */
+export function moveMember(profile: BiodataProfile, memberId: string, step: -1 | 1, now: Clock = systemClock) {
+  const at = locateMember(profile, memberId);
+  if (!at) return profile;
+  const to = at.index + step;
+  if (to < 0 || to >= at.section.members.length) return profile;
+  return updateMembers(profile, at.section.id, (members) => moved(members, at.index, to), now);
+}
+
+/** Removes a member and their details (the editor asks first and offers Undo, which is insertMember). */
+export function removeMember(profile: BiodataProfile, memberId: string, now: Clock = systemClock) {
+  const at = locateMember(profile, memberId);
+  if (!at) return profile;
+  return updateMembers(profile, at.section.id, (members) => members.filter((member) => member.id !== memberId), now);
+}
+
+/** Puts a member back at an index of a relation list (Undo); refused if the id is already there; index clamped. */
+export function insertMember(profile: BiodataProfile, sectionId: string, index: number, member: FamilyMember, now: Clock = systemClock) {
+  if (locateMember(profile, member.id)) return profile;
+  return updateMembers(
+    profile,
+    sectionId,
+    (members) => {
+      const next = [...members];
+      next.splice(Math.max(0, Math.min(index, members.length)), 0, member);
+      return next;
+    },
+    now,
+  );
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The main photo (Step 3.1, D12, D40). Only the reference and crop live in the profile; the picture itself is
+// written by the same save (autosave's photo puts and deletes), so a draft never points at a missing image.
+
+const samePhoto = (a: MainPhoto | undefined, b: MainPhoto | undefined) =>
+  a === b ||
+  (!!a && !!b && a.id === b.id && a.frame === b.frame && a.crop.x === b.crop.x && a.crop.y === b.crop.y && a.crop.zoom === b.crop.zoom && a.crop.rotation === b.crop.rotation);
+
+/** Sets (or, with undefined, removes) the main photo's reference, frame and crop. */
+export function setPhoto(profile: BiodataProfile, photo: MainPhoto | undefined, now: Clock = systemClock) {
+  if (samePhoto(profile.photo, photo)) return profile;
+  if (!photo) {
+    const next = without(profile, "photo");
+    return { ...next, updatedAt: now().toISOString() };
+  }
+  return { ...profile, photo, updatedAt: now().toISOString() };
 }

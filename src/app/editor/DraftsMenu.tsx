@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useState } from "react";
+import { createSampleProfile } from "@/biodata/defaults";
 import { fullNameOf, renameDraft } from "@/biodata/draft-name";
 import type { BiodataProfile } from "@/biodata/types";
 import { DeleteAllDialog } from "@/components/DeleteAllDialog";
@@ -93,6 +94,28 @@ export function DraftsMenu(props: {
     const result = await repo.duplicate(profile.id, { draftName: copyTitleOf({ draftName: profile.draftName, fullName: fullNameOf(profile) }) });
     if (result.ok) {
       window.location.assign(editorUrl(result.profile.id));
+      return;
+    }
+    setBusy(false);
+    fail();
+  }
+
+  /**
+   * Open a sample (Step 2.3): the fictional sample as a new draft, opened with a full page load. The open draft's
+   * changes are written first and the draft itself is never touched; if they can't be written, nothing happens.
+   */
+  async function openSample() {
+    setBusy(true);
+    await controller.flush();
+    const after = controller.getSnapshot();
+    const lost = after.status.state === "error" && after.status.kind === "conflict";
+    if (after.unsaved && !lost) {
+      setBusy(false);
+      return fail(t("drafts.notSaved"));
+    }
+    const created = await repo.create(createSampleProfile());
+    if (created.ok) {
+      window.location.assign(editorUrl(created.profile.id));
       return;
     }
     setBusy(false);
@@ -203,6 +226,16 @@ export function DraftsMenu(props: {
             }}>
               <Icon name="plus" className="size-[18px]" />
               {t("drafts.new")}
+            </button>
+            <button type="button" role="menuitem" className={`${menuItem} items-start`} disabled={busy} onClick={() => {
+              close();
+              void openSample();
+            }}>
+              <Icon name="sparkle" className="mt-0.5 size-[18px]" />
+              <span className="min-w-0 flex-1">
+                <span className="block">{t("drafts.sample")}</span>
+                <span className="block text-xs font-normal text-ink-3">{t("drafts.sampleHint")}</span>
+              </span>
             </button>
             <button type="button" role="menuitem" className={menuItem} disabled={locked || busy} onClick={() => {
               close();

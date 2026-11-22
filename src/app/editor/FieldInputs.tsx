@@ -81,7 +81,10 @@ export function TextValue({
   kind: "text" | "phone" | "email";
   /** May hold line breaks (an address). */
   multiline?: boolean;
-  /** One line of text that wraps to show all of it (a family member's details); Enter adds no line break. */
+  /**
+   * Starts as one line and grows to show all of it (a family member's details). Enter adds a line, so a
+   * reference can list a second phone number on its own line (D44); the biodata prints the lines as typed.
+   */
   wrap?: boolean;
   placeholder?: string;
 }) {
@@ -102,10 +105,9 @@ export function TextValue({
         rows={multiline ? 2 : 1}
         autoCapitalize="sentences"
         className={`${textArea} min-h-9! py-[7px]! leading-5! field-sizing-content pointer-coarse:min-h-11! pointer-coarse:py-[11px]! ${multiline ? "resize-y" : "resize-none"} ${dim ? dimValue : ""}`}
-        onKeyDown={wrap ? (event) => event.key === "Enter" && event.preventDefault() : undefined}
         onChange={(event) => {
           capital.typed();
-          onCommit(wrap ? event.target.value.replace(/[\r\n]+/g, " ") : event.target.value);
+          onCommit(event.target.value);
         }}
       />
     );

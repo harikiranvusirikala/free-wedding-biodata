@@ -66,6 +66,11 @@ export function choicesFor(field: Pick<Field, "key">): readonly Choice[] | undef
 
 const choiceCache = new Map<string, readonly Choice[]>();
 
+/** A relation suggestion's English name (the editor's words; the biodata prints it in its own language). */
+export function relationName(relationKey: string): string {
+  return lookup(doc.relations, relationKey) ?? relationKey;
+}
+
 export function memberLabel(member: Pick<FamilyMember, "relationKey" | "relation">): string {
   return lookup(doc.relations, member.relationKey) || member.relation.trim() || t("editor.unnamedMember");
 }
