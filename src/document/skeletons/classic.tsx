@@ -55,8 +55,12 @@ function headingLook(look: ClassicLook, doc: DocModel, p: Palette): HeadingLook 
   };
 }
 
-const rowLook = (doc: DocModel, p: Palette, wide: boolean, underline: boolean): RowLook => ({
-  labelWidth: wide ? "15.5em" : "11em",
+/** The label column of every row (rows beside the photo and full-width rows share one value column). */
+const LABEL_WIDTH = "11em";
+
+const rowLook = (doc: DocModel, p: Palette, underline: boolean): RowLook => ({
+  // One value column on the whole page (owner, 2026-11-22): rows beside the photo and full-width rows line up.
+  labelWidth: LABEL_WIDTH,
   colon: true,
   labelColor: p.label,
   labelWeight: 700,
@@ -93,14 +97,14 @@ export function classicSkeleton(look: ClassicLook): Pick<TemplateDef, "skeleton"
       case "heading":
         return <HeadingBar lang={doc.lang} title={block.title} look={heading} />;
       case "row":
-        return <Row lang={doc.lang} label={block.row.label} value={block.row.value} note={block.row.note} multiline={block.row.multiline} look={rowLook(doc, palette, block.wide, underline)} />;
+        return <Row lang={doc.lang} label={block.row.label} value={block.row.value} note={block.row.note} multiline={block.row.multiline} look={rowLook(doc, palette, underline)} />;
       case "paragraph":
         return <Paragraph lang={doc.lang} text={text ?? block.paragraph.text} label={block.showLabel && !continued ? block.paragraph.label : undefined} look={paragraph} />;
       case "photo":
         return photoEl ? <div style={{ display: "flex", justifyContent: "flex-end" }}>{photoEl}</div> : null;
       case "lead": {
         const { section } = block;
-        const narrow = rowLook(doc, palette, false, underline);
+        const narrow = rowLook(doc, palette, underline);
         return (
           <div style={{ display: "flex", alignItems: "flex-start", gap: PHOTO_GAP }}>
             <div style={{ flex: "1 1 0", minWidth: 0 }}>

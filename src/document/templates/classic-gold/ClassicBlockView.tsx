@@ -31,8 +31,12 @@ const heading = (doc: DocModel, p: Palette): HeadingLook => ({
   after: `${SPACE.afterHeading}em`,
 });
 
-const row = (doc: DocModel, p: Palette, wide: boolean): RowLook => ({
-  labelWidth: wide ? "15.5em" : "11em",
+/** The label column of every row (rows beside the photo and full-width rows share one value column). */
+const LABEL_WIDTH = "11em";
+
+const row = (doc: DocModel, p: Palette): RowLook => ({
+  // One value column on the whole page (owner, 2026-11-22): rows beside the photo and full-width rows line up.
+  labelWidth: LABEL_WIDTH,
   colon: true,
   labelColor: p.label,
   labelWeight: 700,
@@ -89,8 +93,8 @@ function TopElement({ doc, palette }: { doc: DocModel; palette: Palette }) {
   );
 }
 
-function Rows({ rows, doc, palette, wide }: { rows: DocRow[]; doc: DocModel; palette: Palette; wide: boolean }) {
-  const look = row(doc, palette, wide);
+function Rows({ rows, doc, palette }: { rows: DocRow[]; doc: DocModel; palette: Palette }) {
+  const look = row(doc, palette);
   return rows.map((r) => <Row lang={doc.lang} key={r.id} label={r.label} value={r.value} note={r.note} multiline={r.multiline} look={look} />);
 }
 
@@ -101,7 +105,7 @@ export function ClassicBlockView({ block, doc, palette, photo, text, continued }
     case "heading":
       return <HeadingBar lang={doc.lang} title={block.title} look={heading(doc, palette)} />;
     case "row":
-      return <Row lang={doc.lang} label={block.row.label} value={block.row.value} note={block.row.note} multiline={block.row.multiline} look={row(doc, palette, block.wide)} />;
+      return <Row lang={doc.lang} label={block.row.label} value={block.row.value} note={block.row.note} multiline={block.row.multiline} look={row(doc, palette)} />;
     case "paragraph":
       return (
         <Paragraph
@@ -125,7 +129,7 @@ export function ClassicBlockView({ block, doc, palette, photo, text, continued }
             <HeadingBar lang={doc.lang} title={section.title} look={heading(doc, palette)} />
             {section.items.map((item) =>
               item.kind === "row" ? (
-                <Rows key={item.id} rows={[item]} doc={doc} palette={palette} wide={false} />
+                <Rows key={item.id} rows={[item]} doc={doc} palette={palette} />
               ) : (
                 <Paragraph lang={doc.lang} key={item.id} text={item.text} label={section.items.length > 1 ? item.label : undefined} look={paragraph(doc, palette)} />
               ),
