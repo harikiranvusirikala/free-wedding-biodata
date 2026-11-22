@@ -1,5 +1,6 @@
 import type { DocModel } from "@/biodata/document";
 import type { BlockSpec } from "./types";
+import { invocationParts } from "@/biodata/invocations";
 
 /**
  * Every string a template's blocks print, in order: titles, labels, values (with notes) and paragraphs. Used by
@@ -10,7 +11,9 @@ export function blockTexts(specs: readonly BlockSpec[], doc: DocModel): string[]
   for (const { block } of specs) {
     switch (block.kind) {
       case "header":
-        for (const text of [doc.invocation, doc.title, doc.name]) if (text) out.push(text);
+        // A spread invocation prints as separate parts (TopElement); each part is also inside a one-line invocation.
+        out.push(...invocationParts(doc.invocation ?? ""));
+        for (const text of [doc.title, doc.name]) if (text) out.push(text);
         break;
       case "heading":
         out.push(block.title);

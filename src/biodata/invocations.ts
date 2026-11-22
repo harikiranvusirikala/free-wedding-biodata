@@ -36,5 +36,16 @@ export function findInvocation(text: string): Invocation | undefined {
   return typed ? INVOCATIONS.find((line) => line.text === typed) : undefined;
 }
 
+/**
+ * The parts of an invocation printed spread across the top of the page (left, centre, right), as families print
+ * the Telugu trio "శ్రీరస్తు · శుభమస్తు · అవిఘ్నమస్తు": a line of two to four parts separated by " · ". Any other line
+ * (one part, or more than four) is printed whole, centred: a single item array.
+ */
+export function invocationParts(text: string): string[] {
+  const trimmed = text.trim();
+  const parts = trimmed.split(/\s+·\s+/).map((part) => part.trim()).filter(Boolean);
+  return parts.length >= 2 && parts.length <= 4 ? parts : trimmed ? [trimmed] : [];
+}
+
 /** The title presets, in picker order: keys of `titles` in the document dictionaries (D45). */
 export const TITLE_KEYS = ["biodata", "marriageBiodata", "bioData"] as const;

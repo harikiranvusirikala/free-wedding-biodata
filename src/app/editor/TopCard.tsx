@@ -386,8 +386,8 @@ export const TopCard = memo(function TopCard({
         </div>
       </div>
       <div className="divide-y divide-line">
-        <MotifPicker value={options.motif} palette={palette} readOnly={readOnly} onChange={(id) => edit((p) => setMotif(p, id))} />
         <InvocationPicker value={options.invocation} readOnly={readOnly} onChange={(text) => edit((p) => setInvocation(p, text))} />
+        <MotifPicker value={options.motif} palette={palette} readOnly={readOnly} onChange={(id) => edit((p) => setMotif(p, id))} />
         <TitlePicker options={options} lang={lang} readOnly={readOnly} onChange={(choice) => edit((p) => setTitle(p, choice))} />
       </div>
     </section>
