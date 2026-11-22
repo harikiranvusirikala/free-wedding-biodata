@@ -192,7 +192,7 @@ test.describe("phone", () => {
     expect(pageBox.width).toBeLessThanOrEqual(390);
     await expect(sheet.getByTestId("fit-hint")).toHaveText("Takes 2 pages, even at the smallest size");
     await expect(sheet.getByRole("button", { name: "Download PDF" })).toBeVisible();
-    await expect(sheet.getByRole("button", { name: "Print", exact: true })).toBeVisible();
+    await expect(sheet.getByRole("button", { name: "Print", exact: true })).toHaveCount(0);
     await expect(sheet.getByRole("button", { name: "Save as image" })).toBeVisible();
 
     await sheet.getByTestId("design-choices").getByRole("radio", { name: "Kalyanam" }).click();

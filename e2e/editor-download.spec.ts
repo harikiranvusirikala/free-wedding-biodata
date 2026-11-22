@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { expect, test, type Download, type Page } from "@playwright/test";
 import { SAVED, openStoredDraft, sampleDraft } from "./editor-helpers";
 
-// Step 4.1 part 2: Download PDF, Share PDF, Save as image and Print in the editor. The files come from the preview's
+// Step 4.1 part 2: Download PDF, Share PDF and Save as image in the editor (no Print button since 2026-11-22). The files come from the preview's
 // laid-out pages (D1), named by src/biodata/filename.ts; the engine (src/pdf, with HarfBuzz's WebAssembly) loads on
 // the first use, not with the editor; the page images match the Download engine run on the same draft's true-size
 // pages (/dev/draft); nothing is requested from another origin.
@@ -99,27 +99,22 @@ test("Save as image saves one 2480 px JPEG per page, or a PNG", async ({ page, i
   expect(png.readUInt32BE(16)).toBe(2480);
 });
 
-test("Print prints a true-size copy of the pages, and nothing else", async ({ page, isMobile }) => {
-  await page.addInitScript(() => {
-    const w = window as unknown as { __printed: { pages: number; width: number }[] };
-    w.__printed = [];
-    window.print = () => {
-      const pages = document.querySelectorAll<HTMLElement>(".print-pages [data-page]");
-      w.__printed.push({ pages: pages.length, width: pages[0]?.getBoundingClientRect().width ?? 0 });
-    };
-  });
+test("there is no Print button; the browser's own Print still prints only a true-size copy of the pages", async ({ page, isMobile }) => {
   await openStoredDraft(page, sampleDraft(`print-${isMobile ? "phone" : "desktop"}`));
   await expect(page.locator('[data-testid="preview-pages"] [data-doc-ready="1"]')).toHaveAttribute("data-doc-pages", "2");
   const bar = await actions(page, isMobile);
-  await bar.getByRole("button", { name: "Print" }).click();
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __printed: unknown[] }).__printed)).toEqual([{ pages: 2, width: 794 }]);
-  // In print, the copy is all that shows.
+  await expect(bar.getByRole("button", { name: "Download PDF" })).toBeVisible();
+  await expect(bar.getByRole("button", { name: "Print", exact: true })).toHaveCount(0);
+  // Ctrl+P / the browser menu: the copy is made before printing and is all that shows.
+  await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+  const copy = page.locator(".print-pages [data-page]");
+  await expect(copy).toHaveCount(2);
+  expect((await copy.first().boundingBox())!.width).toBeCloseTo(794, 0);
   await page.emulateMedia({ media: "print" });
   const shown = await page.evaluate(() => [...document.body.children].filter((el) => getComputedStyle(el).display !== "none").map((el) => el.className));
   expect(shown).toEqual(["doc-copy print-pages"]);
   await page.emulateMedia({ media: "screen" });
-  // It goes once the person is back on the page.
-  await page.mouse.click(5, 300);
+  await page.evaluate(() => window.dispatchEvent(new Event("afterprint")));
   await expect(page.locator(".print-pages")).toHaveCount(0);
 });
 

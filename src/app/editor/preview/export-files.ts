@@ -1,6 +1,6 @@
 // Getting the biodata out of the editor (BUILD_PLAN Step 4.1 part 2, VISION §11, D38, D49): the laid-out preview
 // pages copied, unscaled, into an off-screen holder (the Download engine and the printer read that copy), a file
-// saved through a download link, files handed to the share sheet, and Print.
+// saved through a download link, files handed to the share sheet, and printing from the browser's menu.
 //
 // Why a copy: the preview shows the pages scaled to fit its pane and, on phones, inside a sheet that may be hidden.
 // A deep copy of the same laid-out pages ([data-page][lang], D1: nothing is laid out again by our code) placed at
@@ -137,35 +137,12 @@ function removePrintCopies() {
 }
 
 /**
- * Print (D49 "Print = window.print() of the same pages"): a true-size copy of the pages is what the print stylesheet
- * shows (globals.css hides everything else; document.css sets @page A4 and one page per sheet). The copy goes after
- * printing, or at the person's next tap or key where a browser doesn't say when printing ended.
- */
-export async function printPages(pages: Element): Promise<void> {
-  removePrintCopies();
-  await copyPages(pages, { print: true });
-  const cleanUp = () => {
-    removePrintCopies();
-    window.removeEventListener("afterprint", cleanUp);
-    window.removeEventListener("pointerdown", cleanUp, true);
-    window.removeEventListener("keydown", cleanUp, true);
-  };
-  window.addEventListener("afterprint", cleanUp);
-  window.print();
-  // Chrome returns when its dialog closes; elsewhere print() may return at once, so wait for the person to come back.
-  setTimeout(() => {
-    window.addEventListener("pointerdown", cleanUp, true);
-    window.addEventListener("keydown", cleanUp, true);
-  }, 0);
-}
-
-/**
  * Printing from the browser's own menu (Ctrl+P): the same copy, made at once (pictures already decoded in the
  * preview usually draw in time). Returns the listener remover.
  */
 export function printFromBrowserMenu(pages: () => Element | null): () => void {
   const before = () => {
-    if (document.querySelector(`.${PRINT_HOLDER}`)) return; // our own Print button made it
+    if (document.querySelector(`.${PRINT_HOLDER}`)) return; // already made
     const source = pages();
     if (source) copyPagesNow(source, { print: true });
   };

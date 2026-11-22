@@ -422,7 +422,7 @@ Use the current stable, supported versions when implementation begins; do not pi
 | Browser DB | Dexie.js over IndexedDB | `fake-indexeddb` in unit tests |
 | Preferences | localStorage | Theme, app language only |
 | Photo processing | Canvas API and Blob | Own cropper (D12) |
-| PDF | `harfbuzzjs` + `pdf-lib`, lazy-loaded on first download, fed by the laid-out pages (D49) | Print via `window.print()` as a secondary action |
+| PDF | `harfbuzzjs` + `pdf-lib`, lazy-loaded on first download, fed by the laid-out pages (D49) | No Print button (owner, 2026-11-22); the browser's own Print prints only the pages |
 | Fonts | Noto Sans static TTFs (OFL), self-hosted | D10 |
 | PWA | Hand-written `public/sw.js` + `manifest.ts` | D5: the EnglishEasy pattern; no Serwist |
 | Tests | Vitest (+ Testing Library, jsdom) and Playwright (installed Chrome locally) | |
@@ -815,7 +815,7 @@ Later rows override the sections they name. Add a row whenever a product or arch
 | # | Date | Decision | Why | Overrides |
 |---|---|---|---|---|
 | D1 | 2026-11-20 | One HTML/CSS document laid out into A4 page boxes is the preview, the print output and the PDF source. The Download engine is chosen by the Phase 0 spike (candidates A–D in §11). **Status: decided by the spike, see D49.** | “See exactly what you download”; the browser already shapes Indic scripts correctly; one layout to maintain | §11 candidate `@react-pdf/renderer`, §12 PDF row |
-| D2 | 2026-11-20 | Browser print is a secondary **Print** action, never labelled as a download | §11 honesty rule | — |
+| D2 | 2026-11-20 | Browser print is a secondary **Print** action, never labelled as a download. *2026-11-22, owner: no Print button at all (the PDF and images download directly); the browser's own Print still prints only the pages.* | §11 honesty rule | — |
 | D3 | 2026-11-20 | **Share PDF** button where `navigator.canShare({ files })` is true (Android Chrome, iOS Safari) | The main use case is sending the biodata on WhatsApp; this skips the downloads folder | §1, §4 |
 | D4 | 2026-11-20 | Next.js `output: 'export'`; Vercel Hobby serves `out/`; security headers in `vercel.json`. Draft identity is a query parameter: `/editor?d=<id>` (not `/editor/[profileId]`) | A static export can't contain server code, so the no-backend rule is enforced by the build. Dynamic routes for ids that exist only in the browser are unsupported in static export | §5 routes suggested in the planning conversation, §12 Hosting row |
 | D5 | 2026-11-20 | Hand-written service worker (EnglishEasy pattern), no Serwist / next-pwa | Narrow, versioned caching we fully understand; no plugin coupling to Next's build | §12 PWA row |

@@ -378,6 +378,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 - **Photo in the preview:** a just-picked photo now shows in the live preview at once (the editor hands the preview the pictures given this session until autosave writes them); before, it appeared only after a frame change. e2e in `editor-photo.spec.ts`.
 - **Tradition chips unselect:** `options.traditions` records the chips tapped (drafts saved before read them from their fields); a second tap on a ticked chip removes its empty, untouched fields that no other ticked chip uses and the form doesn't have by default (`traditionRemoval`, `removeTradition`), keeps anything typed and says so, with Undo both ways; chips are `aria-pressed` toggles. Tamil and Hindu – other (same fields) are no longer ticked together.
 - **Names:** downloads are `<Full name> Biodata.pdf` (`… Biodata.jpg` for a one-page biodata, else `… Biodata - page n.jpg`), and the automatic draft name is "<Full name>'s biodata".
+- **No Print button:** the owner dropped it (the PDF and images download directly). `printPages` and its strings are gone; `printFromBrowserMenu` still makes the true-size copy on `beforeprint`, so the browser's own Print prints only the pages (e2e).
 - **One value column:** Classic rows beside the photo and full-width rows share one 11em label column (it used to widen to 15.5em below the photo, copied from the owner's original reference).
 
 ## Phase 3 — Photo and live preview
@@ -435,7 +436,7 @@ Every screen is built **production-quality the first time**, to the standard of 
 - Spike code deleted (`src/pdf-spike/`, `/dev/pdf-spike`, `e2e/spike/`, `scripts/spike-vector.mts`); `docs/spikes/` stays as the record. Built by a subagent in parallel with 2.1 and 2.2.
 - **Next (part 2):** done 2026-11-22, below.
 
-### Step 4.1, part 2: Download, Share, Save image, Print (built 2026-11-22)
+### Step 4.1, part 2: Download, Share, Save image (built 2026-11-22; Print button removed the same day)
 
 - **Built** (`ExportActions.tsx`, `export-files.ts`): **Download PDF** (`<Full name> Biodata.pdf`, e.g. `Vusirikala Hari Kiran Biodata.pdf`, since 2026-11-22; title "Marriage Biodata – <name>"); **Share PDF** only where `navigator.canShare({files})` (if Safari refuses because generating took too long, a toast offers a fresh "Share" tap; cancelling the share sheet isn't an error); **Save as image** menu: JPEG (default), PNG, Share as image where supported; one file per page, 2480 × 3508, `<Full name> Biodata.jpg` for one page, else `… Biodata - page n.jpg/.png`; **Print** `window.print()` (the browser's Ctrl+P also prints only the pages).
 - **Decisions:** every output waits until the preview shows the latest edits. The engine reads a true-size off-screen copy of the laid-out pages (SVG ids renamed), not the scaled preview; e2e shows its images match the engine on `/dev/draft` (mean pixel difference < 0.5). `import("@/pdf")` on first use, warmed on pointer-over. One job at a time (buttons disabled, spinner); a toast after 300 ms with page progress, then success or error. Several images download 250 ms apart via `blob:` URLs (allowed by the CSP).

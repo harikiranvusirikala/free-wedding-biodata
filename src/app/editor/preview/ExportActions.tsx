@@ -9,9 +9,9 @@ import { Icon } from "@/components/ui/icons";
 import { Menu, menuItem } from "@/components/ui/Menu";
 import { Toast, toastAction } from "@/components/ui/Toast";
 import { t, type AppKey } from "@/lib/i18n";
-import { canShareFiles, copyPages, printPages, saveBlobs, shareFiles } from "./export-files";
+import { canShareFiles, copyPages, saveBlobs, shareFiles } from "./export-files";
 
-// Download PDF, Share PDF, Save as image and Print (BUILD_PLAN Step 4.1 part 2, VISION §11, D38, D49). The Download
+// Download PDF, Share PDF and Save as image (BUILD_PLAN Step 4.1 part 2; the Print button was dropped by the owner, 2026-11-22: the PDF and images are downloaded directly, and the browser's own Print still prints only the pages, VISION §11, D38, D49). The Download
 // engine (src/pdf, HarfBuzz + pdf-lib, ≈ 635 KB gzip) loads on the first use, never with the editor. Every output
 // comes from the preview's laid-out pages, once they show the latest edits (D1), copied at true size
 // (export-files.ts). One job at a time: the buttons are disabled while one runs; a toast says what is happening
@@ -24,7 +24,7 @@ export interface ExportSource {
   profile: () => BiodataProfile;
 }
 
-type Job = "pdf" | "share" | "jpeg" | "png" | "shareImages" | "print";
+type Job = "pdf" | "share" | "jpeg" | "png" | "shareImages";
 type Format = "jpeg" | "png";
 
 interface ToastState {
@@ -182,16 +182,6 @@ export function useExport(source: ExportSource) {
       "export.failed.share",
     );
 
-  const print = () =>
-    run(
-      "print",
-      async () => {
-        const pages = await source.pages().catch(() => Promise.reject(new NotReadyError()));
-        await printPages(pages);
-      },
-      "export.failed.print",
-    );
-
   // Success and error toasts go by themselves; one with a Share button stays a little longer.
   useEffect(() => {
     if (!toast || toast.tone === "neutral" && !toast.action) return;
@@ -199,7 +189,7 @@ export function useExport(source: ExportSource) {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  return { job, toast, dismiss, canSharePdf, canShareImages, downloadPdf, sharePdf, saveImages, shareImages, print };
+  return { job, toast, dismiss, canSharePdf, canShareImages, downloadPdf, sharePdf, saveImages, shareImages };
 }
 
 export type ExportControls = ReturnType<typeof useExport>;
@@ -259,15 +249,12 @@ function ImageMenu({ controls, buttonClassName, inSheet }: { controls: ExportCon
   );
 }
 
-/** The desktop pane's actions, top right (mockup: editor): Save as image, Print, Share (where it works), Download PDF. */
+/** The desktop pane's actions, top right: Save as image, Share (where it works), Download PDF (no Print button: owner, 2026-11-22). */
 export function ToolbarActions({ controls }: { controls: ExportControls }) {
   const busy = controls.job !== null;
   return (
     <div className="flex items-center gap-1.5" role="group" aria-label={t("export.actions")} data-testid="export-actions">
       <ImageMenu controls={controls} buttonClassName={outlineIconButton} />
-      <button type="button" className={outlineIconButton} aria-label={t("export.print")} title={t("export.print")} disabled={busy} onClick={() => void controls.print()}>
-        {controls.job === "print" ? <Spinner /> : <Icon name="printer" className="size-5" />}
-      </button>
       {controls.canSharePdf && (
         <button type="button" className={outlineIconButton} aria-label={t("export.share")} title={t("export.share")} disabled={busy} onPointerEnter={warm} onClick={() => void controls.sharePdf()}>
           {controls.job === "share" ? <Spinner /> : <Icon name="share" className="size-5" />}
@@ -283,7 +270,7 @@ export function ToolbarActions({ controls }: { controls: ExportControls }) {
 
 const sheetIcon = `${outlineIconButton} size-12! rounded-xl pointer-coarse:size-12!`;
 
-/** The sheet's foot (mockups: sheet-phone, preview-phone): Save as image, Share, Print, then Download PDF filling the rest. */
+/** The sheet's foot (mockups: sheet-phone, preview-phone): Save as image, Share, then Download PDF filling the rest. */
 export function SheetActions({ controls }: { controls: ExportControls }) {
   const busy = controls.job !== null;
   return (
@@ -294,9 +281,6 @@ export function SheetActions({ controls }: { controls: ExportControls }) {
           {controls.job === "share" ? <Spinner /> : <Icon name="share" className="size-5" />}
         </button>
       )}
-      <button type="button" className={sheetIcon} aria-label={t("export.print")} title={t("export.print")} disabled={busy} onClick={() => void controls.print()}>
-        {controls.job === "print" ? <Spinner /> : <Icon name="printer" className="size-5" />}
-      </button>
       <button type="button" className={`${button("primary", "lg")} h-12 min-w-0 flex-1 rounded-xl text-base`} disabled={busy} onClick={() => void controls.downloadPdf()}>
         {controls.job === "pdf" ? <Spinner /> : <Icon name="download" className="size-5" />}
         {t("export.download")}
