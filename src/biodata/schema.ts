@@ -3,6 +3,7 @@ import {
   CURRENT_SCHEMA_VERSION,
   DATE_FORMATS,
   FIELD_TYPES,
+  FORM_LAYOUTS,
   HEIGHT_FORMATS,
   LABEL_CASES,
   LANG_CODES,
@@ -72,6 +73,9 @@ export const optionsSchema = z.object({
   heightFormat: z.enum(HEIGHT_FORMATS),
   textSize: z.enum(TEXT_SIZES),
   labelCase: z.enum(LABEL_CASES),
+  // Added with D50 without a format bump: a draft saved before it has no layout and was made with every default
+  // section, so it reads as Detailed. (An optional addition with a default, as the note at the top allows.)
+  formLayout: z.enum(FORM_LAYOUTS).default("detailed"),
   titleKey: z.string().min(1).optional(),
   title: z.string().optional(),
   motif: z.string().min(1).nullable(),

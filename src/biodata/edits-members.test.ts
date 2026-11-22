@@ -22,7 +22,7 @@ function freeze<T>(value: T): T {
 
 function setup() {
   let n = 0;
-  let profile = createProfile({ newId: () => `id-${++n}`, now: () => CREATED });
+  let profile = createProfile({ newId: () => `id-${++n}`, now: () => CREATED, formLayout: "detailed" });
   profile = addPresetSection(profile, "references", () => `id-${++n}`, () => CREATED);
   let m = 0;
   const newId = () => `new-${++m}`;

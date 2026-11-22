@@ -7,10 +7,12 @@ import {
   QUICK_PICK_SECTIONS,
   RELATION_KEYS,
   SAMPLE_PROFILE,
+  SIMPLE_SECTIONS,
   TRADITION_FIELD_SETS,
   createProfile,
   createSampleProfile,
   createSection,
+  layoutSections,
   optionsFor,
   type FieldKey,
 } from "./defaults";
@@ -23,16 +25,46 @@ const counter = () => {
 };
 const NOW = new Date("2026-11-21T10:00:00.000Z");
 const create = () => createProfile({ newId: counter(), now: () => NOW });
+const createDetailed = () => createProfile({ newId: counter(), now: () => NOW, formLayout: "detailed" });
+const outlineOf = (profile: BiodataProfile) =>
+  profile.sections.map((s) => (s.kind === "fields" ? [s.key, s.fields.map((f) => f.key)] : [s.key, s.members.map((m) => m.relationKey)]));
 
 const allFields = (profile: BiodataProfile): Field[] =>
   profile.sections.flatMap((s) => (s.kind === "fields" ? s.fields : []));
 
 describe("createProfile", () => {
-  it("has the default sections and fields of VISION §6 in the D39 reading order", () => {
-    const outline = create().sections.map((s) =>
-      s.kind === "fields" ? [s.key, s.fields.map((f) => f.key)] : [s.key, s.members.map((m) => m.relationKey)],
-    );
-    expect(outline).toEqual([
+  it("starts with the Simple form: four sections with the fields most biodatas print (D50)", () => {
+    const profile = create();
+    expect(profile.options.formLayout).toBe("simple");
+    expect(outlineOf(profile)).toEqual([
+      [
+        "personal",
+        [
+          "fullName",
+          "dateOfBirth",
+          "birthTime",
+          "birthPlace",
+          "nakshatra",
+          "rashi",
+          "caste",
+          "gotra",
+          "maternalGotra",
+          "height",
+          "highestQualification",
+          "occupation",
+          "annualIncome",
+        ],
+      ],
+      ["family", ["father", "mother"]],
+      ["contact", ["phone", "address"]],
+      ["partnerPreferences", ["partnerExpectations"]],
+    ]);
+  });
+
+  it("has the default sections and fields of VISION §6 in the D39 reading order in the Detailed form", () => {
+    const profile = createDetailed();
+    expect(profile.options.formLayout).toBe("detailed");
+    expect(outlineOf(profile)).toEqual([
       ["aboutMe", ["aboutMe"]],
       [
         "personal",
@@ -53,13 +85,13 @@ describe("createProfile", () => {
   });
 
   it("never adds a complexion or stored age field", () => {
-    const keys = allFields(create()).map((f) => f.key?.toLowerCase());
+    const keys = [...allFields(create()), ...allFields(createDetailed())].map((f) => f.key?.toLowerCase());
     expect(keys.some((k) => k?.includes("complexion") || k === "age")).toBe(false);
     expect(Object.keys(FIELD_CATALOG).some((k) => /complexion|^age$/i.test(k))).toBe(false);
   });
 
   it("starts every field empty, visible and unlabelled, with nothing picked or inferred", () => {
-    for (const field of allFields(create())) {
+    for (const field of [...allFields(create()), ...allFields(createDetailed())]) {
       expect(field).toMatchObject({ value: "", visible: true });
       expect(field.label).toBeUndefined();
       expect(field.optionKey).toBeUndefined();
@@ -68,11 +100,13 @@ describe("createProfile", () => {
   });
 
   it("pre-adds Father and Mother as picked relations with empty details (D28)", () => {
-    const family = create().sections.find((s) => s.key === "family");
-    expect(family?.kind === "family" && family.members.map((m) => [m.relationKey, m.relation, m.details])).toEqual([
-      ["father", "", ""],
-      ["mother", "", ""],
-    ]);
+    for (const profile of [create(), createDetailed()]) {
+      const family = profile.sections.find((s) => s.key === "family");
+      expect(family?.kind === "family" && family.members.map((m) => [m.relationKey, m.relation, m.details])).toEqual([
+        ["father", "", ""],
+        ["mother", "", ""],
+      ]);
+    }
   });
 
   it("uses a fresh id for every profile, section, field and member", () => {
@@ -105,6 +139,7 @@ describe("createProfile", () => {
       heightFormat: "ft-in",
       textSize: "auto",
       labelCase: "normal",
+      formLayout: "simple",
       motif: null,
       invocation: "",
     });
@@ -146,7 +181,7 @@ describe("field catalogue and lists", () => {
   });
 
   it("keeps tradition fields out of new drafts and points chips at real sections (D32, D43)", () => {
-    const defaultKeys = new Set(allFields(create()).map((f) => f.key));
+    const defaultKeys = new Set(allFields(createDetailed()).map((f) => f.key));
     const sectionKeys = new Set(DEFAULT_SECTIONS.map((s) => s.key));
     for (const set of Object.values(TRADITION_FIELD_SETS)) {
       // Each chip adds something a new draft lacks; it may also name a default field (Gotra), skipped if present.
@@ -170,9 +205,50 @@ describe("field catalogue and lists", () => {
   });
 });
 
+describe("SIMPLE_SECTIONS (D50)", () => {
+  const keysOf = (defs: readonly (typeof SIMPLE_SECTIONS)[number][]) => defs.flatMap((d) => (d.kind === "fields" ? d.fields : []));
+
+  it("uses only Detailed section keys, in the Detailed reading order, so headings print from the same dictionaries", () => {
+    const detailed = DEFAULT_SECTIONS.map((d) => d.key);
+    const simple = SIMPLE_SECTIONS.map((d) => d.key);
+    expect(simple).toEqual(["personal", "family", "contact", "partnerPreferences"]);
+    expect(simple.map((key) => detailed.indexOf(key))).toEqual([...simple.map((key) => detailed.indexOf(key))].sort((a, b) => a - b));
+    for (const def of SIMPLE_SECTIONS) expect(DEFAULT_SECTIONS.find((d) => d.key === def.key)?.kind).toBe(def.kind);
+  });
+
+  it("holds only Detailed default fields, each once, and no complexion", () => {
+    const simple = keysOf(SIMPLE_SECTIONS);
+    const detailed = new Set(keysOf(DEFAULT_SECTIONS));
+    expect(new Set(simple).size).toBe(simple.length);
+    for (const key of simple) expect(detailed.has(key), key).toBe(true);
+    expect(simple.some((key) => /complexion/i.test(key))).toBe(false);
+  });
+
+  it("keeps fields that share a section in both forms in the same relative order", () => {
+    for (const def of SIMPLE_SECTIONS) {
+      if (def.kind !== "fields") continue;
+      const detailed = DEFAULT_SECTIONS.find((d) => d.key === def.key);
+      const order = detailed?.kind === "fields" ? detailed.fields : [];
+      const shared = def.fields.filter((key) => order.includes(key));
+      expect(shared).toEqual(order.filter((key) => shared.includes(key)));
+    }
+  });
+
+  it("is what layoutSections gives for each form", () => {
+    expect(layoutSections("simple")).toBe(SIMPLE_SECTIONS);
+    expect(layoutSections("detailed")).toBe(DEFAULT_SECTIONS);
+  });
+});
+
 describe("SAMPLE_PROFILE", () => {
   it("passes the schema", () => {
     expect(profileSchema.parse(SAMPLE_PROFILE)).toEqual(SAMPLE_PROFILE);
+  });
+
+  it("is a Detailed draft, the full showcase (D50)", () => {
+    expect(SAMPLE_PROFILE.options.formLayout).toBe("detailed");
+    expect(createSampleProfile().options.formLayout).toBe("detailed");
+    for (const def of DEFAULT_SECTIONS) expect(SAMPLE_PROFILE.sections.some((s) => s.key === def.key), def.key).toBe(true);
   });
 
   it("is the fictional Sai Teja Mandapati", () => {

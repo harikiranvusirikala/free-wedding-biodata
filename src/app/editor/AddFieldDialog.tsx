@@ -21,12 +21,15 @@ import { fieldLabel, sectionTitle } from "./labels";
 const PILL =
   "inline-flex h-8 items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3 text-[13px] font-medium text-ink-2 shadow-card transition-colors hover:border-brand/40 hover:bg-brand-soft hover:text-brand-ink outline-none focus-visible:ring-[3px] focus-visible:ring-ring pointer-coarse:min-h-11 pointer-coarse:px-3.5 pointer-coarse:text-sm";
 
-/** The section's own usual keys (its default fields and its tradition fields), then the rest of the defaults. */
+/**
+ * The section's own usual keys (its default fields in the draft's form and in the Detailed form, D50, and its
+ * tradition fields), then the rest of the defaults.
+ */
 function suggestionsFor(profile: BiodataProfile, section: FieldsSection): { usual: FieldKey[]; other: FieldKey[] } {
   const missing = new Set(missingCatalogKeys(profile));
-  const def = sectionDefOf(section);
+  const defs = [sectionDefOf(section, profile.options.formLayout), sectionDefOf(section)];
   const own: FieldKey[] = [
-    ...(def?.kind === "fields" ? def.fields : []),
+    ...new Set(defs.flatMap((def) => (def?.kind === "fields" ? def.fields : []))),
     ...Object.values(TRADITION_FIELD_SETS)
       .flat()
       .filter((entry) => entry.section === section.key)

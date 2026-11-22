@@ -376,7 +376,7 @@ function SectionMenuItems({ section, close }: { section: Section; close: () => v
   const profile = manage.current();
   const index = profile.sections.findIndex((s) => s.id === section.id);
   const id = section.id;
-  const def = sectionDefOf(section);
+  const def = sectionDefOf(section, profile.options.formLayout);
   const restorable = def !== undefined && (def.kind === "fields" ? def.fields.length : def.members.length) > 0;
   const missing = restorable ? missingDefaults(profile, section).length : 0;
 

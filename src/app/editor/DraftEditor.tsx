@@ -19,6 +19,7 @@ import { SaveProblem, SaveStatus } from "./SaveStatus";
 import { SectionCard } from "./SectionCard";
 import { SectionJump, SectionRail, useCurrentSection } from "./SectionNav";
 import { StorageCard } from "./StorageCard";
+import { FormLayoutSwitch } from "./FormLayoutSwitch";
 import { LanguageNotice } from "./LanguageNotice";
 import { PHOTO_ID, PhotoCard } from "./PhotoCard";
 import { TOP_ID, TopCard } from "./TopCard";
@@ -114,6 +115,7 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
             {/* Below lg the bottom padding keeps the last card clear of the floating Preview pill. */}
             <div className="mx-auto w-full max-w-3xl min-w-0 space-y-4 px-4 pt-4 pb-24 sm:px-6 sm:pt-6 lg:mx-0 lg:max-w-none lg:px-5 lg:pb-8" data-testid="editor-form" data-editor-pane>
               <SaveProblem status={status} onRetry={() => void controller.flush()} />
+              <FormLayoutSwitch layout={profile.options.formLayout} readOnly={conflict} />
               <TopCard
                 options={profile.options}
                 lang={profile.docLanguage}

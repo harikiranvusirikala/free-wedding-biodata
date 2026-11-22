@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { toDocument } from "../src/biodata/document";
 import type { BiodataProfile, FamilySection } from "../src/biodata/types";
 import { getDocDictionary } from "../src/i18n/doc";
-import { SAVED, readStored, storedField } from "./editor-helpers";
+import { SAVED, readStored, storedField, switchToDetailed } from "./editor-helpers";
 
 // Step 2.3: family members and References (VISION §6 "Repeated family members", D28, D44) and Open a sample.
 // Each change is checked on screen, after a reload, in the draft on disk and in what the biodata prints (the
@@ -17,10 +17,12 @@ const item = (page: Page, name: string) => page.getByRole("menuitem", { name, ex
 const toast = (page: Page) => page.getByTestId("manage-toast");
 const memberDialog = (page: Page) => page.getByRole("dialog").filter({ has: page.getByTestId("member-dialog") });
 
+/** A new draft in the Detailed form, whose sections this spec works with (new drafts start Simple, D50). */
 async function openNewDraft(page: Page) {
   await page.goto("/editor?new=1");
   await expect(page).toHaveURL(/\/editor\?d=[0-9a-f-]{36}$/);
   await expect(label(page, "Name")).toBeVisible();
+  await switchToDetailed(page);
   return idOf(page);
 }
 

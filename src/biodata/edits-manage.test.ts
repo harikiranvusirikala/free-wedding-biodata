@@ -45,7 +45,7 @@ function freeze<T>(value: T): T {
 
 function setup() {
   let n = 0;
-  const profile = freeze(createProfile({ newId: () => `id-${++n}`, now: () => CREATED }));
+  const profile = freeze(createProfile({ newId: () => `id-${++n}`, now: () => CREATED, formLayout: "detailed" }));
   let m = 0;
   const newId = () => `new-${++m}`;
   return { profile, newId };

@@ -2,7 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { toDocument } from "../src/biodata/document";
 import type { BiodataProfile } from "../src/biodata/types";
 import { getDocDictionary } from "../src/i18n/doc";
-import { SAVED, readStored, storedField } from "./editor-helpers";
+import { SAVED, readStored, storedField, switchToDetailed } from "./editor-helpers";
 
 // Step 2.2: managing fields and sections from the ⋯ menus and the Add buttons (VISION §6 "Dynamic field
 // functionality"). Each change is checked on screen, in the draft on disk and, where it matters, in what the
@@ -17,10 +17,12 @@ const sectionMenu = (page: Page, title: string) => page.getByRole("button", { na
 const item = (page: Page, name: string) => page.getByRole("menuitem", { name, exact: true });
 const toast = (page: Page) => page.getByTestId("manage-toast");
 
+/** A new draft in the Detailed form, whose sections this spec works with (new drafts start Simple, D50). */
 async function openNewDraft(page: Page) {
   await page.goto("/editor?new=1");
   await expect(page).toHaveURL(/\/editor\?d=[0-9a-f-]{36}$/);
   await expect(label(page, "Name")).toBeVisible();
+  await switchToDetailed(page);
   return idOf(page);
 }
 

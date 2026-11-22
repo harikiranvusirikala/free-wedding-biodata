@@ -2,7 +2,8 @@
 
 import { useId, useState } from "react";
 import { newUuid } from "@/biodata/defaults";
-import { addCustomSection, addPresetSection, availablePresetSections } from "@/biodata/edits";
+import type { SectionDef } from "@/biodata/defaults";
+import { addCustomSection, addPresetSection, availablePresetSections, presetFieldKeys } from "@/biodata/edits";
 import type { BiodataProfile } from "@/biodata/types";
 import { button } from "@/components/ui/button";
 import { Dialog, DialogActions } from "@/components/ui/Dialog";
@@ -11,13 +12,30 @@ import { Icon, type IconName } from "@/components/ui/icons";
 import { t, type AppKey } from "@/lib/i18n";
 import en from "@/i18n/app/en.json";
 import type { Edit } from "./FieldRow";
-import { SECTION_ICONS, sectionTitle } from "./labels";
+import { SECTION_ICONS, fieldLabel, sectionTitle } from "./labels";
 
 // "Add a section" (BUILD_PLAN Step 2.2, VISION §6, D44): the ready-made sections not in the draft (References, and
-// any default section the user removed, back with its usual fields), each added with one tap at the end; or the
-// user's own section, which starts empty. The new card is scrolled to and its title focused.
+// any default section the user removed or, in the Simple form, D50, didn't start with, with its usual fields that
+// aren't in the draft yet), each added with one tap at the end; or the user's own section, which starts empty. The
+// new card is scrolled to and its title focused.
 
 const hasKey = (key: string): key is AppKey => Object.hasOwn(en, key);
+
+/** Labels shown in a ready-made section's line before "and N more". */
+const SHOWN_LABELS = 4;
+
+/** "A", "A and B", "A, B and C". */
+const listOf = (labels: string[]) => (labels.length < 2 ? (labels[0] ?? "") : `${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}`);
+
+/** What a ready-made section brings: its own description, else the fields it would come with. */
+function presetDescription(profile: BiodataProfile, def: SectionDef): string {
+  const descKey = `manage.addSection.desc.${def.key}`;
+  if (hasKey(descKey)) return t(descKey);
+  const labels = presetFieldKeys(profile, def).map((key) => fieldLabel({ key }));
+  if (!labels.length) return t("manage.addSection.startsEmpty");
+  if (labels.length <= SHOWN_LABELS) return t("manage.addSection.comesWith", { labels: listOf(labels) });
+  return t("manage.addSection.comesWithMore", { labels: labels.slice(0, SHOWN_LABELS - 1).join(", "), count: labels.length - (SHOWN_LABELS - 1) });
+}
 
 export function AddSectionDialog({
   open,
@@ -55,7 +73,6 @@ export function AddSectionDialog({
           <h3 className="text-[12px] font-semibold tracking-[0.06em] text-ink-3 uppercase">{t("manage.addSection.ready")}</h3>
           <ul className="mt-2 grid gap-2">
             {presets.map((def, index) => {
-              const descKey = `manage.addSection.desc.${def.key}`;
               const icon: IconName = SECTION_ICONS[def.key] ?? "list";
               return (
                 <li key={def.key}>
@@ -70,7 +87,7 @@ export function AddSectionDialog({
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold text-ink">{sectionTitle({ key: def.key })}</span>
-                      <span className="block text-[13px] leading-snug text-pretty text-ink-3">{hasKey(descKey) ? t(descKey) : t("manage.addSection.removed")}</span>
+                      <span className="block text-[13px] leading-snug text-pretty text-ink-3">{presetDescription(profile, def)}</span>
                     </span>
                     <Icon name="plus" className="size-[18px] text-brand-ink" />
                   </button>

@@ -42,6 +42,8 @@ export const SectionCard = memo(function SectionCard({
   const titleId = `${anchor}-title`;
   const { filled, total } = sectionCompletion(section);
   const empty = section.kind === "fields" ? section.fields.length === 0 : section.members.length === 0;
+  // In Personal details (the Simple form's host, D50) the chips follow the rows, so the card opens with Name.
+  const chipsAtEnd = section.key === "personal";
   return (
     <section
       id={anchor}
@@ -71,7 +73,7 @@ export const SectionCard = memo(function SectionCard({
         )}
         <SectionMenu section={section} readOnly={readOnly} />
       </div>
-      {traditions !== undefined && <TraditionChips done={traditions} readOnly={readOnly} />}
+      {traditions !== undefined && !chipsAtEnd && <TraditionChips done={traditions} readOnly={readOnly} />}
       {!section.visible && <p className="border-b border-line bg-sunken/60 px-4 py-2 text-[13px] text-pretty text-ink-3 sm:px-5">{t("manage.section.hiddenTip")}</p>}
       {empty ? (
         <p className="px-4 py-5 text-sm text-pretty text-ink-3 sm:px-5" data-testid="section-empty">
@@ -94,6 +96,7 @@ export const SectionCard = memo(function SectionCard({
               ))}
         </div>
       )}
+      {traditions !== undefined && chipsAtEnd && <TraditionChips done={traditions} readOnly={readOnly} atEnd />}
       <div className="flex flex-wrap items-center gap-2 rounded-b-2xl border-t border-line bg-sunken/50 px-4 py-3 sm:px-5">
         <button
           type="button"

@@ -4,6 +4,7 @@ import {
   QUICK_PICK_SECTIONS,
   createField,
   createSection,
+  layoutSections,
   newUuid,
   systemClock,
   type Clock,
@@ -14,7 +15,22 @@ import {
   type Tradition,
 } from "./defaults";
 import { dateToText, heightToInches, parseDateText, parseTimeText, splitInches, timeToText } from "./inputs";
-import type { BiodataProfile, FamilyMember, FamilySection, Field, FieldType, FieldsSection, LabelCase, LangCode, MainPhoto, ProfileOptions, Section, TextSize } from "./types";
+import {
+  FORM_LAYOUTS,
+  type BiodataProfile,
+  type FamilyMember,
+  type FamilySection,
+  type Field,
+  type FieldType,
+  type FieldsSection,
+  type FormLayout,
+  type LabelCase,
+  type LangCode,
+  type MainPhoto,
+  type ProfileOptions,
+  type Section,
+  type TextSize,
+} from "./types";
 
 // Every change to a profile is a small pure function: (profile, …) → new profile (VISION D6). Nothing is mutated,
 // so React sees a new object exactly when something changed, undo is "keep the old one", and each edit is a
@@ -277,10 +293,14 @@ export function missingCatalogKeys(profile: BiodataProfile): FieldKey[] {
   return (Object.keys(FIELD_CATALOG) as FieldKey[]).filter((key) => !present.has(key));
 }
 
-/** The default definition of a keyed section (a default section or a quick pick), if it has one. */
-export function sectionDefOf(section: Pick<Section, "key">): SectionDef | undefined {
+/**
+ * The default definition of a keyed section, if it has one: the form layout's own (D50: Simple's Personal details
+ * holds the horoscope, education and career basics), else the Detailed one (a section added back in Simple), else
+ * a quick pick. Detailed is assumed when no layout is given.
+ */
+export function sectionDefOf(section: Pick<Section, "key">, layout: FormLayout = "detailed"): SectionDef | undefined {
   if (section.key === undefined) return undefined;
-  return [...DEFAULT_SECTIONS, ...QUICK_PICK_SECTIONS].find((def) => def.key === section.key);
+  return [...layoutSections(layout), ...DEFAULT_SECTIONS, ...QUICK_PICK_SECTIONS].find((def) => def.key === section.key);
 }
 
 /**
@@ -318,7 +338,7 @@ export function addCatalogField(
     profile,
     sectionId,
     (fields, section) => {
-      const def = sectionDefOf(section);
+      const def = sectionDefOf(section, profile.options.formLayout);
       const order = def?.kind === "fields" ? def.fields : [];
       const index = order.includes(key) ? defaultIndex(fields.map((f) => f.key), order, key) : fields.length;
       const next = [...fields];
@@ -455,18 +475,30 @@ export function addCustomSection(profile: BiodataProfile, title: string, newId: 
  * was removed) aren't duplicated. The section takes the first new id. A no-op if a section with this key is already there or the key is unknown.
  */
 export function addPresetSection(profile: BiodataProfile, key: string, newId: NewId = newUuid, now: Clock = systemClock) {
-  const def = sectionDefOf({ key });
+  const def = sectionDefOf({ key }, profile.options.formLayout);
   if (!def || profile.sections.some((section) => section.key === key)) return profile;
-  const present = new Set(allFields(profile).map((field) => field.key));
-  const trimmed: SectionDef = def.kind === "fields" ? { ...def, fields: def.fields.filter((k) => !present.has(k)) } : def;
+  const trimmed: SectionDef = def.kind === "fields" ? { ...def, fields: presetFieldKeys(profile, def) } : def;
   const id = newId(); // first, so the caller can find (and scroll to) the new section
   return touch(profile, [...profile.sections, { ...createSection(trimmed, newId), id }], now);
 }
 
-/** The ready-made sections not in the profile: removed default sections in their default order, then the quick picks. */
+/** The fields a ready-made section would come with: its default fields that aren't anywhere in the draft yet. */
+export function presetFieldKeys(profile: Pick<BiodataProfile, "sections">, def: SectionDef): FieldKey[] {
+  if (def.kind !== "fields") return [];
+  const present = new Set(allFields(profile).map((field) => field.key));
+  return def.fields.filter((k) => !present.has(k));
+}
+
+/**
+ * The ready-made sections not in the profile: default sections in their default order (removed ones, or in Simple
+ * the Detailed ones it doesn't start with, D50), each as the draft's form layout defines it, then the quick picks.
+ */
 export function availablePresetSections(profile: BiodataProfile): SectionDef[] {
   const present = new Set(profile.sections.map((section) => section.key));
-  return [...DEFAULT_SECTIONS, ...QUICK_PICK_SECTIONS].filter((def) => !present.has(def.key));
+  const layout = profile.options.formLayout;
+  return [...DEFAULT_SECTIONS, ...QUICK_PICK_SECTIONS]
+    .filter((def) => !present.has(def.key))
+    .map((def) => sectionDefOf(def, layout) ?? def);
 }
 
 /** Removes a section with everything in it (the editor asks first and offers Undo, which is insertSection). */
@@ -497,7 +529,7 @@ export function moveSection(profile: BiodataProfile, sectionId: string, step: -1
  * relations (Father, Mother) missing from it. Empty for a custom section.
  */
 export function missingDefaults(profile: BiodataProfile, section: Section): string[] {
-  const def = sectionDefOf(section);
+  const def = sectionDefOf(section, profile.options.formLayout);
   if (!def || def.kind !== section.kind) return [];
   if (def.kind === "fields") {
     const present = new Set(allFields(profile).map((field) => field.key));
@@ -517,7 +549,7 @@ export function restoreSectionDefaults(profile: BiodataProfile, sectionId: strin
   const section = profile.sections.find((s) => s.id === sectionId);
   if (!section) return profile;
   const missing = missingDefaults(profile, section);
-  const def = sectionDefOf(section);
+  const def = sectionDefOf(section, profile.options.formLayout);
   if (!missing.length || !def) return profile;
   const order: readonly string[] = def.kind === "fields" ? def.fields : def.members;
   let next: Section;
@@ -537,6 +569,159 @@ export function restoreSectionDefaults(profile: BiodataProfile, sectionId: strin
     profile.sections.map((s) => (s.id === sectionId ? next : s)),
     now,
   );
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Simple and Detailed forms (BUILD_PLAN Step 2.4, VISION D50). Switching is one pure edit that never loses anything
+// typed: the fields the form layout placed move to their home in the other layout; empty, untouched default fields
+// and sections come and go; everything the user filled, renamed, hid, moved or made stays. With nothing typed in
+// between, Simple → Detailed → Simple gives back the same draft.
+
+/**
+ * Where each catalogue field lives in a form layout: its default section there, and for a tradition chip's field
+ * the section the chips put it in (its own in Detailed; Personal details in Simple, which has no Religion or
+ * Horoscope section).
+ */
+function layoutHomes(layout: FormLayout): Map<string, string> {
+  const homes = new Map<string, string>();
+  for (const def of layoutSections(layout)) {
+    if (def.kind === "fields") for (const key of def.fields) homes.set(key, def.key);
+  }
+  for (const entries of Object.values(TRADITION_FIELD_SETS)) {
+    for (const { section, field } of entries) if (!homes.has(field)) homes.set(field, layout === "simple" ? "personal" : section);
+  }
+  return homes;
+}
+
+/** Keys that are a default field of some form layout (tradition fields are not: only a chip adds them). */
+const LAYOUT_FIELD_KEYS: ReadonlySet<string> = new Set(
+  FORM_LAYOUTS.flatMap((layout) => layoutSections(layout).flatMap((def) => (def.kind === "fields" ? def.fields : []))),
+);
+/** Keys of the default sections of every layout. */
+const LAYOUT_SECTION_KEYS: ReadonlySet<string> = new Set(FORM_LAYOUTS.flatMap((layout) => layoutSections(layout).map((def) => def.key)));
+
+/** A catalogue field exactly as a new draft has it: empty, shown, not renamed, no note, its own type. */
+function isUntouched(field: Field): boolean {
+  if (!isFieldKey(field.key)) return false;
+  const def: { type: FieldType; multiline?: true } = FIELD_CATALOG[field.key];
+  return (
+    field.value === "" &&
+    field.optionKey === undefined &&
+    field.label === undefined &&
+    field.visible &&
+    !field.note &&
+    field.help === undefined &&
+    field.type === def.type &&
+    !!field.multiline === !!def.multiline
+  );
+}
+
+/**
+ * A layout section's fields once fields have arrived: its default fields in the layout's order; each of the user's
+ * own fields (custom, moved in, a tradition chip's) just before the default field it came before, or at the end if
+ * none came after it; fields arriving that aren't defaults here last.
+ */
+function arrange(staying: readonly Field[], arriving: readonly Field[], order: readonly string[]): Field[] {
+  const rank = (field: Field) => (field.key === undefined ? -1 : order.indexOf(field.key));
+  const defaults = [...staying, ...arriving].filter((f) => rank(f) >= 0).sort((a, b) => rank(a) - rank(b));
+  const before = new Map<Field, Field[]>();
+  let run: Field[] = [];
+  for (const field of staying) {
+    if (rank(field) < 0) run.push(field);
+    else if (run.length) {
+      before.set(field, run);
+      run = [];
+    }
+  }
+  return [...defaults.flatMap((f) => [...(before.get(f) ?? []), f]), ...run, ...arriving.filter((f) => rank(f) < 0)];
+}
+
+/**
+ * Switches the draft to the Simple or the Detailed form (D50), never losing anything typed:
+ * - A catalogue field the current layout placed (in its home section there) moves to its home in the other layout,
+ *   keeping its id, value, visibility, label and note. Fields the user moved elsewhere stay where they are. A hidden
+ *   section is left exactly as it is (nothing moves out of it, into it, or is added or removed there), since moving
+ *   a field in or out would change what prints.
+ * - The other layout's missing default sections are added at their default places, and its default fields that
+ *   are nowhere in the draft are added empty. Inside a layout section that receives fields, default fields follow
+ *   the layout's order and the user's own fields keep their place among them (`arrange`).
+ * - Default fields the other layout doesn't have are removed only when empty and untouched (`isUntouched`) and still
+ *   in the place the current layout put them; default sections the other layout doesn't have are removed only when
+ *   left with no fields, shown and not renamed. Relation lists keep every member; custom sections, References and
+ *   tradition chips' fields always stay.
+ * The same profile comes back when it already has this layout.
+ */
+export function setFormLayout(profile: BiodataProfile, layout: FormLayout, newId: NewId = newUuid, now: Clock = systemClock): BiodataProfile {
+  const from = profile.options.formLayout;
+  if (from === layout) return profile;
+  const fromHomes = layoutHomes(from);
+  const toHomes = layoutHomes(layout);
+  const targetDefs = layoutSections(layout);
+  const byKey = (sections: readonly Section[], key: string) => sections.find((s) => s.key === key);
+
+  // 1. Take out the fields that move, and the untouched default fields the new layout doesn't have.
+  const arriving = new Map<string, Field[]>();
+  const leaving = new Set<Field>();
+  for (const section of profile.sections) {
+    if (section.kind !== "fields" || !section.visible || section.key === undefined) continue;
+    for (const field of section.fields) {
+      if (field.key === undefined || fromHomes.get(field.key) !== section.key) continue; // not placed by the layout
+      const home = toHomes.get(field.key);
+      if (home === undefined) {
+        if (LAYOUT_FIELD_KEYS.has(field.key) && isUntouched(field)) leaving.add(field);
+        continue;
+      }
+      if (home === section.key) continue;
+      const target = byKey(profile.sections, home);
+      if (target && (target.kind !== "fields" || !target.visible)) continue;
+      leaving.add(field);
+      arriving.set(home, [...(arriving.get(home) ?? []), field]);
+    }
+  }
+  let sections: Section[] = profile.sections.map((section) =>
+    section.kind === "fields" && section.fields.some((f) => leaving.has(f)) ? { ...section, fields: section.fields.filter((f) => !leaving.has(f)) } : section,
+  );
+
+  // 2. The new layout's missing sections, each at its default place among the sections there.
+  const order = targetDefs.map((def) => def.key);
+  for (const def of targetDefs) {
+    if (byKey(sections, def.key)) continue;
+    const created: Section = def.kind === "fields" ? { id: newId(), kind: "fields", key: def.key, visible: true, fields: [] } : createSection(def, newId);
+    sections.splice(defaultIndex(sections.map((s) => s.key), order, def.key), 0, created);
+  }
+
+  // 3. Fields arriving in each layout section, with its default fields that are nowhere in the draft, added empty.
+  // (Moved fields are out of every section until now, but they are still in the draft.)
+  const kept = new Set(allFields({ sections }).map((f) => f.key));
+  for (const list of arriving.values()) for (const f of list) kept.add(f.key);
+  sections = sections.map((section) => {
+    if (section.kind !== "fields" || section.key === undefined || !section.visible) return section;
+    const def = targetDefs.find((d) => d.key === section.key);
+    if (!def || def.kind !== "fields" || byKey(sections, def.key) !== section) return section;
+    const created = def.fields.filter((key) => !kept.has(key)).map((key) => createField(key, newId));
+    for (const f of created) kept.add(f.key);
+    const incoming = [...(arriving.get(def.key) ?? []), ...created];
+    return incoming.length ? { ...section, fields: arrange(section.fields, incoming, def.fields) } : section;
+  });
+
+  // 4. Default sections the new layout doesn't have, left empty by the switch (or before it) and never renamed.
+  sections = sections.filter(
+    (s) => !(s.kind === "fields" && s.key !== undefined && LAYOUT_SECTION_KEYS.has(s.key) && !order.includes(s.key) && !s.fields.length && s.visible && s.title === undefined),
+  );
+
+  return { ...profile, options: { ...profile.options, formLayout: layout }, sections, updatedAt: now().toISOString() };
+}
+
+/**
+ * Undo after a switch (the editor's toast): `before` was the draft just before setFormLayout made `after`. If the
+ * draft's sections and options are still the ones the switch made (a save only changes the revision), it gets
+ * `before`'s back exactly; if anything was edited meanwhile, it is switched back instead, which keeps those edits.
+ */
+export function undoFormLayout(profile: BiodataProfile, before: BiodataProfile, after: BiodataProfile, newId: NewId = newUuid, now: Clock = systemClock): BiodataProfile {
+  if (profile.sections === after.sections && profile.options === after.options) {
+    return { ...profile, sections: before.sections, options: before.options, updatedAt: now().toISOString() };
+  }
+  return setFormLayout(profile, before.options.formLayout, newId, now);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -624,8 +809,11 @@ export function setLabelCase(profile: BiodataProfile, labelCase: LabelCase, now:
   return updateOptions(profile, (o) => (o.labelCase === labelCase ? o : { ...o, labelCase }), now);
 }
 
-/** Where a tradition field goes when its own section isn't in the draft: the first of these that is. */
-const TRADITION_FALLBACK = ["religion", "horoscope", "personal"];
+/**
+ * Where a tradition field goes when its own section isn't in the draft: the first of these that is (Personal
+ * details in the Simple form, D50). The editor shows the chips in the same section.
+ */
+export const TRADITION_FALLBACK: readonly string[] = ["religion", "horoscope", "personal"];
 
 /**
  * The fields a tradition chip would add (D32, D43): its set minus the keys already anywhere in the draft, each

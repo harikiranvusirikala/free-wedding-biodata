@@ -5,7 +5,7 @@ import { profileSchema } from "./schema";
 import type { BiodataProfile } from "./types";
 
 let n = 0;
-const fresh = () => createProfile({ newId: () => `id-${++n}`, now: () => new Date("2026-11-21T10:00:00.000Z") });
+const fresh = () => createProfile({ newId: () => `id-${++n}`, now: () => new Date("2026-11-21T10:00:00.000Z"), formLayout: "detailed" });
 
 const issuesOf = (value: unknown) => {
   const result = profileSchema.safeParse(value);

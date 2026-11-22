@@ -66,6 +66,19 @@ export async function openStoredDraft(page: Page, profile: BiodataProfile) {
   await expect(page.getByTestId("editor-form")).toBeVisible();
 }
 
+/**
+ * Switches the open draft to the Detailed form (D50: new drafts start Simple), for specs about sections only the
+ * Detailed form starts with. The switch's toast is dismissed so it covers nothing the spec looks at.
+ */
+export async function switchToDetailed(page: Page) {
+  const detailed = page.getByRole("radiogroup", { name: "Form" }).getByRole("radio", { name: "Detailed" });
+  await detailed.click();
+  await expect(detailed).toHaveAttribute("aria-checked", "true");
+  await expect(page.locator('[data-section="horoscope"]')).toBeVisible();
+  await page.getByTestId("manage-toast").getByRole("button", { name: "Dismiss" }).click();
+  await expect(page.getByTestId("manage-toast")).toHaveCount(0);
+}
+
 /** A field's stored record, by its key. */
 export function storedField(profile: BiodataProfile, key: string) {
   return profile.sections.flatMap((s) => (s.kind === "fields" ? s.fields : [])).find((f) => f.key === key);

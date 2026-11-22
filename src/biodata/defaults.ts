@@ -4,6 +4,7 @@ import {
   type FamilyMember,
   type Field,
   type FieldType,
+  type FormLayout,
   type LangCode,
   type ProfileOptions,
   type Section,
@@ -240,9 +241,10 @@ export type SectionDef =
   | { key: string; kind: "family"; members: readonly RelationKey[] };
 
 /**
- * The sections of a new draft, in the default reading order (D39: About me first, then Personal details,
- * Horoscope, Education and career, Family, Contact, Partner preferences), with §6's other default sections in
- * their natural places. Fields are §6's, minus complexion (never a default field) and age (computed, D13).
+ * The Detailed form's sections (D50; every draft's before it), in the default reading order (D39: About me first,
+ * then Personal details, Horoscope, Education and career, Family, Contact, Partner preferences), with §6's other
+ * default sections in their natural places. Fields are §6's, minus complexion (never a default field) and age
+ * (computed, D13). Also the sections "Add a section" offers back, in either form.
  */
 export const DEFAULT_SECTIONS: readonly SectionDef[] = [
   { key: "aboutMe", kind: "fields", fields: ["aboutMe"] },
@@ -302,6 +304,42 @@ export const DEFAULT_SECTIONS: readonly SectionDef[] = [
     ],
   },
 ];
+
+/**
+ * The Simple form (D50), what a new draft starts with: the four sections most real biodatas print, on one page.
+ * Horoscope, education and career details sit in Personal details, as in the owner's reference biodata (D28); no
+ * complexion (§6). The section keys are the Detailed ones, so the headings print from the same dictionaries in all
+ * ten languages, and every field here is also a Detailed default field (the switch only moves them).
+ */
+export const SIMPLE_SECTIONS: readonly SectionDef[] = [
+  {
+    key: "personal",
+    kind: "fields",
+    fields: [
+      "fullName",
+      "dateOfBirth",
+      "birthTime",
+      "birthPlace",
+      "nakshatra",
+      "rashi",
+      "caste",
+      "gotra",
+      "maternalGotra",
+      "height",
+      "highestQualification",
+      "occupation",
+      "annualIncome",
+    ],
+  },
+  { key: "family", kind: "family", members: ["father", "mother"] },
+  { key: "contact", kind: "fields", fields: ["phone", "address"] },
+  { key: "partnerPreferences", kind: "fields", fields: ["partnerExpectations"] },
+];
+
+/** The default sections of a form layout (D50): Simple's four, or every default section for Detailed. */
+export function layoutSections(layout: FormLayout): readonly SectionDef[] {
+  return layout === "simple" ? SIMPLE_SECTIONS : DEFAULT_SECTIONS;
+}
 
 /** Ready-made sections in "Add a section" (D44), not in a new draft. References: people who vouch for the family. */
 export const QUICK_PICK_SECTIONS: readonly SectionDef[] = [{ key: "references", kind: "family", members: [] }];
@@ -404,13 +442,17 @@ export function createSection(def: SectionDef, newId: NewId = newUuid): Section 
 export const DEFAULT_TEMPLATE_ID = "classic-gold";
 export const DEFAULT_COLOR_ID = "gold";
 
-/** Age is opt-in (D13); dates DD-MM-YYYY (D14); text size Auto (D31); no title, motif or invocation (D21). */
+/**
+ * Age is opt-in (D13); dates DD-MM-YYYY (D14); text size Auto (D31); the Simple form (D50); no title, motif or
+ * invocation (D21).
+ */
 export const DEFAULT_OPTIONS: Readonly<ProfileOptions> = {
   showAge: false,
   dateFormat: "dd-mm-yyyy",
   heightFormat: "ft-in",
   textSize: "auto",
   labelCase: "normal",
+  formLayout: "simple",
   motif: null,
   invocation: "",
 };
@@ -420,14 +462,20 @@ export interface CreateProfileOptions {
   now?: Clock;
   draftName?: string;
   docLanguage?: LangCode;
+  /** The form a new draft starts with: Simple (D50), unless asked for the Detailed one (the sample, tests). */
+  formLayout?: FormLayout;
 }
 
-/** A new draft with the default sections, all empty. Revision 0 = never saved (persistence bumps it on save). */
+/**
+ * A new draft with its form layout's default sections, all empty: Simple unless `formLayout` says otherwise (D50).
+ * Revision 0 = never saved (persistence bumps it on save).
+ */
 export function createProfile({
   newId = newUuid,
   now = systemClock,
   draftName = "",
   docLanguage = "en",
+  formLayout = "simple",
 }: CreateProfileOptions = {}): BiodataProfile {
   const timestamp = now().toISOString();
   return {
@@ -440,8 +488,8 @@ export function createProfile({
     docLanguage,
     templateId: DEFAULT_TEMPLATE_ID,
     colorId: DEFAULT_COLOR_ID,
-    options: { ...DEFAULT_OPTIONS },
-    sections: DEFAULT_SECTIONS.map((def) => createSection(def, newId)),
+    options: { ...DEFAULT_OPTIONS, formLayout },
+    sections: layoutSections(formLayout).map((def) => createSection(def, newId)),
   };
 }
 
@@ -510,6 +558,8 @@ function buildSample(): BiodataProfile {
     newId,
     now: () => new Date("2026-11-21T09:00:00.000Z"),
     draftName: "Sample: Sai Teja Mandapati",
+    // The full showcase: every section, so previews and "Open a sample" show what the Detailed form holds (D50).
+    formLayout: "detailed",
   });
   profile.options.showAge = true;
 

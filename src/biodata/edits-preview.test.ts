@@ -25,7 +25,7 @@ function freeze<T>(value: T): T {
 
 function setup(): BiodataProfile {
   let n = 0;
-  return freeze(createProfile({ newId: () => `id-${++n}`, now: () => CREATED }));
+  return freeze(createProfile({ newId: () => `id-${++n}`, now: () => CREATED, formLayout: "detailed" }));
 }
 
 const valid = (profile: BiodataProfile) => expect(profileSchema.safeParse(profile).success).toBe(true);

@@ -5,7 +5,7 @@ import { useRef, type KeyboardEvent } from "react";
 /**
  * A short row of choices with one picked (paper size, Day / Night / Follow device): a sunken track with the
  * chosen option raised. A radio group: Tab reaches the chosen option, arrows (and Home, End) move and choose,
- * as screen-reader users expect. `label` names the group.
+ * as screen-reader users expect. `label` names the group; `describedBy` points at text explaining the choice.
  */
 export function SegmentedControl<T extends string>(props: {
   label: string;
@@ -13,8 +13,9 @@ export function SegmentedControl<T extends string>(props: {
   options: readonly { value: T; label: string; disabled?: boolean }[];
   onChange: (value: T) => void;
   className?: string;
+  describedBy?: string;
 }) {
-  const { label, value, options, onChange, className = "" } = props;
+  const { label, value, options, onChange, className = "", describedBy } = props;
   const group = useRef<HTMLDivElement>(null);
   const enabled = options.filter((o) => !o.disabled);
 
@@ -33,6 +34,7 @@ export function SegmentedControl<T extends string>(props: {
       ref={group}
       role="radiogroup"
       aria-label={label}
+      aria-describedby={describedBy}
       onKeyDown={onKeyDown}
       className={`inline-grid auto-cols-fr grid-flow-col gap-0.5 rounded-lg bg-sunken p-0.5 ring-1 ring-line ring-inset ${className}`}
     >

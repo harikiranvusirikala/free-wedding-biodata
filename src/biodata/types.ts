@@ -94,6 +94,14 @@ export type TextSize = (typeof TEXT_SIZES)[number];
 export const LABEL_CASES = ["normal", "upper"] as const;
 export type LabelCase = (typeof LABEL_CASES)[number];
 
+export const FORM_LAYOUTS = ["simple", "detailed"] as const;
+/**
+ * Which set of default sections and fields the draft follows (D50): Simple (four sections, the fields most biodatas
+ * print; new drafts) or Detailed (every default section; drafts saved before D50). It decides where the editor's
+ * switch puts fields and what "Restore default fields" brings back; the sections themselves are always stored.
+ */
+export type FormLayout = (typeof FORM_LAYOUTS)[number];
+
 export interface ProfileOptions {
   /** Print the age computed from the date of birth on the day the document is made (opt-in, D13). */
   showAge: boolean;
@@ -101,6 +109,8 @@ export interface ProfileOptions {
   heightFormat: HeightFormat;
   textSize: TextSize;
   labelCase: LabelCase;
+  /** Simple or Detailed form (D50). Drafts saved before it was added read as "detailed" (schema default). */
+  formLayout: FormLayout;
   /** A preset title (e.g. "biodata"), printed in the document language (D45). Neither this nor `title` = no title. */
   titleKey?: string;
   /** A title the user typed, printed exactly as typed. Ignored when `titleKey` is set. */

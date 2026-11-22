@@ -44,7 +44,7 @@ function jpegSize(data: Buffer): { width: number; height: number } {
 async function shortDraft(page: Page) {
   await page.goto("/editor?new=1");
   await page.getByLabel("Name", { exact: true }).fill("Sai Teja Mandapati");
-  await page.getByLabel("Current City", { exact: true }).fill("Hyderabad");
+  await page.getByLabel("Place of Birth", { exact: true }).fill("Hyderabad");
   await expect(page.locator('[data-testid="preview-pages"] [data-doc-ready="1"]')).toHaveAttribute("data-doc-pages", "1");
 }
 

@@ -16,6 +16,24 @@ describe("migrate", () => {
     expect(result.ok && result.profile).toEqual(SAMPLE_PROFILE);
   });
 
+  it("opens a draft saved before D50 (no form layout) as Detailed, the form it was made with", () => {
+    const old = createProfile({ newId: () => crypto.randomUUID(), formLayout: "detailed" });
+    const { formLayout, ...optionsBefore } = old.options;
+    expect(formLayout).toBe("detailed");
+    const stored = JSON.parse(JSON.stringify({ ...old, options: optionsBefore }));
+    const result = migrate(stored);
+    expect(result).toEqual({ ok: true, profile: old, fromVersion: 1 });
+    // Nothing else is touched, and the stored record isn't changed.
+    expect(stored.options).not.toHaveProperty("formLayout");
+  });
+
+  it("keeps the form layout a draft was saved with, and refuses an unknown one", () => {
+    const simple = draft();
+    expect(migrate(simple)).toMatchObject({ ok: true, profile: { options: { formLayout: "simple" } } });
+    const bad = migrate({ ...simple, options: { ...simple.options, formLayout: "compact" } });
+    expect(!bad.ok && bad.error).toMatchObject({ code: "invalid", message: expect.stringContaining("options.formLayout") });
+  });
+
   it("doesn't change its input", () => {
     const raw = { ...draft(), extra: "kept by the caller" };
     const before = structuredClone(raw);

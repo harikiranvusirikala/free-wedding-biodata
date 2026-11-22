@@ -27,6 +27,16 @@ describe("SegmentedControl", () => {
     expect(radio("Small").tabIndex).toBe(-1);
   });
 
+  test("can point at text that explains the choice", () => {
+    render(
+      <>
+        <SegmentedControl label="Form" value="a" options={[{ value: "a", label: "A" }]} onChange={() => {}} describedBy="why" />
+        <p id="why">Because</p>
+      </>,
+    );
+    expect(screen.getByRole("radiogroup", { name: "Form" }).getAttribute("aria-describedby")).toBe("why");
+  });
+
   test("a click chooses", () => {
     render(<Example />);
     fireEvent.click(radio("Large"));

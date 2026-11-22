@@ -52,13 +52,13 @@ test.beforeEach(async ({ page }) => {
 test("what you type is saved, and a reload brings it back with the same address", async ({ page }) => {
   const id = await openNewDraft(page);
   await fullName(page).fill("Sai Teja Mandapati");
-  await page.getByLabel("Current City", { exact: true }).fill("Hyderabad");
+  await page.getByLabel("Place of Birth", { exact: true }).fill("Hyderabad");
   await expect(status(page)).toHaveText(SAVED);
 
   await page.reload();
   await expect(page).toHaveURL(`/editor?d=${id}`);
   await expect(fullName(page)).toHaveValue("Sai Teja Mandapati");
-  await expect(page.getByLabel("Current City", { exact: true })).toHaveValue("Hyderabad");
+  await expect(page.getByLabel("Place of Birth", { exact: true })).toHaveValue("Hyderabad");
 });
 
 test("Saved appears only after the write: Saving… first, and the value is on disk by then", async ({ page }) => {

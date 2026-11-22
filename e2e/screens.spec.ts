@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { drawnPng, openStoredDraft, sampleDraft } from "./editor-helpers";
+import { drawnPng, openStoredDraft, sampleDraft, switchToDetailed } from "./editor-helpers";
 
 // The A7 quality gate (BUILD_PLAN A7): every screen at phone, tablet and desktop size, Day and Night, saved in
 // test-results/screenshots/ to be looked at before committing; and nothing scrolls sideways at 360 px.
@@ -18,7 +18,7 @@ interface Screen {
 /** Fills the first fields of a new draft (fictional values) and waits until they are saved. */
 async function fillDraft(page: Page, path = "/editor") {
   await page.goto(path);
-  for (const [label, value] of [["Name", "Sai Teja Mandapati"], ["Date of Birth", "15-03-1998"], ["Nationality", "Indian"], ["Current City", "Hyderabad"], ["Native Place", "Guntur"]]) {
+  for (const [label, value] of [["Name", "Sai Teja Mandapati"], ["Date of Birth", "15-03-1998"], ["Place of Birth", "Guntur"], ["Qualification", "B.Tech (Computer Science)"], ["Occupation", "Software Engineer"]]) {
     await page.getByLabel(label, { exact: true }).fill(value);
   }
   await expect(page.getByTestId("save-status")).toHaveText(/Saved on this device · \d/);
@@ -205,12 +205,13 @@ test("field and section menus, add dialogs and the Undo toast, Day and Night", a
   }
 });
 
-// A new draft after some management: a hidden section, an empty section of the user's own, and Add a section offering
-// a removed default section back with References (Step 2.2).
+// A new Detailed draft after some management: a hidden section, an empty section of the user's own, and Add a section
+// offering a removed default section back with References (Step 2.2).
 test("hidden and empty sections, and Add a section with ready-made picks, Day and Night", async ({ page, isMobile }) => {
   test.skip(isMobile, "sizes are set here, so one project is enough");
   await page.goto("/editor?new=1");
   await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
+  await switchToDetailed(page);
   await page.getByRole("button", { name: "Options for the “Family Background” section" }).click();
   await page.getByRole("menuitem", { name: "Remove section…" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Remove" }).click();
@@ -279,7 +280,9 @@ test("top of your biodata, its pickers, the language notice and tradition chips,
     await expect(page.getByTestId("language-options")).toBeVisible();
     await shoot("editor-language-dialog", size.name);
     await page.getByRole("dialog").getByRole("button", { name: "Done" }).click();
-    await page.locator('[data-section="religion"]').evaluate((el) => el.scrollIntoView({ block: "start" }));
+    // A new draft is Simple (D50): the chips sit at the top of Personal details.
+    await page.getByTestId("tradition-chips").evaluate((el) => el.scrollIntoView({ block: "start" }));
+    await page.evaluate(() => window.scrollBy(0, -140));
     await page.getByTestId("tradition-chips").getByRole("button", { name: "Muslim", exact: true }).click();
     await expect(page.getByTestId("manage-toast")).toBeVisible();
     await shoot("editor-tradition-chips", size.name);
@@ -430,7 +433,7 @@ test("live preview and downloads at every size, Day and Night", async ({ page, i
   // A one-page draft.
   await page.goto("/editor?new=1");
   await page.getByLabel("Name", { exact: true }).fill("Sai Teja Mandapati");
-  for (const [label, value] of [["Date of Birth", "15-03-1998"], ["Current City", "Hyderabad"], ["Native Place", "Guntur"], ["Nationality", "Indian"]]) {
+  for (const [label, value] of [["Date of Birth", "15-03-1998"], ["Place of Birth", "Guntur"], ["Qualification", "B.Tech (Computer Science)"], ["Occupation", "Software Engineer"]]) {
     await page.getByLabel(label, { exact: true }).fill(value);
   }
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -443,6 +446,83 @@ test("live preview and downloads at every size, Day and Night", async ({ page, i
   await page.getByTestId("preview-pill").click();
   await expect(page.getByRole("dialog", { name: "Preview" })).toBeVisible();
   await shoot("editor-preview-short-phone-sheet");
+});
+
+// The Simple / Detailed switch (Step 2.4, D50), shot as it is at every size, Day and Night: the top of a new Simple
+// draft, the Detailed form just after switching (with its toast), a filled Simple draft (the whole form on desktop,
+// Add a section offering the Detailed sections), and that draft's printed page.
+test("Simple and Detailed forms at every size, Day and Night", async ({ page, isMobile }) => {
+  test.skip(isMobile, "sizes are set here, so one project is enough");
+  test.setTimeout(180_000);
+  const shoot = async (name: string, fullPage = false) => {
+    for (const theme of THEMES) {
+      await page.emulateMedia({ colorScheme: theme });
+      await expect(page.locator("html")).toHaveClass(theme === "dark" ? /dark/ : /^(?!.*dark)/);
+      await page.screenshot({ path: `test-results/screenshots/${name}-${theme === "light" ? "day" : "night"}.png`, fullPage, animations: "disabled" });
+    }
+    await page.emulateMedia({ colorScheme: "light" });
+  };
+  const form = page.getByRole("radiogroup", { name: "Form" });
+  for (const size of SIZES) {
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await page.goto("/editor?new=1");
+    await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
+    await shoot(`editor-layout-simple-${size.name}`);
+    await page.getByTestId("tradition-chips").evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await shoot(`editor-layout-simple-chips-${size.name}`);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await form.getByRole("radio", { name: "Detailed" }).click();
+    await expect(page.getByTestId("manage-toast")).toBeVisible();
+    await shoot(`editor-layout-detailed-${size.name}`);
+    await page.getByTestId("manage-toast").getByRole("button", { name: "Dismiss" }).click();
+  }
+
+  // A filled Simple draft (fictional values).
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/editor?new=1");
+  const fill = (label: string, value: string) => page.getByLabel(label, { exact: true }).fill(value);
+  await fill("Name", "Sai Teja Mandapati");
+  await fill("Date of Birth", "14-08-1996");
+  await fill("Time of Birth", "6:45 am");
+  await fill("Place of Birth", "Guntur");
+  await page.getByRole("combobox", { name: "Nakshatra" }).fill("Magha");
+  await page.getByRole("combobox", { name: "Rashi" }).fill("Simha");
+  await fill("Gotra", "Bharadwaja");
+  await fill("Maternal Gotra", "Kashyapa");
+  await page.locator('[data-section="personal"]').getByLabel("Height", { exact: true }).selectOption({ label: "5 ft 10 in · 178 cm" });
+  await fill("Qualification", "B.Tech (Computer Science)");
+  await fill("Occupation", "Software Engineer, Hyderabad");
+  await fill("Annual Income", "₹ 18 lakh per year");
+  await fill("Father", "Mandapati Venkata Rao, Retired Headmaster, Guntur");
+  await fill("Mother", "Mandapati Lakshmi, Homemaker");
+  await fill("Phone", "+91 90000 00001");
+  await fill("Address", "Plot 12, Sample Colony, Guntur, Andhra Pradesh");
+  await page.getByRole("textbox", { name: "Expectations" }).fill("Someone kind, family-minded and independent, who enjoys travel and simple living.");
+  await page.getByLabel("Phone", { exact: true }).focus();
+  await expect(page.getByTestId("save-status")).toHaveText(/Saved on this device · \d/);
+  await expect(page.locator('[data-testid="preview-pages"] [data-page="1"]')).toContainText("simple living");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shoot("editor-layout-filled-desktop");
+  await shoot("editor-layout-filled-desktop-full", true);
+  await page.locator("#add-section").click();
+  await expect(page.getByRole("dialog", { name: "Add a section" })).toBeVisible();
+  await shoot("editor-layout-add-section-desktop");
+  await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator("#add-section").click();
+  await expect(page.getByRole("dialog", { name: "Add a section" })).toBeVisible();
+  await shoot("editor-layout-add-section-phone");
+  await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+  await page.getByTestId("preview-pill").click();
+  await expect(page.getByRole("dialog", { name: "Preview" })).toBeVisible();
+  await shoot("editor-layout-filled-phone-sheet");
+
+  const id = new URL(page.url()).searchParams.get("d")!;
+  await page.setViewportSize({ width: 900, height: 1200 });
+  await page.goto(`/dev/draft?d=${id}`);
+  await expect(page.locator("body[data-doc-ready]")).toHaveCount(1);
+  await expect(page.locator("[data-page]")).toHaveCount(1);
+  await page.locator("[data-page]").first().screenshot({ path: "test-results/screenshots/document-simple-1.png", animations: "disabled" });
 });
 
 /** Screenshots a page as it is (no reload) at every size, Day and Night; colour transitions are finished first. */

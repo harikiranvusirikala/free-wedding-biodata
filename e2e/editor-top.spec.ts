@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { getDocDictionary } from "../src/i18n/doc";
-import { SAVED, readStored, storedField } from "./editor-helpers";
+import { SAVED, readStored, storedField, switchToDetailed } from "./editor-helpers";
 
 // Step 2.0: the editor's opening (VISION D21, D11, D32, D43). The top of the biodata starts at None everywhere and
 // what the user picks is kept and printed; the document language changes the printed labels while the editor stays
@@ -13,10 +13,12 @@ const idOf = (page: Page) => new URL(page.url()).searchParams.get("d")!;
 const top = (page: Page) => page.locator('[data-section="top"]');
 const toast = (page: Page) => page.getByTestId("manage-toast");
 
+/** A new draft in the Detailed form, whose sections this spec works with (new drafts start Simple, D50). */
 async function openNewDraft(page: Page) {
   await page.goto("/editor?new=1");
   await expect(page).toHaveURL(/\/editor\?d=[0-9a-f-]{36}$/);
   await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
+  await switchToDetailed(page);
   return idOf(page);
 }
 

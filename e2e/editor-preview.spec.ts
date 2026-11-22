@@ -65,7 +65,7 @@ test.describe("desktop", () => {
     // Never a blank pane while it lays the page out again.
     await expect(pageOne(page)).toBeVisible();
     await expect(pageOne(page)).toContainText("Sai Teja Mandapati Garu");
-    await page.getByLabel("Current City", { exact: true }).fill("Hyderabad");
+    await page.getByLabel("Place of Birth", { exact: true }).fill("Hyderabad");
     await expect(pageOne(page)).toContainText("Hyderabad");
     await expect(page.getByTestId("save-status")).toHaveText(SAVED);
   });

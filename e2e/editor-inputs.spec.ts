@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { SAVED, openStoredDraft, readStored, sampleDraft, storedField, storedMember } from "./editor-helpers";
+import { SAVED, openStoredDraft, readStored, sampleDraft, storedField, storedMember, switchToDetailed } from "./editor-helpers";
 
 // Step 2.1: the editor's sections and an input for every field type (VISION §6, D13, D33, D47). Values are typed
 // as people type them, stored in their formats, and come back after a reload; hidden fields keep their values;
@@ -10,10 +10,12 @@ const idOf = (page: Page) => new URL(page.url()).searchParams.get("d")!;
 const section = (page: Page, key: string) => page.locator(`[data-section="${key}"]`);
 const label = (page: Page, text: string) => page.getByLabel(text, { exact: true });
 
+/** A new draft in the Detailed form, whose sections this spec works with (new drafts start Simple, D50). */
 async function openNewDraft(page: Page) {
   await page.goto("/editor?new=1");
   await expect(page).toHaveURL(/\/editor\?d=[0-9a-f-]{36}$/);
   await expect(label(page, "Name")).toBeVisible();
+  await switchToDetailed(page);
   return idOf(page);
 }
 

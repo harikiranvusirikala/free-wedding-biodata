@@ -21,7 +21,7 @@ const later = () => LATER;
 
 function setup() {
   let n = 0;
-  const profile = createProfile({ newId: () => `id-${++n}`, now: () => CREATED });
+  const profile = createProfile({ newId: () => `id-${++n}`, now: () => CREATED, formLayout: "detailed" });
   // Deep-freeze the original so any mutation by an edit throws.
   const freeze = (value: unknown): void => {
     if (value && typeof value === "object") {

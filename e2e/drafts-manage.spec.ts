@@ -120,7 +120,7 @@ test("rename shows the name in the menu only, and an empty name goes back to the
 
 test("duplicate makes a copy with the same values under a new address", async ({ page }) => {
   const original = await newDraft(page, "Sai Teja Mandapati");
-  await page.getByLabel("Current City", { exact: true }).fill("Hyderabad");
+  await page.getByLabel("Place of Birth", { exact: true }).fill("Hyderabad");
   await expect(status(page)).toHaveText(SAVED);
 
   await choose(page, "Duplicate");
@@ -128,16 +128,16 @@ test("duplicate makes a copy with the same values under a new address", async ({
   await expect(page).toHaveURL(DRAFT_URL);
   await expect(title(page)).toHaveText("Sai Teja's biodata (copy)");
   await expect(fullName(page)).toHaveValue("Sai Teja Mandapati");
-  await expect(page.getByLabel("Current City", { exact: true })).toHaveValue("Hyderabad");
+  await expect(page.getByLabel("Place of Birth", { exact: true })).toHaveValue("Hyderabad");
 
   // The copy is its own draft: changing it leaves the original as it was.
-  await page.getByLabel("Current City", { exact: true }).fill("Guntur");
+  await page.getByLabel("Place of Birth", { exact: true }).fill("Guntur");
   await expect(status(page)).toHaveText(SAVED);
   await openMenu(page);
   await expect(listed(page)).toHaveCount(2);
   await listed(page).filter({ hasText: /^Sai Teja's biodata\s*Edited/ }).click();
   await expect(page).toHaveURL(`/editor?d=${original}`);
-  await expect(page.getByLabel("Current City", { exact: true })).toHaveValue("Hyderabad");
+  await expect(page.getByLabel("Place of Birth", { exact: true })).toHaveValue("Hyderabad");
 });
 
 test("delete asks first, then opens the newest remaining draft, and a new one after the last", async ({ page }) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { TRADITIONS, TRADITION_FIELD_SETS, newUuid, type Tradition } from "@/biodata/defaults";
-import { addTraditionFields, removeFields, traditionFieldsToAdd } from "@/biodata/edits";
+import { TRADITION_FALLBACK, addTraditionFields, removeFields, traditionFieldsToAdd } from "@/biodata/edits";
 import type { BiodataProfile } from "@/biodata/types";
 import { focusRing } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
@@ -10,7 +10,7 @@ import { fieldLabel } from "./labels";
 import { useManage } from "./ManageProvider";
 
 // "Add details common in your family" (BUILD_PLAN Step 2.0, VISION D32, D43): one-tap chips inside the Religion
-// card (the Horoscope card when Religion is gone). A chip adds its tradition's fields that aren't in the draft yet
+// card (the Horoscope card when Religion is gone; Personal details in the Simple form, D50, which has neither). A chip adds its tradition's fields that aren't in the draft yet
 // (TRADITION_FIELD_SETS), empty, at the end of their sections, with Undo in the toast; a second tap adds nothing.
 // Never shown pre-chosen, never inferred from the Religion value. A chip whose fields are all present shows a tick.
 
@@ -19,9 +19,13 @@ function listOf(labels: string[]): string {
   return labels.length < 2 ? (labels[0] ?? "") : `${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}`;
 }
 
-/** The chips' card, or nothing: shown in the first of Religion and Horoscope that the draft has. */
+/**
+ * The chips' card, or nothing: shown in the first of Religion, Horoscope and Personal details that the draft has
+ * (else the first fields section), the same order the chips' fields fall back to (traditionFieldsToAdd).
+ */
 export function showsTraditions(profile: Pick<BiodataProfile, "sections">, sectionId: string): boolean {
-  const host = profile.sections.find((s) => s.kind === "fields" && s.key === "religion") ?? profile.sections.find((s) => s.kind === "fields" && s.key === "horoscope");
+  const fields = profile.sections.filter((s) => s.kind === "fields");
+  const host = TRADITION_FALLBACK.map((key) => fields.find((s) => s.key === key)).find(Boolean) ?? fields[0];
   return host?.id === sectionId;
 }
 
@@ -33,7 +37,11 @@ export function doneTraditions(profile: Pick<BiodataProfile, "sections">): strin
   return TRADITIONS.filter((tradition) => traditionFieldsToAdd(profile, tradition).length === 0).join(" ");
 }
 
-export function TraditionChips({ done: doneList, readOnly }: { done: string; readOnly: boolean }) {
+/**
+ * `atEnd`: after the rows, where Personal details holds the chips (Simple form, D50), so the card still opens with
+ * Name and the chips sit just above where their fields are added. Elsewhere they head the card.
+ */
+export function TraditionChips({ done: doneList, readOnly, atEnd = false }: { done: string; readOnly: boolean; atEnd?: boolean }) {
   const manage = useManage();
 
   function add(tradition: Tradition) {
@@ -67,7 +75,7 @@ export function TraditionChips({ done: doneList, readOnly }: { done: string; rea
   }
 
   return (
-    <div className="border-b border-line bg-sunken/40 px-4 py-3 sm:px-5" data-testid="tradition-chips">
+    <div className={`${atEnd ? "border-t" : "border-b"} border-line bg-sunken/40 px-4 py-3 sm:px-5`} data-testid="tradition-chips">
       <p className="text-[13.5px] font-medium text-ink-2">{t("traditions.title")}</p>
       <p className="mt-0.5 text-[13px] text-pretty text-ink-3">{t("traditions.text")}</p>
       <ul className="mt-2.5 flex flex-wrap gap-1.5">
