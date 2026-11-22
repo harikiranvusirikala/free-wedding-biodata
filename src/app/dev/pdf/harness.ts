@@ -3,6 +3,7 @@
 // from the browser's). Used by /dev/document (any variant) and /dev/pdf (the display-list feature page).
 
 import { readDisplayList, type DisplayList } from "@/pdf/display-list";
+import { faceSuffix } from "@/pdf/weights";
 
 export interface PdfRun {
   pdf: string;
@@ -53,7 +54,7 @@ export function pdfHarness(root: () => ParentNode): PdfHarness {
         debug: {
           onRun: (m) => {
             runs++;
-            lines.push({ page: m.page, text: m.text, fonts: Object.fromEntries(m.fonts.map((f) => [`${f.family.replace(/\s+/g, "")}-${f.weight >= 600 ? "Bold" : "Regular"}`, f.glyphs])) });
+            lines.push({ page: m.page, text: m.text, fonts: Object.fromEntries(m.fonts.map((f) => [`${f.family.replace(/\s+/g, "")}-${faceSuffix(f.weight)}`, f.glyphs])) });
             if (m.fallback) fallbackRuns++;
           },
           onMismatch: (m) => mismatches.push({ text: m.text, ratio: Math.round(m.ratio * 10000) / 10000, fontFamily: m.fontFamily, fontWeight: m.fontWeight }),

@@ -8,7 +8,7 @@ import { hasIndicScript, textFontStack } from "../../scripts";
 import { mix } from "../../frames/geometry";
 import { SIDE_PANEL_WIDTH } from "../../frames/SidePanel";
 import type { AsideProps, BlockViewProps } from "../../templates/types";
-import { isLatin, type Palette } from "../../tokens";
+import { isLatin, VALUE_WEIGHT, type Palette } from "../../tokens";
 import { modernSubtitle, SIDE_PAD, sideContact } from "./layout";
 
 // The Modern skeleton's drawings (VISION D34, D46): a crisp two-column page. The side panel (page 1) holds the
@@ -152,7 +152,7 @@ export function ModernAside({ doc, palette, photo, secondPhoto }: AsideProps) {
                     {item.label}
                   </div>
                 ) : null}
-                <div style={{ fontSize: "0.94em", lineHeight: 1.4, overflowWrap: "anywhere", whiteSpace: item.multiline ? "pre-line" : undefined, fontFamily: font(valueText(item)) }}>
+                <div style={{ fontSize: "0.94em", fontWeight: VALUE_WEIGHT, lineHeight: 1.4, overflowWrap: "anywhere", whiteSpace: item.multiline ? "pre-line" : undefined, fontFamily: font(valueText(item)) }}>
                   {valueText(item)}
                 </div>
               </div>

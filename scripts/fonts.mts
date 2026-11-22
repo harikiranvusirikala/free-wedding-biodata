@@ -1,5 +1,5 @@
 // Copies the Noto Sans fonts the biodata uses into public/fonts/: `npm run fonts`. The same files draw the
-// preview, print, the PDF and page images (BUILD_PLAN A1). Static TTFs (Regular and Bold) from the
+// preview, print, the PDF and page images (BUILD_PLAN A1). Static TTFs (Regular, Medium for values, Bold) from the
 // @expo-google-fonts packages, under the SIL Open Font License 1.1 (OFL.txt is copied beside them).
 import { copyFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 
@@ -17,6 +17,7 @@ const FAMILIES: Record<string, string> = {
 };
 const WEIGHTS = [
   { dir: "400Regular", suffix: "Regular" },
+  { dir: "500Medium", suffix: "Medium" },
   { dir: "700Bold", suffix: "Bold" },
 ];
 

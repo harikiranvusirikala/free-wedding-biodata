@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import type { LangCode } from "@/biodata/types";
 import { textFontStack } from "../scripts";
-import { relaxed } from "../tokens";
+import { relaxed, VALUE_WEIGHT } from "../tokens";
 
 // A label/value row (BUILD_PLAN A4): the label in a fixed column, the value wrapping beside it. Used for fields,
 // the computed age and family members (relation : details, D28), so it is also the "family row". User text is
@@ -57,6 +57,7 @@ export function Row({
     flex: "1 1 0",
     minWidth: 0,
     color: look.valueColor,
+    fontWeight: VALUE_WEIGHT,
     overflowWrap: "anywhere",
     whiteSpace: multiline ? "pre-line" : undefined,
     fontFamily: textFontStack(lang, valueText),

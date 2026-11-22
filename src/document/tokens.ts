@@ -27,6 +27,13 @@ export const AUTO_STEPS: readonly TextStep[] = ["xl", "l", "m", "s", "xs"];
 /** Unitless line height of body text. */
 export const LINE_HEIGHT = 1.45;
 
+/**
+ * The weight of every value the user typed in a row (name, dates, family, contact): Medium, a touch heavier than
+ * body text so the details read firmly next to the bold labels (owner's request, 2026-11-22). A real face ships for
+ * every script (public/fonts/*-Medium.ttf), so the PDF and images draw the same weight (src/pdf/weights.ts).
+ */
+export const VALUE_WEIGHT = 500;
+
 /** Space in em of the body size. */
 export const SPACE = {
   /** Between sections (above each heading). */

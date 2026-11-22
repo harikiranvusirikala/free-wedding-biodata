@@ -3,16 +3,17 @@
 // static file through `new URL(…, import.meta.url)`. Nothing is requested from another origin.
 
 import { FONT_FAMILY } from "@/document/tokens";
+import { faceSuffix } from "./weights";
 
 /** The font files in public/fonts by family (`npm run fonts`). */
 const FAMILY_FILES: Record<string, string> = Object.fromEntries(
   [...new Set(Object.values(FONT_FAMILY))].map((family) => [family, family.replace(/\s+/g, "")]),
 );
 
-/** `/fonts/<File>-Regular.ttf` or `-Bold.ttf` for a family and weight, or null for a family we don't ship. */
+/** `/fonts/<File>-Regular.ttf`, `-Medium.ttf` or `-Bold.ttf` for a family and weight, or null for a family we don't ship. */
 export function fontUrl(family: string, weight: number): string | null {
   const file = FAMILY_FILES[family];
-  return file ? `/fonts/${file}-${weight >= 600 ? "Bold" : "Regular"}.ttf` : null;
+  return file ? `/fonts/${file}-${faceSuffix(weight)}.ttf` : null;
 }
 
 const SUBSET_WASM = new URL("../../node_modules/harfbuzzjs/dist/harfbuzz-subset.wasm", import.meta.url);

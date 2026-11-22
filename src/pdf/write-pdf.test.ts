@@ -6,11 +6,12 @@ import { describe, expect, it } from "vitest";
 import type { DisplayList, DisplayPage, TextItem } from "./display-list";
 import { num } from "./color";
 import { imagePlacement } from "./image-placement";
+import { faceSuffix } from "./weights";
 import { writePdf, type RunMeasure, type WritePdfOptions } from "./write-pdf";
 
 const root = process.cwd();
 const fonts = async (family: string, weight: number) => {
-  const file = path.join(root, "public/fonts", `${family.replace(/\s+/g, "")}-${weight >= 600 ? "Bold" : "Regular"}.ttf`);
+  const file = path.join(root, "public/fonts", `${family.replace(/\s+/g, "")}-${faceSuffix(weight)}.ttf`);
   return existsSync(file) ? new Uint8Array(readFileSync(file)) : null;
 };
 const subsetWasm = readFileSync(path.join(root, "node_modules/harfbuzzjs/dist/harfbuzz-subset.wasm"));

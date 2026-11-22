@@ -273,8 +273,9 @@ test("values in other scripts: the same fonts and glyphs on screen as in the PDF
   await writeFile(`${OUT}/mixed-fonts.json`, JSON.stringify(byVariant, null, 2));
 
   const fontsOf = (id: string, text: string) => byVariant[id].find((p) => p.text === text)?.screen;
-  // A Telugu name on an English page: Telugu letters in Noto Sans Telugu, the spaces in Noto Sans.
-  expect(Object.keys(fontsOf("classic-gold-en-mixed", "రవి తేజ మండపాటి") ?? {}).sort()).toEqual(["NotoSans-Regular", "NotoSansTelugu-Regular"]);
+  // A Telugu name on an English page: Telugu letters in Noto Sans Telugu, the spaces in Noto Sans; a value, so Medium
+  // (D59: values print a touch heavier than body text).
+  expect(Object.keys(fontsOf("classic-gold-en-mixed", "రవి తేజ మండపాటి") ?? {}).sort()).toEqual(["NotoSans-Medium", "NotoSansTelugu-Medium"]);
   // A label typed in Telugu stays bold.
   expect(Object.keys(fontsOf("classic-gold-en-mixed", "గోత్రం :") ?? {}).sort()).toEqual(["NotoSans-Bold", "NotoSansTelugu-Bold"]);
   // A Tamil section title on an English page (letter spacing dropped, the Latin part in capitals).

@@ -16,6 +16,7 @@ import { loadShapingFont, shapeRun, type HarfBuzzModule, type ShapingFont } from
 import { createSubsetter, type Subsetter } from "./subset";
 import { unicodeRangeTest } from "./unicode-range";
 import { imagePlacement } from "./image-placement";
+import { faceSuffix, faceWeight } from "./weights";
 
 export const A4_WIDTH_PT = 595.28;
 export const A4_HEIGHT_PT = 841.89;
@@ -129,7 +130,7 @@ function readMetrics(font: ShapingFont): FontMetrics {
   } catch {
     // HB_TINY builds may lack name lookup.
   }
-  if (!postScriptName) postScriptName = `${font.family.replace(/\s+/g, "")}-${font.weight >= 600 ? "Bold" : "Regular"}`;
+  if (!postScriptName) postScriptName = `${font.family.replace(/\s+/g, "")}-${faceSuffix(font.weight)}`;
   return { bbox, ascent, descent, capHeight, postScriptName: postScriptName.replace(/[^\x21-\x7e]|[()<>[\]{}/%#]/g, "") };
 }
 
@@ -219,7 +220,7 @@ function embedFont(context: PDFContext, font: ShapingFont, subsetter: Subsetter 
       Ascent: Math.round(metrics.ascent),
       Descent: Math.round(metrics.descent),
       CapHeight: Math.round(metrics.capHeight),
-      StemV: font.weight >= 600 ? 120 : 80,
+      StemV: { 400: 80, 500: 100, 700: 120 }[faceWeight(font.weight)],
       FontFile2: fontFile,
     }),
   );
@@ -306,10 +307,10 @@ export async function writePdf(list: DisplayList, fonts: FontLoader, options: Wr
   const context = doc.context;
 
   // Fonts: loaded once per family + weight, shaped with HarfBuzz, embedded after all pages are drawn.
-  // CSS weight matching with 400 and 700 faces: 500 and below take 400, 600 and above take 700.
+  // CSS weight matching with the 400, 500 and 700 faces we ship (weights.ts).
   const loaded = new Map<string, Promise<ShapingFont | null>>();
   const fontFor = (family: string, weight: number) => {
-    const w = weight >= 600 ? 700 : 400;
+    const w = faceWeight(weight);
     const key = `${family}|${w}`;
     let p = loaded.get(key);
     if (!p) {
@@ -322,7 +323,7 @@ export async function writePdf(list: DisplayList, fonts: FontLoader, options: Wr
   const stacks = new Map<string, Promise<ShapingFont[]>>();
   const stackFor = (families: string[], weight: number) => {
     const names = [...new Set([...families, ...fallbackFamilies])];
-    const key = `${names.join(",")}|${weight >= 600 ? 700 : 400}`;
+    const key = `${names.join(",")}|${faceWeight(weight)}`;
     let p = stacks.get(key);
     if (!p) {
       p = Promise.all(names.map((f) => fontFor(f, weight))).then((all) => all.filter((f): f is ShapingFont => !!f));
