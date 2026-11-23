@@ -275,7 +275,12 @@ function PagesPane({
         ref={pane}
         // The desktop column scrolls its pages; in the sheet the pages take their full height inside the sheet's own
         // scrolling body (PreviewSheet), under the controls.
-        className={zoomable ? "relative min-h-0 flex-1 overflow-auto overscroll-contain" : "relative"}
+        className={zoomable ? "relative min-h-0 flex-1 overflow-auto overscroll-contain outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-inset" : "relative"}
+        // The pages hold nothing focusable, so the scrolling column itself takes the focus for keyboard scrolling
+        // (WCAG 2.1.1; axe scrollable-region-focusable).
+        tabIndex={zoomable ? 0 : undefined}
+        role={zoomable ? "region" : undefined}
+        aria-label={zoomable ? t("preview.pane") : undefined}
         onScroll={(event) => setCurrent(pageInView(event.currentTarget.scrollTop, event.currentTarget.clientHeight, scale, pageCount))}
         data-testid="preview-pane"
       >

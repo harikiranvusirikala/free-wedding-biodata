@@ -18,7 +18,7 @@
   --line-strong: #d6d3d1;
   --ink: #1c1917;
   --ink-2: #44403c;
-  --ink-3: #78716c;
+  --ink-3: #6b645f; /* AA (≥ 4.5:1) on every Day surface: surface, page, sunken, brand-soft (Step 6.2) */
   --brand: #8a1c2b;
   --brand-hover: #74151f;
   --on-brand: #ffffff;

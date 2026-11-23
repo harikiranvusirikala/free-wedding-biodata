@@ -19,9 +19,9 @@ function offsite(page: Page): string[] {
 /** The page's JSON-LD blocks, parsed. */
 const structuredData = (page: Page) => page.locator('script[type="application/ld+json"]').evaluateAll((scripts) => scripts.map((s) => JSON.parse(s.textContent!)));
 
-/** Every <img> on the page has loaded (scrolled into view first, for lazy ones). */
+/** Every shown <img> on the page has loaded (scrolled into view first, for lazy ones; phones hide the desktop shot). */
 async function picturesLoad(page: Page) {
-  const images = page.locator("main img");
+  const images = page.locator("main img:visible");
   const count = await images.count();
   expect(count).toBeGreaterThan(0);
   for (let i = 0; i < count; i++) {

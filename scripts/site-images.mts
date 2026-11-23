@@ -86,6 +86,12 @@ function brandCard(width: number, height: number, margin: number, front: string,
   const frontX = width - margin - pageW + 10;
   const backX = frontX - Math.round(pageW * 0.42);
   const pageY = margin - 10;
+  // The description's lines, 32 px apart, end at least 64 px above the address (which stays inside the margin): on
+  // GitHub's 640 px card they move up rather than crowd it.
+  const LINE = 32;
+  const descTop = Math.min(top + 378, height - margin - 64 - (LINES.length - 1) * LINE);
+  // The headline moves up by as much (into the room under the logo), so it keeps its gap to the description.
+  const lift = top + 378 - descTop;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
   <defs>
     <linearGradient id="phrase" x1="0" y1="0" x2="1" y2="0.2">
@@ -101,10 +107,10 @@ function brandCard(width: number, height: number, margin: number, front: string,
 
   <image x="${margin}" y="${top}" width="64" height="64" href="${dataUrl("image/svg+xml", icon)}"/>
   ${text(margin + 82, top + 43, 32, 700, "#1c1917", SITE_NAME)}
-  ${text(margin, top + 168, 66, 800, "#1c1917", first)}
-  <text x="${margin}" y="${top + 242}" font-family="${FONT}" font-size="66" font-weight="800" fill="url(#phrase)">${second} ${third}</text>
-  ${text(margin, top + 316, 66, 800, "#1c1917", rest.join(" "))}
-  ${LINES.map((line, i) => text(margin, top + 378 + i * 32, 24, 400, "#57534e", line)).join("")}
+  ${text(margin, top + 168 - lift, 66, 800, "#1c1917", first)}
+  <text x="${margin}" y="${top + 242 - lift}" font-family="${FONT}" font-size="66" font-weight="800" fill="url(#phrase)">${second} ${third}</text>
+  ${text(margin, top + 316 - lift, 66, 800, "#1c1917", rest.join(" "))}
+  ${LINES.map((line, i) => text(margin, descTop + i * LINE, 24, 400, "#57534e", line)).join("")}
   ${text(margin, height - margin, 21, 600, MAROON, PRODUCTION_URL.replace("https://", ""))}
 
   ${sheet(backX, pageY + 18, pageW, back, -5)}

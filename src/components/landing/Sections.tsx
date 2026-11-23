@@ -91,10 +91,10 @@ export function HowItWorks() {
 /** A feature row: words with ticks on one side, a real picture on the other (`flip` puts the picture first on wide screens). */
 export function FeatureRow({ id, prefix, points, flip = false, children, after }: { id?: string; prefix: string; points: number; flip?: boolean; children: ReactNode; after?: ReactNode }) {
   return (
-    <div id={id} className="grid scroll-mt-20 items-center gap-10 lg:grid-cols-2 lg:gap-16">
+    <section id={id} aria-label={t(`${prefix}.eyebrow` as AppKey)} className="grid scroll-mt-20 items-center gap-10 lg:grid-cols-2 lg:gap-16">
       <div className={flip ? "lg:order-2" : undefined}>
         <p className={eyebrow}>{t(`${prefix}.eyebrow` as AppKey)}</p>
-        <h3 className={sectionTitle}>{t(`${prefix}.title` as AppKey)}</h3>
+        <h2 className={sectionTitle}>{t(`${prefix}.title` as AppKey)}</h2>
         <p className={sectionLead}>{t(`${prefix}.text` as AppKey)}</p>
         {points ? (
           <ul className="mt-6 space-y-3">
@@ -109,7 +109,7 @@ export function FeatureRow({ id, prefix, points, flip = false, children, after }
         {after}
       </div>
       <div className={`rounded-2xl border border-line bg-gradient-to-br from-gold-soft/70 via-surface to-surface p-5 shadow-card sm:p-8 ${flip ? "lg:order-1" : ""}`}>{children}</div>
-    </div>
+    </section>
   );
 }
 

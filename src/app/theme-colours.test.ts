@@ -75,6 +75,12 @@ describe.each([
     expect(contrast(get("--brand-ink"), page)).toBeGreaterThanOrEqual(4.5);
   });
 
+  it("keeps every text colour at AA (4.5:1) on every surface it sits on (Step 6.2: axe found grey on sunken below it)", () => {
+    for (const ink of ["--ink", "--ink-2", "--ink-3"]) {
+      for (const bg of ["--surface", "--page", "--sunken", "--brand-soft"]) expect(contrast(get(ink), get(bg)), `${ink} on ${bg}`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
   it("keeps brand-coloured icons readable on the soft icon tile", () => {
     for (const stop of stops(get("--tile-gradient"))) expect(contrast(get("--brand-ink"), stop), stop).toBeGreaterThanOrEqual(4.5);
   });

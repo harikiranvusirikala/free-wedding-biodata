@@ -3,7 +3,8 @@ import type { LangCode } from "@/biodata/types";
 // The nine language landing pages (Step 6.1 part 2, VISION D36): /te, /hi, … each written in its own language, for
 // people who search in it. The app's buttons are English only (D23), so every page says that only the printed biodata
 // is in that language. Kept short on purpose: these are the maker's own translations, not yet read by native
-// speakers (`reviewed: false`, tracked with the label dictionaries' review, D47). English is the home page itself.
+// speakers (`reviewed: false`; the owner chose on 2026-11-23 to publish them without that reading for now). English is
+// the home page itself.
 
 export type PageLang = Exclude<LangCode, "en">;
 

@@ -72,7 +72,8 @@ export default function Home() {
 
       <HowItWorks />
 
-      <section aria-label={t("home.preview.eyebrow")} className="space-y-20 border-t border-line bg-sunken/40 py-16 sm:space-y-28 sm:py-24">
+      {/* Three feature rows, each its own section with an h2 (FeatureRow). */}
+      <div className="space-y-20 border-t border-line bg-sunken/40 py-16 sm:space-y-28 sm:py-24">
         <div className={pageWidth}>
           <FeatureRow prefix="home.preview" points={3}>
             <PagePicture id="classic-gold" alt={t("home.preview.alt")} className="mx-auto max-w-sm" />
@@ -91,7 +92,7 @@ export default function Home() {
             </div>
           </FeatureRow>
         </div>
-      </section>
+      </div>
 
       <section id="templates" aria-labelledby="templates-title" className="scroll-mt-20 border-t border-line py-16 sm:py-24">
         <div className={pageWidth}>
