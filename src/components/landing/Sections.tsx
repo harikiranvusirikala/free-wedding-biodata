@@ -6,6 +6,7 @@ import { Icon, type IconName } from "@/components/ui/icons";
 import { eyebrow, pageWidth } from "@/components/ui/page";
 import { t, type AppKey } from "@/lib/i18n";
 import { FAQ } from "./content";
+import { LANGUAGE_PAGES } from "./languages";
 
 // The landing page's parts (BUILD_PLAN A7 landing composition, mockup: landing): product shot, how it works,
 // feature rows beside real pictures, the templates strip, the features grid, the privacy promise, the questions and
@@ -126,15 +127,21 @@ export function PagePicture({ id, alt, className = "" }: { id: string; alt: stri
   );
 }
 
-/** The ten document languages, each named in its own script. */
-const LANGUAGE_NAMES = ["English", "తెలుగు", "हिन्दी", "தமிழ்", "ಕನ್ನಡ", "മലയാളം", "मराठी", "ગુજરાતી", "বাংলা", "ਪੰਜਾਬੀ"];
-
+/** The ten document languages, each named in its own script, linking to its page (English is this one). */
 export function LanguageChips() {
+  const chip = "inline-flex rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm font-medium text-ink-2 shadow-card transition-colors hover:text-ink pointer-coarse:min-h-11 pointer-coarse:items-center";
   return (
     <ul aria-label={t("home.languages.list")} className="mt-6 flex flex-wrap gap-2">
-      {LANGUAGE_NAMES.map((name) => (
-        <li key={name} className="rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm font-medium text-ink-2 shadow-card">
-          {name}
+      <li>
+        <span lang="en" className={chip}>
+          English
+        </span>
+      </li>
+      {LANGUAGE_PAGES.map((p) => (
+        <li key={p.lang}>
+          <a href={`/${p.lang}`} lang={p.lang} className={chip}>
+            {p.native}
+          </a>
         </li>
       ))}
     </ul>

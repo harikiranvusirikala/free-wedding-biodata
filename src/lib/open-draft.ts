@@ -1,7 +1,7 @@
 import { createProfile } from "@/biodata/defaults";
 import { isBlankDraft } from "@/biodata/draft-name";
 import type { MigrateErrorCode } from "@/biodata/migrate";
-import type { BiodataProfile } from "@/biodata/types";
+import type { BiodataProfile, LangCode } from "@/biodata/types";
 import type { ProfileRepo, RepoErrorKind } from "./profile-repo";
 
 // Which draft the editor opens (BUILD_PLAN A5, Step 1.3): the one in the address (?d=<id>), else the last one
@@ -28,20 +28,21 @@ export type OpenDraftResult =
 type Repo = Pick<ProfileRepo, "load" | "create" | "getLastOpened" | "setLastOpened">;
 
 /**
- * Which draft the address asks for: `?d=<id>`, `?new=1` (Create my biodata, New draft), or neither; with `?new=1`,
- * `&design=<id>` asks for the new draft in that design (the design gallery's "Use this design", Step 6.1). The design id
- * is checked by the editor against the designs that exist.
+ * Which draft the address asks for: `?d=<id>`, `?new=1` (Create my biodata, New draft), or neither. With `?new=1`,
+ * `&design=<id>` asks for the new draft in that design (the design gallery, Step 6.1) and `&lang=<code>` for its
+ * headings in that language (the language pages, Step 6.1 part 2); the editor checks both against what exists.
  */
-export function draftRequest(search: string): { id: string | null; fresh: boolean; design: string | null } {
+export function draftRequest(search: string): { id: string | null; fresh: boolean; design: string | null; lang: string | null } {
   const params = new URLSearchParams(search);
   const fresh = !params.has("d") && params.get("new") === "1";
-  return { id: params.get("d"), fresh, design: fresh ? params.get("design") : null };
+  return { id: params.get("d"), fresh, design: fresh ? params.get("design") : null, lang: fresh ? params.get("lang") : null };
 }
 
-/** A design and colour for a new draft. */
-export interface DraftDesign {
-  templateId: string;
-  colorId: string;
+/** How a new draft starts when the address asks: its design and colour, and its document language. */
+export interface DraftStart {
+  templateId?: string;
+  colorId?: string;
+  docLanguage?: LangCode;
 }
 
 export async function openDraft(
@@ -66,19 +67,20 @@ export async function openDraft(
  * A new draft, for "Create my biodata" and the drafts menu's New draft (`/editor?new=1`, Step 1.4). If the last
  * draft opened is still untouched (never saved, nothing in it), that one is reopened instead, so pressing Create
  * twice doesn't leave a trail of empty "Untitled biodata" drafts. Nothing is ever deleted to achieve that. With a
- * `design`, the new draft starts in it.
+ * `start`, the new draft starts in that design and language.
  */
-export async function openNewDraft(repo: Repo, makeProfile: () => BiodataProfile = () => createProfile(), design?: DraftDesign): Promise<OpenDraftResult> {
+export async function openNewDraft(repo: Repo, makeProfile: () => BiodataProfile = () => createProfile(), start: DraftStart = {}): Promise<OpenDraftResult> {
   const last = await repo.getLastOpened();
   if (last.ok && last.value !== undefined) {
     const loaded = await repo.load(last.value);
-    // An untouched draft in another design isn't reused when a design was asked for: it is left as it is.
-    const sameDesign = !design || (loaded.ok && loaded.profile.templateId === design.templateId && loaded.profile.colorId === design.colorId);
-    if (loaded.ok && loaded.profile.revision === 0 && isBlankDraft(loaded.profile) && sameDesign) {
+    // An untouched draft that starts differently from what was asked for isn't reused: it is left as it is.
+    const matches = loaded.ok && (Object.keys(start) as (keyof DraftStart)[]).every((k) => start[k] === undefined || loaded.profile[k] === start[k]);
+    if (loaded.ok && loaded.profile.revision === 0 && isBlankDraft(loaded.profile) && matches) {
       return remember(repo, { kind: "ready", profile: loaded.profile, created: false });
     }
   }
-  const make = design ? () => ({ ...makeProfile(), templateId: design.templateId, colorId: design.colorId }) : makeProfile;
+  const given = Object.fromEntries(Object.entries(start).filter(([, v]) => v !== undefined));
+  const make = Object.keys(given).length ? () => ({ ...makeProfile(), ...given }) : makeProfile;
   return remember(repo, await createDraft(repo, make));
 }
 

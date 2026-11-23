@@ -87,4 +87,51 @@ test("robots.txt keeps this (non-production) build out of search engines; sitema
   const sitemap = await (await request.get("/sitemap.xml")).text();
   expect(sitemap).toContain("<urlset");
   expect(sitemap).not.toContain("<url>");
+  // Only the nine language pages exist at the top level.
+  expect((await request.get("/xx")).status()).toBe(404);
+});
+
+test("a language page is in its language, lists every language version, and starts a biodata with its headings", async ({ page }) => {
+  const away = offsite(page);
+  await page.goto("/te");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("తెలుగులో పెళ్లి బయోడేటా");
+  await expect(page.locator("main [lang=te]").first()).toBeVisible();
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /\/te$/);
+  // hreflang: English (the home page), the nine languages and x-default.
+  await expect(page.locator('link[rel="alternate"][hreflang]')).toHaveCount(11);
+  await expect(page.locator('meta[property="og:locale"]')).toHaveAttribute("content", "te_IN");
+  await picturesLoad(page);
+  await page.getByRole("link", { name: "తెలుగు బయోడేటా తయారు చేయండి" }).click();
+  await expect(page).toHaveURL(/\/editor\?d=[0-9a-f-]{36}$/);
+  await expect(page.getByLabel("Name", { exact: true })).toBeVisible();
+  const id = new URL(page.url()).searchParams.get("d")!;
+  await expect.poll(async () => (await readStored(page, id))?.docLanguage).toBe("te");
+  expect(away).toEqual([]);
+});
+
+test("the home page lists the language versions too, and its language chips lead to them", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator('link[rel="alternate"][hreflang]')).toHaveCount(11);
+  await page.locator("#languages").getByRole("link", { name: "हिन्दी" }).click();
+  await expect(page).toHaveURL(/\/hi$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("हिंदी में शादी का बायोडाटा");
+});
+
+test("a tradition page lists that tradition's rows and shows its own sample; the guide links the formats", async ({ page }) => {
+  const away = offsite(page);
+  await page.goto("/biodata-format/muslim");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Muslim marriage biodata format");
+  const includes = page.getByRole("region", { name: "What it usually includes" });
+  await expect(includes).toContainText("Sect");
+  await expect(includes).toContainText("Maslak");
+  await expect(includes).not.toContainText("Nakshatra");
+  await expect(page.locator('img[src="/designs/tradition-muslim.webp"]')).toBeVisible();
+  await picturesLoad(page);
+  expect((await structuredData(page)).map((d) => d["@type"])).toEqual(["BreadcrumbList"]);
+
+  await page.goto("/guide");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("What to write in each part of your biodata");
+  await page.getByRole("region", { name: "Formats for each tradition" }).getByRole("link", { name: "Sikh marriage biodata format" }).click();
+  await expect(page).toHaveURL(/\/biodata-format\/sikh$/);
+  expect(away).toEqual([]);
 });

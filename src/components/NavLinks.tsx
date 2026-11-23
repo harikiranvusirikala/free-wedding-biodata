@@ -10,6 +10,7 @@ import { t, type AppKey } from "@/lib/i18n";
  */
 const LINKS: { href: string; label: AppKey }[] = [
   { href: "/templates", label: "nav.templates" },
+  { href: "/guide", label: "nav.guide" },
   { href: "/help", label: "nav.help" },
   { href: "/privacy", label: "nav.privacy" },
 ];

@@ -140,12 +140,13 @@ describe("openNewDraft (Create my biodata, New draft)", () => {
   });
 
   it("reads the request from the address", () => {
-    expect(draftRequest("?d=abc")).toEqual({ id: "abc", fresh: false, design: null });
-    expect(draftRequest("?new=1")).toEqual({ id: null, fresh: true, design: null });
-    expect(draftRequest("?d=abc&new=1")).toEqual({ id: "abc", fresh: false, design: null });
-    expect(draftRequest("")).toEqual({ id: null, fresh: false, design: null });
-    expect(draftRequest("?new=1&design=peacock")).toEqual({ id: null, fresh: true, design: "peacock" });
-    expect(draftRequest("?design=peacock")).toEqual({ id: null, fresh: false, design: null });
+    expect(draftRequest("?d=abc")).toEqual({ id: "abc", fresh: false, design: null, lang: null });
+    expect(draftRequest("?new=1")).toEqual({ id: null, fresh: true, design: null, lang: null });
+    expect(draftRequest("?d=abc&new=1")).toEqual({ id: "abc", fresh: false, design: null, lang: null });
+    expect(draftRequest("")).toEqual({ id: null, fresh: false, design: null, lang: null });
+    expect(draftRequest("?new=1&design=peacock")).toEqual({ id: null, fresh: true, design: "peacock", lang: null });
+    expect(draftRequest("?design=peacock")).toEqual({ id: null, fresh: false, design: null, lang: null });
+    expect(draftRequest("?new=1&lang=te")).toEqual({ id: null, fresh: true, design: null, lang: "te" });
   });
 
   it("starts a new draft in the design asked for, and doesn't reuse an untouched draft in another design", async () => {
@@ -158,5 +159,10 @@ describe("openNewDraft (Create my biodata, New draft)", () => {
     // Asked again: the untouched Peacock draft is reused.
     expect(await openNewDraft(repo, undefined, peacock)).toMatchObject({ kind: "ready", created: false, profile: { templateId: "peacock" } });
     expect(await db.profiles.count()).toBe(2);
+  });
+
+  it("starts a new draft with its headings in the language asked for", async () => {
+    const { repo } = setup();
+    expect(await openNewDraft(repo, undefined, { docLanguage: "te" })).toMatchObject({ kind: "ready", created: true, profile: { docLanguage: "te", templateId: "classic-gold" } });
   });
 });

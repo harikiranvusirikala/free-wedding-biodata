@@ -68,7 +68,7 @@ test.describe("desktop", () => {
     await page.screenshot({ path: `${OUT}/editor-desktop.png`, animations: "disabled" });
   });
 
-  test("the first page of every design, and Telugu and a dark colour", async ({ page }) => {
+  test("the first page of every design, every language, a dark colour and the tradition samples", async ({ page }) => {
     test.setTimeout(180_000);
     await mkdir(OUT, { recursive: true });
     await page.setViewportSize({ width: 900, height: 1200 });
@@ -76,8 +76,10 @@ test.describe("desktop", () => {
     await expect(page.locator("body")).toHaveAttribute("data-doc-ready", "1", { timeout: 60_000 });
     const shoot = (variant: string, name: string) => page.locator(`[data-variant="${variant}"] [data-page]`).first().screenshot({ path: `${OUT}/page-${name}.png`, scale: "device" });
     for (const id of ["classic-gold", "minimal-ivory", ...NEW_DESIGNS.map((d) => d.id)]) await shoot(`${id}-en-simple`, id);
-    await shoot("classic-gold-te-simple", "classic-gold-te");
+    // The language pages (Classic Gold in each language) and the tradition pages (each family's own sample).
+    for (const lang of ["te", "hi", "ta", "kn", "ml", "mr", "gu", "bn", "pa"]) await shoot(`classic-gold-${lang}-simple`, `classic-gold-${lang}`);
     await shoot("deepam-en-simple-night", "deepam-night");
+    for (const name of ["muslim", "christian", "sikh", "jain"]) await shoot(`classic-gold-en-simple-${name}`, `tradition-${name}`);
   });
 });
 

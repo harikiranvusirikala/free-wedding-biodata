@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ContinueEditing } from "@/components/landing/ContinueEditing";
 import { homeStructuredData, jsonLd, STRUCTURED_DATA_SITE } from "@/components/landing/content";
+import { ALL_LOCALES, HOME_LOCALE, LANGUAGE_ALTERNATES } from "@/components/landing/languages";
 import { ClosingCall, Faq, FeatureRow, FeaturesGrid, HowItWorks, LanguageChips, PagePicture, Privacy, ProductShot, SectionHeading } from "@/components/landing/Sections";
 import { button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
@@ -17,8 +18,8 @@ import { GOOGLE_SITE_VERIFICATION, HEADLINE, META_DESCRIPTION, SHORT_DESCRIPTION
 export const metadata: Metadata = {
   // The root layout's title and description; this page is their canonical home.
   title: { absolute: TITLE },
-  alternates: { canonical: "/" },
-  openGraph: pageOpenGraph(TITLE, META_DESCRIPTION, "/"),
+  alternates: { canonical: "/", languages: LANGUAGE_ALTERNATES },
+  openGraph: { ...pageOpenGraph(TITLE, META_DESCRIPTION, "/"), locale: HOME_LOCALE, alternateLocale: ALL_LOCALES.filter((l) => l !== HOME_LOCALE) },
   verification: { google: GOOGLE_SITE_VERIFICATION },
 };
 

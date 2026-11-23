@@ -51,7 +51,16 @@ describe("gtmId (VISION D22)", () => {
 
 describe("sitemapFor", () => {
   it("lists the public pages at the production address in production", () => {
-    expect(sitemapFor({ VERCEL_ENV: "production" }).map((e) => e.url)).toEqual(["/", "/templates", "/help", "/privacy"].map((p) => `${PRODUCTION_URL}${p}`));
+    const entries = sitemapFor({ VERCEL_ENV: "production" });
+    expect(entries.map((e) => e.url.slice(PRODUCTION_URL.length))).toEqual([
+      "/", "/te", "/hi", "/ta", "/kn", "/ml", "/mr", "/gu", "/bn", "/pa",
+      "/templates", "/guide",
+      "/biodata-format/hindu", "/biodata-format/muslim", "/biodata-format/christian", "/biodata-format/sikh", "/biodata-format/jain",
+      "/help", "/privacy",
+    ]);
+    // The home page and each language page list all eleven hreflang alternates.
+    expect(Object.keys(entries[0].alternates!.languages!)).toHaveLength(11);
+    expect(entries[1].alternates!.languages!).toMatchObject({ te: `${PRODUCTION_URL}/te`, "x-default": `${PRODUCTION_URL}/` });
   });
 
   it("is empty elsewhere", () => {

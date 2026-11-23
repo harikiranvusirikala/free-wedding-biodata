@@ -8,8 +8,9 @@ import { LoadingNote, Skeleton } from "@/components/ui/Skeleton";
 import { createAutosave, type AutosaveController } from "@/lib/autosave";
 import { openDb, type BiodataDb } from "@/lib/db";
 import { t } from "@/lib/i18n";
+import { LANG_CODES, type LangCode } from "@/biodata/types";
 import { DESIGN_CATALOG } from "@/document/templates/catalog";
-import { createDraft, draftRequest, openDraft, openNewDraft, type DraftDesign, type OpenDraftResult } from "@/lib/open-draft";
+import { createDraft, draftRequest, openDraft, openNewDraft, type DraftStart, type OpenDraftResult } from "@/lib/open-draft";
 import { createProfileRepo, type ProfileRepo } from "@/lib/profile-repo";
 import { registerServiceWorker } from "@/lib/service-worker";
 import { DraftEditor } from "./DraftEditor";
@@ -33,7 +34,7 @@ async function start(): Promise<EditorState> {
   const db = openDb();
   const repo = createProfileRepo(db);
   const request = draftRequest(window.location.search);
-  const result = request.fresh ? await openNewDraft(repo, undefined, requestedDesign(request.design)) : await openDraft(repo, request.id);
+  const result = request.fresh ? await openNewDraft(repo, undefined, requestedStart(request)) : await openDraft(repo, request.id);
   if (result.kind === "ready") {
     showInAddress(result.profile.id);
     return { kind: "ready", controller: createAutosave({ repo, initial: result.profile }), repo, db };
@@ -43,10 +44,13 @@ async function start(): Promise<EditorState> {
   return result;
 }
 
-/** A design the address asks for (`&design=<id>`, the gallery), in its first colour, if it exists. */
-function requestedDesign(id: string | null): DraftDesign | undefined {
-  const design = id ? DESIGN_CATALOG.find((t) => t.id === id) : undefined;
-  return design ? { templateId: design.id, colorId: design.colors[0].id } : undefined;
+/** How the address asks a new draft to start (`&design=<id>` from the gallery, `&lang=<code>` from a language page), if those exist. */
+function requestedStart({ design, lang }: { design: string | null; lang: string | null }): DraftStart {
+  const found = design ? DESIGN_CATALOG.find((t) => t.id === design) : undefined;
+  return {
+    ...(found ? { templateId: found.id, colorId: found.colors[0].id } : {}),
+    ...(lang && (LANG_CODES as readonly string[]).includes(lang) ? { docLanguage: lang as LangCode } : {}),
+  };
 }
 
 /** Puts ?d=<id> in the address without a new history entry (Next.js keeps its router in step). */
@@ -55,6 +59,7 @@ function showInAddress(id: string) {
   if (url.searchParams.get("d") === id && !url.searchParams.has("new")) return;
   url.searchParams.delete("new");
   url.searchParams.delete("design");
+  url.searchParams.delete("lang");
   url.searchParams.set("d", id);
   window.history.replaceState(null, "", url);
 }

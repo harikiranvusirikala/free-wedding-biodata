@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+import { LANGUAGE_ALTERNATES, LANGUAGE_PAGES } from "@/components/landing/languages";
+import { TRADITION_PAGES } from "@/components/landing/traditions";
 
 // The product's identity in one place (VISION §1, D17, D37, D42), and where the site lives. Pure, so it is
 // unit-tested; layout.tsx and robots.ts pass process.env, read at build time (the site is a static export).
@@ -57,13 +59,29 @@ export function robotsFor(env: SiteEnv): MetadataRoute.Robots {
   return { rules: { userAgent: "*", allow: "/", disallow: PRIVATE_PATHS }, sitemap: `${PRODUCTION_URL}/sitemap.xml` };
 }
 
-/** The public pages search engines may list (the editor and dev pages never). */
-export const PUBLIC_PATHS = ["/", "/templates", "/help", "/privacy"] as const;
+/** The public pages search engines may list (the editor and dev pages never), with each one's language versions. */
+export function publicPages(): { path: string; languages?: Record<string, string> }[] {
+  const languages = Object.fromEntries(Object.entries(LANGUAGE_ALTERNATES).map(([lang, path]) => [lang, `${PRODUCTION_URL}${path}`]));
+  return [
+    { path: "/", languages },
+    ...LANGUAGE_PAGES.map((p) => ({ path: `/${p.lang}`, languages })),
+    { path: "/templates" },
+    { path: "/guide" },
+    ...TRADITION_PAGES.map((tradition) => ({ path: `/biodata-format/${tradition}` })),
+    { path: "/help" },
+    { path: "/privacy" },
+  ];
+}
 
-/** sitemap.xml: the public pages in production; elsewhere empty (robots.txt asks search engines to stay away). */
+/** sitemap.xml: the public pages in production, with hreflang alternates; elsewhere empty (robots.txt asks search engines to stay away). */
 export function sitemapFor(env: SiteEnv): MetadataRoute.Sitemap {
   if (!isLiveSite(env)) return [];
-  return PUBLIC_PATHS.map((path) => ({ url: `${PRODUCTION_URL}${path}`, changeFrequency: "monthly", priority: path === "/" ? 1 : 0.7 }));
+  return publicPages().map(({ path, languages }) => ({
+    url: `${PRODUCTION_URL}${path}`,
+    changeFrequency: "monthly",
+    priority: path === "/" ? 1 : 0.7,
+    ...(languages ? { alternates: { languages } } : {}),
+  }));
 }
 
 /**

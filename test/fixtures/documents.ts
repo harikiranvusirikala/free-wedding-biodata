@@ -1,7 +1,7 @@
 import { SAMPLE_PROFILE } from "../../src/biodata/defaults";
 import type { BiodataProfile, Field, LangCode } from "../../src/biodata/types";
 import { ENGLISH_PAGE, LONG_ADDRESS, LONG_NAME, SCRIPT_PAGES, type FixturePage } from "./scripts";
-import { ownerStyleDraft } from "./simple";
+import { ownerStyleDraft, TRADITION_SAMPLES, traditionDraft } from "./simple";
 
 // Document fixtures (BUILD_PLAN Step 3.2): the fictional sample profile in three lengths, for the /dev/document
 // page, its e2e screenshots and layout tests. Entirely made up (the 90000 number range is unassigned); nothing
@@ -431,7 +431,7 @@ export function scriptVariants(templates: readonly { id: string; colors: readonl
 /**
  * Step 6.1: the Simple form's biodata (the four Simple sections, shaped like the owner's) in every design given, as
  * the site's pictures show it: `<id>-en-simple` in each design's first colour, plus Classic Gold in Telugu and
- * Deepam in its dark colour.
+ * Deepam in its dark colour; Classic Gold in the other nine languages and the tradition pages' samples (part 2).
  */
 export function simpleVariants(templates: readonly { id: string; colors: readonly { id: string }[] }[]): DocVariant[] {
   const make = (templateId: string, colorId: string, lang: LangCode, suffix = ""): DocVariant => {
@@ -445,9 +445,16 @@ export function simpleVariants(templates: readonly { id: string; colors: readonl
     profile.photo = { id: "placeholder", frame: photo, crop: { x: 0.5, y: 0.5, zoom: 1, rotation: 0 } };
     return { id: `${templateId}-${lang}-simple${suffix}`, templateId, colorId, lang, length: "simple", photo, profile };
   };
+  const tradition = (name: (typeof TRADITION_SAMPLES)[number]): DocVariant => {
+    const profile = traditionDraft(`simple-${name}`, name);
+    profile.photo = { id: "placeholder", frame: "3:4", crop: { x: 0.5, y: 0.5, zoom: 1, rotation: 0 } };
+    return { id: `classic-gold-en-simple-${name}`, templateId: "classic-gold", colorId: "gold", lang: "en", length: "simple", photo: "3:4", profile };
+  };
   return [
     ...templates.map((t) => make(t.id, t.colors[0].id, "en")),
-    make("classic-gold", "gold", "te"),
+    // Step 6.1 part 2: Classic Gold in every other language (the language pages) and each tradition's sample.
+    ...(["te", "hi", "ta", "kn", "ml", "mr", "gu", "bn", "pa"] as const).map((lang) => make("classic-gold", "gold", lang)),
     make("deepam", "night", "en", "-night"),
+    ...TRADITION_SAMPLES.filter((name) => name !== "hindu").map(tradition),
   ];
 }

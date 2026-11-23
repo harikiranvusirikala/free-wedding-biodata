@@ -3,7 +3,9 @@ import { Logo } from "@/components/Logo";
 import { button, focusRing } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { pageWidth } from "@/components/ui/page";
-import { t } from "@/lib/i18n";
+import { LANGUAGE_PAGES } from "@/components/landing/languages";
+import { TRADITION_PAGES } from "@/components/landing/traditions";
+import { t, type AppKey } from "@/lib/i18n";
 import { REPOSITORY_URL, SITE_NAME, SUPPORT_URL } from "@/lib/site";
 
 // 44 px tall on touch screens, like every control (VISION D16), so the lists open up a little on phones.
@@ -19,8 +21,8 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-line">
       <div className={`${pageWidth} pt-12 pb-8 text-sm sm:pt-14`}>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-9 sm:grid-cols-[1.6fr_1fr_1fr] lg:grid-cols-[2fr_1fr_1fr]">
-          <div className="col-span-2 sm:col-span-1">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-9 sm:grid-cols-3 lg:grid-cols-[1.6fr_1fr_1fr_1.2fr_1fr]">
+          <div className="col-span-2 sm:col-span-3 lg:col-span-1">
             <Logo />
             <p className="mt-3.5 max-w-xs text-pretty text-ink-3">{t("footer.about")}</p>
             <ExternalLink href={SUPPORT_URL} className={`${button("secondary", "sm")} mt-4`}>
@@ -51,6 +53,35 @@ export function SiteFooter() {
                   {t("footer.privacy")}
                 </a>
               </li>
+            </ul>
+          </nav>
+          <nav aria-label={t("footer.learn")}>
+            <h2 className={heading}>{t("footer.learn")}</h2>
+            <ul className="space-y-2.5 pointer-coarse:space-y-0">
+              <li>
+                <a href="/guide" className={link}>
+                  {t("footer.guide")}
+                </a>
+              </li>
+              {TRADITION_PAGES.map((p) => (
+                <li key={p}>
+                  <a href={`/biodata-format/${p}`} className={link}>
+                    {t(`tradition.${p}.h1` as AppKey).replace(/ marriage biodata format$/, " format")}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <nav aria-label={t("footer.languages")}>
+            <h2 className={heading}>{t("footer.languages")}</h2>
+            <ul className="grid grid-cols-2 gap-x-4 gap-y-2.5 pointer-coarse:gap-y-0">
+              {LANGUAGE_PAGES.map((p) => (
+                <li key={p.lang}>
+                  <a href={`/${p.lang}`} lang={p.lang} className={link}>
+                    {p.native}
+                  </a>
+                </li>
+              ))}
             </ul>
           </nav>
           <nav aria-label={t("footer.project")}>
