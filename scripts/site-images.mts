@@ -4,10 +4,11 @@
 //   public/icons (192, 512 and a maskable 512).
 // - src/app/opengraph-image.png (1200 x 630, under 300 KB): the link preview WhatsApp, search results and social
 //   sites show; docs/social-preview.png (1280 x 640): GitHub's social preview, the same drawing.
-//   The previews show two biodata pages from docs/screenshots/ (Step 6.1 adds real app screens).
+//   The previews show two biodata pages from docs/screenshots/ (real app screens, e2e/capture.spec.ts).
+// - public/landing/*.webp and public/designs/<design>.webp: the landing page's and the gallery's pictures.
 // Text is drawn with the fonts of the machine that runs this (Helvetica Neue on macOS).
 // sharp is Next.js's own image library, installed with it.
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import sharp from "sharp";
 import { HEADLINE, PRODUCTION_URL, SITE_NAME } from "../src/lib/site";
 
@@ -113,13 +114,25 @@ function brandCard(width: number, height: number, margin: number, front: string,
 
 /** As small a PNG as looks the same: chat apps skip big link previews (WhatsApp's limit is about 300 KB). */
 const smallPng = (svg: string) => sharp(Buffer.from(svg)).png({ palette: true, quality: 90, effort: 10 }).toBuffer();
-// Two biodata pages drawn by the app (docs/screenshots/; from the PDF spike's reference page until Step 6.1
-// renders the real templates).
+// Two biodata pages drawn by the app (docs/screenshots/, from e2e/capture.spec.ts): Classic Gold in English in
+// front, in Telugu behind.
 const page = async (name: string) => dataUrl("image/png", await sharp(`docs/screenshots/${name}.png`).resize({ width: 640 }).png().toBuffer());
-const english = await page("biodata-en");
-const telugu = await page("biodata-te");
+const english = await page("page-classic-gold");
+const telugu = await page("page-classic-gold-te");
 await writeFile("src/app/opengraph-image.png", await smallPng(brandCard(1200, 630, 64, english, telugu)));
 await writeFile("src/app/opengraph-image.alt.txt", `${SITE_NAME}: ${HEADLINE}. Create a marriage biodata and download it as PDF or PNG.`);
 await mkdir("docs", { recursive: true });
 await writeFile("docs/social-preview.png", await smallPng(brandCard(1280, 640, 80, english, telugu)));
-console.log("Wrote favicon.ico, apple-icon.png, public/icons/*, opengraph-image.png, docs/social-preview.png");
+
+// The landing page's and the gallery's pictures (Step 6.1), as WebP at fixed sizes (LANDING_IMAGES in
+// src/components/landing/images.ts gives the page the same sizes): the editor on a computer and on a phone, and
+// the first page of every design (plus Telugu and a dark colour).
+const shots = (await readdir("docs/screenshots")).filter((f) => f.endsWith(".png"));
+await mkdir("public/landing", { recursive: true });
+await mkdir("public/designs", { recursive: true });
+const webp = (from: string, width: number, to: string) => sharp(`docs/screenshots/${from}`).resize({ width }).webp({ quality: 82, effort: 6 }).toFile(to);
+await webp("editor-desktop.png", 1800, "public/landing/editor-desktop.webp");
+await webp("editor-phone.png", 600, "public/landing/editor-phone.webp");
+const pages = shots.filter((f) => f.startsWith("page-"));
+for (const f of pages) await webp(f, 720, `public/designs/${f.slice("page-".length, -".png".length)}.webp`);
+console.log(`Wrote favicon.ico, apple-icon.png, public/icons/*, opengraph-image.png, docs/social-preview.png, public/landing/* and ${pages.length} design pictures`);
