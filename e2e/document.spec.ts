@@ -67,7 +67,7 @@ test("document pages: page counts, no overflow, display list text, screenshots, 
 
     // Auto text size: a typical biodata fits one page; the long one flows onto exactly two (D31).
     await expect(pages, v.id).toHaveCount(v.pages);
-    if (v.length === "short" || v.length === "mixed" || v.length === "script") expect.soft(v.pages, `${v.id} pages`).toBe(1);
+    if (v.length === "short" || v.length === "mixed" || v.length === "script" || v.length === "simple") expect.soft(v.pages, `${v.id} pages`).toBe(1);
     if (v.length === "long" || v.length === "split") expect.soft(v.pages, `${v.id} pages`).toBe(2);
     if (v.length === "split") {
       // The long paragraph continues from the bottom of page 1 to the top of page 2, split between lines.

@@ -1,13 +1,15 @@
 import { mkdir } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 import { NEW_DESIGNS } from "../test/fixtures/documents";
-import { SAVED, openStoredDraft, sampleDraft } from "./editor-helpers";
+import { ownerStyleDraft } from "../test/fixtures/simple";
+import { SAVED, openStoredDraft } from "./editor-helpers";
 
 // The site's real pictures (BUILD_PLAN Step 6.1, VISION D26, D27): clean screens of the built app, saved to
 // docs/screenshots/ (committed). `npm run images` then makes the landing page's and the gallery's WebPs, the link
 // preview and GitHub's social preview from them. Run on purpose only, since it rewrites committed files:
 //   CAPTURE=1 npx playwright test e2e/capture.spec.ts
-// Fictional sample only (VISION D29). The photo is the dev page's neutral silhouette, drawn here.
+// The Simple form's one-page biodata, shaped like the owner's (test/fixtures/simple.ts; owner's choice 2026-11-23),
+// entirely fictional (VISION D29). The photo is the dev page's neutral silhouette, drawn here.
 
 test.skip(!process.env.CAPTURE, "rewrites docs/screenshots/: run with CAPTURE=1");
 
@@ -35,12 +37,12 @@ async function silhouettePng(page: Page): Promise<Buffer> {
   return Buffer.from(base64, "base64");
 }
 
-/** The sample in Classic Gold with the Ganesha symbol and the silhouette as its photo, in the Day theme. */
+/** The Simple-form biodata in Classic Gold with the Ganesha symbol and the silhouette as its photo, in the Day theme. */
 async function openSample(page: Page, id: string) {
   await page.emulateMedia({ colorScheme: "light" });
   await openStoredDraft(
     page,
-    sampleDraft(id, (p) => {
+    ownerStyleDraft(id, (p) => {
       p.options.motif = "ganesha";
     }),
   );
@@ -73,22 +75,21 @@ test.describe("desktop", () => {
     await page.goto("/dev/document");
     await expect(page.locator("body")).toHaveAttribute("data-doc-ready", "1", { timeout: 60_000 });
     const shoot = (variant: string, name: string) => page.locator(`[data-variant="${variant}"] [data-page]`).first().screenshot({ path: `${OUT}/page-${name}.png`, scale: "device" });
-    for (const id of ["classic-gold", "minimal-ivory", ...NEW_DESIGNS.map((d) => d.id)]) await shoot(`${id}-en-short`, id);
-    await shoot("classic-gold-te-short", "classic-gold-te");
-    await shoot("deepam-en-short-night", "deepam-night");
+    for (const id of ["classic-gold", "minimal-ivory", ...NEW_DESIGNS.map((d) => d.id)]) await shoot(`${id}-en-simple`, id);
+    await shoot("classic-gold-te-simple", "classic-gold-te");
+    await shoot("deepam-en-simple-night", "deepam-night");
   });
 });
 
 test.describe("phone", () => {
   test.skip(({ isMobile }) => !isMobile, "the phone screen");
 
-  test("the preview sheet on a phone", async ({ page }) => {
+  test("the Simple form on a phone, with the preview pill", async ({ page }) => {
     await mkdir(OUT, { recursive: true });
     await openSample(page, "capture-phone");
-    await page.getByTestId("preview-pill").click();
-    const sheet = page.getByRole("dialog", { name: "Preview" });
-    await expect(sheet.locator('[data-doc-ready="1"] [data-page="1"]')).toContainText("Sai Teja Mandapati");
-    await page.waitForTimeout(400); // the sheet's slide-in
+    await page.locator('[data-section="personal"]').evaluate((el) => el.scrollIntoView({ block: "start" }));
+    await expect(page.getByTestId("preview-pill")).toBeVisible();
+    await page.waitForTimeout(300);
     await page.screenshot({ path: `${OUT}/editor-phone.png`, animations: "disabled" });
   });
 });

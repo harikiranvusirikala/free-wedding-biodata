@@ -1,6 +1,7 @@
 import { SAMPLE_PROFILE } from "../../src/biodata/defaults";
 import type { BiodataProfile, Field, LangCode } from "../../src/biodata/types";
 import { ENGLISH_PAGE, LONG_ADDRESS, LONG_NAME, SCRIPT_PAGES, type FixturePage } from "./scripts";
+import { ownerStyleDraft } from "./simple";
 
 // Document fixtures (BUILD_PLAN Step 3.2): the fictional sample profile in three lengths, for the /dev/document
 // page, its e2e screenshots and layout tests. Entirely made up (the 90000 number range is unassigned); nothing
@@ -12,9 +13,11 @@ import { ENGLISH_PAGE, LONG_ADDRESS, LONG_NAME, SCRIPT_PAGES, type FixturePage }
 //   mixed:  the short biodata with values typed in other scripts than the page's (Step 4.2), one page;
 //   script: a one-page biodata whose values are typed in the page's own language (Step 4.2 part 2, VISION §15),
 //           from the script fixture (scripts.ts), optional fields left empty;
-//   scriptLong: the same with a 60-character name, a two-line address and three paragraphs of About me.
+//   scriptLong: the same with a 60-character name, a two-line address and three paragraphs of About me;
+//   simple: the Simple form's one-page biodata shaped like the owner's (simple.ts), with a photo and the Ganesha
+//           symbol: the site's pictures (Step 6.1, e2e/capture.spec.ts).
 
-export type DocLength = "short" | "sample" | "long" | "split" | "mixed" | "script" | "scriptLong";
+export type DocLength = "short" | "sample" | "long" | "split" | "mixed" | "script" | "scriptLong" | "simple";
 
 export interface DocVariant {
   id: string;
@@ -423,4 +426,28 @@ export function scriptVariants(templates: readonly { id: string; colors: readonl
     };
     return [make("classic-gold", "gold", false), make(design.id, design.colors[0].id, true)];
   });
+}
+
+/**
+ * Step 6.1: the Simple form's biodata (the four Simple sections, shaped like the owner's) in every design given, as
+ * the site's pictures show it: `<id>-en-simple` in each design's first colour, plus Classic Gold in Telugu and
+ * Deepam in its dark colour.
+ */
+export function simpleVariants(templates: readonly { id: string; colors: readonly { id: string }[] }[]): DocVariant[] {
+  const make = (templateId: string, colorId: string, lang: LangCode, suffix = ""): DocVariant => {
+    const profile = ownerStyleDraft(`simple-${templateId}-${lang}${suffix}`, (p) => {
+      p.templateId = templateId;
+      p.colorId = colorId;
+      p.docLanguage = lang;
+      p.options.motif = "ganesha";
+    });
+    const photo = NEW_DESIGNS.find((d) => d.id === templateId)?.photo ?? "3:4";
+    profile.photo = { id: "placeholder", frame: photo, crop: { x: 0.5, y: 0.5, zoom: 1, rotation: 0 } };
+    return { id: `${templateId}-${lang}-simple${suffix}`, templateId, colorId, lang, length: "simple", photo, profile };
+  };
+  return [
+    ...templates.map((t) => make(t.id, t.colors[0].id, "en")),
+    make("classic-gold", "gold", "te"),
+    make("deepam", "night", "en", "-night"),
+  ];
 }
