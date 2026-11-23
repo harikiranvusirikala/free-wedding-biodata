@@ -37,7 +37,7 @@ test("the public header links only to pages that exist, and into the editor with
   await page.goto("/help");
   const header = page.getByRole("banner");
   const nav = header.getByRole("navigation", { name: "Main" });
-  await expect(nav.getByRole("link")).toHaveText(["Help", "Privacy"]);
+  await expect(nav.getByRole("link")).toHaveText(["Templates", "Help", "Privacy"]);
   await expect(nav.getByRole("link", { name: "Help" })).toHaveAttribute("aria-current", "page");
   await header.getByRole("link", { name: "Create my biodata" }).click();
   // A new draft is made and named in the address (e2e/drafts.spec.ts covers saving).

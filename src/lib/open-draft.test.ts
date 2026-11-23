@@ -140,9 +140,23 @@ describe("openNewDraft (Create my biodata, New draft)", () => {
   });
 
   it("reads the request from the address", () => {
-    expect(draftRequest("?d=abc")).toEqual({ id: "abc", fresh: false });
-    expect(draftRequest("?new=1")).toEqual({ id: null, fresh: true });
-    expect(draftRequest("?d=abc&new=1")).toEqual({ id: "abc", fresh: false });
-    expect(draftRequest("")).toEqual({ id: null, fresh: false });
+    expect(draftRequest("?d=abc")).toEqual({ id: "abc", fresh: false, design: null });
+    expect(draftRequest("?new=1")).toEqual({ id: null, fresh: true, design: null });
+    expect(draftRequest("?d=abc&new=1")).toEqual({ id: "abc", fresh: false, design: null });
+    expect(draftRequest("")).toEqual({ id: null, fresh: false, design: null });
+    expect(draftRequest("?new=1&design=peacock")).toEqual({ id: null, fresh: true, design: "peacock" });
+    expect(draftRequest("?design=peacock")).toEqual({ id: null, fresh: false, design: null });
+  });
+
+  it("starts a new draft in the design asked for, and doesn't reuse an untouched draft in another design", async () => {
+    const { repo, db } = setup();
+    const first = await openNewDraft(repo);
+    if (first.kind !== "ready") throw new Error("not ready");
+    const peacock = { templateId: "peacock", colorId: "teal" };
+    const second = await openNewDraft(repo, undefined, peacock);
+    expect(second).toMatchObject({ kind: "ready", created: true, profile: { templateId: "peacock", colorId: "teal" } });
+    // Asked again: the untouched Peacock draft is reused.
+    expect(await openNewDraft(repo, undefined, peacock)).toMatchObject({ kind: "ready", created: false, profile: { templateId: "peacock" } });
+    expect(await db.profiles.count()).toBe(2);
   });
 });

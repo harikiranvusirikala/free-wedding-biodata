@@ -207,7 +207,7 @@ test("the landing page offers Continue editing only when a draft exists, and Cre
   // Looking for drafts on a first visit leaves nothing behind.
   expect(await databases(page)).not.toContain("free-wedding-biodata");
 
-  await page.getByRole("main").getByRole("link", { name: "Create my biodata" }).click();
+  await page.getByRole("main").getByRole("link", { name: "Create my biodata" }).first().click(); // the hero's (the closing call to action has one too)
   await expect(page).toHaveURL(DRAFT_URL);
   const first = idOf(page);
   await fullName(page).fill("Sai Teja Mandapati");
@@ -222,7 +222,7 @@ test("the landing page offers Continue editing only when a draft exists, and Cre
   await expect(fullName(page)).toHaveValue("Sai Teja Mandapati");
 
   await page.goto("/");
-  await page.getByRole("main").getByRole("link", { name: "Create my biodata" }).click();
+  await page.getByRole("main").getByRole("link", { name: "Create my biodata" }).first().click(); // the hero's (the closing call to action has one too)
   await expect(page).toHaveURL(DRAFT_URL);
   const second = idOf(page);
   expect(second).not.toBe(first);

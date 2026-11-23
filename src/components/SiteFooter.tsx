@@ -37,6 +37,11 @@ export function SiteFooter() {
                 </a>
               </li>
               <li>
+                <a href="/templates" className={link}>
+                  {t("footer.templates")}
+                </a>
+              </li>
+              <li>
                 <a href="/help" className={link}>
                   {t("footer.help")}
                 </a>

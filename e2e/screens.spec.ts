@@ -29,9 +29,21 @@ async function openSample(page: Page) {
   await openStoredDraft(page, sampleDraft("sample-screens"));
 }
 
+/**
+ * Lazy pictures (the landing page's and the gallery's) only load near the screen, and a full-page screenshot doesn't
+ * scroll: start them all, wait until they have loaded, and go back to the top.
+ */
+async function loadLazyPictures(page: Page) {
+  const lazy = page.locator('main img[loading="lazy"]');
+  if (!(await lazy.count())) return;
+  await lazy.evaluateAll((images) => images.forEach((img) => ((img as HTMLImageElement).loading = "eager")));
+  await expect.poll(() => lazy.evaluateAll((images) => images.every((img) => (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalWidth > 0))).toBe(true);
+}
+
 const SCREENS: Screen[] = [
   { name: "home", path: "/" },
   { name: "home-continue", path: "/", setup: fillDraft, ready: (page) => expect(page.getByTestId("continue-editing")).toBeVisible() },
+  { name: "templates", path: "/templates" },
   { name: "help", path: "/help" },
   { name: "privacy", path: "/privacy" },
   { name: "editor", path: "/editor", setup: openSample },
@@ -64,6 +76,7 @@ test.describe("screens", () => {
           await expect(page.getByTestId("editor-loading")).toHaveCount(0); // the editor opens its draft after load
           await screen.ready?.(page);
           await expect(page.locator("html")).toHaveClass(theme === "dark" ? /dark/ : /^(?!.*dark)/);
+          await loadLazyPictures(page);
           await page.screenshot({ path: `test-results/screenshots/${screen.name}-${size.name}-${theme === "light" ? "day" : "night"}.png`, fullPage: true, animations: "disabled" });
         }
       }

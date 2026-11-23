@@ -27,10 +27,21 @@ export type OpenDraftResult =
 
 type Repo = Pick<ProfileRepo, "load" | "create" | "getLastOpened" | "setLastOpened">;
 
-/** Which draft the address asks for: `?d=<id>`, `?new=1` (Create my biodata, New draft), or neither. */
-export function draftRequest(search: string): { id: string | null; fresh: boolean } {
+/**
+ * Which draft the address asks for: `?d=<id>`, `?new=1` (Create my biodata, New draft), or neither; with `?new=1`,
+ * `&design=<id>` asks for the new draft in that design (the design gallery's "Use this design", Step 6.1). The design id
+ * is checked by the editor against the designs that exist.
+ */
+export function draftRequest(search: string): { id: string | null; fresh: boolean; design: string | null } {
   const params = new URLSearchParams(search);
-  return { id: params.get("d"), fresh: !params.has("d") && params.get("new") === "1" };
+  const fresh = !params.has("d") && params.get("new") === "1";
+  return { id: params.get("d"), fresh, design: fresh ? params.get("design") : null };
+}
+
+/** A design and colour for a new draft. */
+export interface DraftDesign {
+  templateId: string;
+  colorId: string;
 }
 
 export async function openDraft(
@@ -54,17 +65,21 @@ export async function openDraft(
 /**
  * A new draft, for "Create my biodata" and the drafts menu's New draft (`/editor?new=1`, Step 1.4). If the last
  * draft opened is still untouched (never saved, nothing in it), that one is reopened instead, so pressing Create
- * twice doesn't leave a trail of empty "Untitled biodata" drafts. Nothing is ever deleted to achieve that.
+ * twice doesn't leave a trail of empty "Untitled biodata" drafts. Nothing is ever deleted to achieve that. With a
+ * `design`, the new draft starts in it.
  */
-export async function openNewDraft(repo: Repo, makeProfile: () => BiodataProfile = () => createProfile()): Promise<OpenDraftResult> {
+export async function openNewDraft(repo: Repo, makeProfile: () => BiodataProfile = () => createProfile(), design?: DraftDesign): Promise<OpenDraftResult> {
   const last = await repo.getLastOpened();
   if (last.ok && last.value !== undefined) {
     const loaded = await repo.load(last.value);
-    if (loaded.ok && loaded.profile.revision === 0 && isBlankDraft(loaded.profile)) {
+    // An untouched draft in another design isn't reused when a design was asked for: it is left as it is.
+    const sameDesign = !design || (loaded.ok && loaded.profile.templateId === design.templateId && loaded.profile.colorId === design.colorId);
+    if (loaded.ok && loaded.profile.revision === 0 && isBlankDraft(loaded.profile) && sameDesign) {
       return remember(repo, { kind: "ready", profile: loaded.profile, created: false });
     }
   }
-  return remember(repo, await createDraft(repo, makeProfile));
+  const make = design ? () => ({ ...makeProfile(), templateId: design.templateId, colorId: design.colorId }) : makeProfile;
+  return remember(repo, await createDraft(repo, make));
 }
 
 /** Makes and stores a new draft (the "Start a new draft" action, and the first visit). */

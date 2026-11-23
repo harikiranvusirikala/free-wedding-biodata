@@ -5,10 +5,11 @@ import { focusRing } from "@/components/ui/button";
 import { t, type AppKey } from "@/lib/i18n";
 
 /**
- * The public pages' navigation: only pages that exist (BUILD_PLAN Part B rule 4; Templates arrives with its
- * page in Step 6.1). Client-side only to mark the page you're on.
+ * The public pages' navigation: only pages that exist (BUILD_PLAN Part B rule 4). Client-side only to mark the page
+ * you're on.
  */
 const LINKS: { href: string; label: AppKey }[] = [
+  { href: "/templates", label: "nav.templates" },
   { href: "/help", label: "nav.help" },
   { href: "/privacy", label: "nav.privacy" },
 ];

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { META_DESCRIPTION, PRODUCTION_URL, TITLE, robotsFor, siteUrl } from "./site";
+import { GTM_CONTAINER, META_DESCRIPTION, PRODUCTION_URL, TITLE, gtmId, robotsFor, siteUrl, sitemapFor } from "./site";
 
 describe("site identity", () => {
   it("keeps the meta description within what search engines show", () => {
@@ -36,6 +36,25 @@ describe("robotsFor", () => {
   it("keeps the editor and dev pages out of search results in production", () => {
     expect(robotsFor({ VERCEL_ENV: "production" })).toEqual({
       rules: { userAgent: "*", allow: "/", disallow: ["/editor", "/dev/"] },
+      sitemap: `${PRODUCTION_URL}/sitemap.xml`,
     });
+  });
+});
+
+describe("gtmId (VISION D22)", () => {
+  it("gives the owner's container in production only", () => {
+    expect(gtmId({ VERCEL_ENV: "production" })).toBe(GTM_CONTAINER);
+    expect(gtmId({ VERCEL_ENV: "preview" })).toBeUndefined();
+    expect(gtmId({})).toBeUndefined();
+  });
+});
+
+describe("sitemapFor", () => {
+  it("lists the public pages at the production address in production", () => {
+    expect(sitemapFor({ VERCEL_ENV: "production" }).map((e) => e.url)).toEqual(["/", "/templates", "/help", "/privacy"].map((p) => `${PRODUCTION_URL}${p}`));
+  });
+
+  it("is empty elsewhere", () => {
+    expect(sitemapFor({ VERCEL_ENV: "preview" })).toEqual([]);
   });
 });
