@@ -6,7 +6,7 @@ import { PagePicture } from "@/components/landing/Sections";
 import { button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icons";
 import { pageWidth } from "@/components/ui/page";
-import { SITE_NAME } from "@/lib/site";
+import { SITE_NAME, pageOpenGraph } from "@/lib/site";
 
 // A language landing page (Step 6.1 part 2, VISION D36): /te, /hi, … in that language, with a real page made by the
 // app with that language's headings, and "Create" opening a new draft whose headings print in it
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     title: { absolute: page.title },
     description: page.description,
     alternates: { canonical: path, languages: LANGUAGE_ALTERNATES },
-    openGraph: { siteName: SITE_NAME, type: "website", title: page.title, description: page.description, url: path, locale: page.locale, alternateLocale: ALL_LOCALES.filter((l) => l !== page.locale) },
+    openGraph: { ...pageOpenGraph(page.title, page.description, path), locale: page.locale, alternateLocale: ALL_LOCALES.filter((l) => l !== page.locale) },
   };
 }
 

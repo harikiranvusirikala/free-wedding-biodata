@@ -19,7 +19,7 @@ Most biodata makers ask you to sign up, upload your family's personal details to
 ## What it does
 
 - Ready-made sections (personal, education and career, family, horoscope, contact) that you can rename, hide, reorder and extend with your own fields and sections.
-- A live A4 preview in 20 designs, each in three colours, with headings in English and nine Indian languages.
+- A live A4 preview in 20 designs, each in three colours, with headings in English and nine Indian languages: Telugu, Hindi, Tamil, Kannada, Malayalam, Marathi, Gujarati, Bengali and Punjabi.
 - Download a PDF with real text, share it on a phone, or save each page as a JPEG or PNG.
 - Extra photo pages and an attached horoscope page, in the same design.
 - Several drafts, autosaved on your device; a backup file to move them to another device.

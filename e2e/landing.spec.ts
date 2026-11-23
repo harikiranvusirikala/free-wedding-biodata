@@ -38,6 +38,9 @@ test("the landing page: title, canonical, Search Console tag, structured data ma
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", /^https?:\/\/[^/]+\/?$/);
   await expect(page.locator('meta[name="google-site-verification"]')).toHaveAttribute("content", "iS4OF4-2DT8drLIM-FZU8JA8b-ALGsTFZEbWyQEoj8Y");
   await expect(page.locator('meta[property="og:url"]')).toHaveAttribute("content", /^https?:\/\/[^/]+\/?$/);
+  // The link preview picture: a page's own openGraph replaces the root one's, so pageOpenGraph repeats it.
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", /\/opengraph-image\.png$/);
+  await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute("content", /\/opengraph-image\.png$/);
   await expect(page.getByRole("link", { name: "Create my biodata" }).first()).toHaveAttribute("href", "/editor?new=1");
 
   const [data] = await structuredData(page);

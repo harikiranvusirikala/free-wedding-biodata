@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GTM_CONTAINER, META_DESCRIPTION, PRODUCTION_URL, TITLE, gtmId, robotsFor, siteUrl, sitemapFor } from "./site";
+import { GTM_CONTAINER, META_DESCRIPTION, PRODUCTION_URL, SHARE_IMAGE, TITLE, gtmId, pageOpenGraph, robotsFor, siteUrl, sitemapFor } from "./site";
 
 describe("site identity", () => {
   it("keeps the meta description within what search engines show", () => {
@@ -65,5 +65,14 @@ describe("sitemapFor", () => {
 
   it("is empty elsewhere", () => {
     expect(sitemapFor({ VERCEL_ENV: "preview" })).toEqual([]);
+  });
+});
+
+describe("pageOpenGraph", () => {
+  it("carries the link preview picture, which a page's own openGraph would otherwise drop", () => {
+    const og = pageOpenGraph("Guide", "About the guide", "/guide");
+    expect(og).toMatchObject({ siteName: "Free Wedding Biodata", type: "website", title: "Guide", url: "/guide" });
+    expect(og.images).toEqual([SHARE_IMAGE]);
+    expect(SHARE_IMAGE).toMatchObject({ url: "/opengraph-image.png", width: 1200, height: 630 });
   });
 });

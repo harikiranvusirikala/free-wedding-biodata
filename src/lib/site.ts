@@ -84,10 +84,19 @@ export function sitemapFor(env: SiteEnv): MetadataRoute.Sitemap {
   }));
 }
 
+/** The link preview picture (src/app/opengraph-image.png, made by `npm run images`): 1200 by 630, as Open Graph asks. */
+export const SHARE_IMAGE = {
+  url: "/opengraph-image.png",
+  width: 1200,
+  height: 630,
+  type: "image/png",
+  alt: `${SITE_NAME}: ${HEADLINE}. Create a marriage biodata and download it as PDF or PNG.`,
+};
+
 /**
- * A page's Open Graph tags. Next.js replaces the root layout's whole `openGraph` object when a page sets its own, so
- * the site name and type are repeated here (the link preview image comes from src/app/opengraph-image.png either way).
+ * A page's Open Graph tags. Next.js replaces the root layout's whole `openGraph` object when a page sets its own, and
+ * with it the picture from src/app/opengraph-image.png, so the site name, type and picture are repeated here.
  */
 export function pageOpenGraph(title: string, description: string, url: string) {
-  return { siteName: SITE_NAME, type: "website" as const, title, description, url };
+  return { siteName: SITE_NAME, type: "website" as const, title, description, url, images: [SHARE_IMAGE] };
 }

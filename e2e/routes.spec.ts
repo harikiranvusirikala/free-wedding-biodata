@@ -24,7 +24,7 @@ test("the privacy page loads", async ({ page }) => {
 test("the help page loads, with its questions", async ({ page }) => {
   await page.goto("/help");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("How to make your biodata");
-  await expect(page).toHaveTitle(/^Help · Free Wedding Biodata$/);
+  await expect(page).toHaveTitle(/^Help: how to make a marriage biodata · Free Wedding Biodata$/);
   const first = page.locator("details").first();
   await expect(first).toHaveAttribute("open", "");
   const second = page.locator("details").nth(1);
