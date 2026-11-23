@@ -6,6 +6,7 @@ import { Row, type RowLook } from "../../blocks/Row";
 import { TopElement } from "../../blocks/TopElement";
 import { hasIndicScript, textFontStack } from "../../scripts";
 import { mix } from "../../frames/geometry";
+import { FitWords } from "../../blocks/FitWords";
 import { SIDE_PANEL_WIDTH } from "../../frames/SidePanel";
 import type { AsideProps, BlockViewProps } from "../../templates/types";
 import { isLatin, VALUE_WEIGHT, type Palette } from "../../tokens";
@@ -120,9 +121,8 @@ export function ModernAside({ doc, palette, photo, secondPhoto }: AsideProps) {
         </div>
       ) : null}
       {doc.name ? (
-        <div style={{ fontSize: "1.75em", fontWeight: 700, lineHeight: 1.2, marginTop: photo ? "0.7em" : 0, overflowWrap: "anywhere", fontFamily: font(doc.name) }}>
-          {doc.name}
-        </div>
+        // A long word of a long name (ராமகிருஷ்ணா) is set smaller rather than broken in the middle.
+        <FitWords key={doc.name} text={doc.name} em={1.75} style={{ fontWeight: 700, lineHeight: 1.2, marginTop: photo ? "0.7em" : 0, fontFamily: font(doc.name) }} />
       ) : null}
       {subtitle ? (
         <div style={{ color: c.muted, fontSize: "0.92em", lineHeight: 1.4, marginTop: "0.45em", overflowWrap: "anywhere", fontFamily: font(subtitle) }}>{subtitle}</div>

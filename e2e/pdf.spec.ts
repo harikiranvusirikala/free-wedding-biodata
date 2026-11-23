@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
-import { PDFDocument } from "pdf-lib";
-import { expect, test, type Page } from "@playwright/test";
+import { PDFArray, PDFDict, PDFDocument, PDFName, PDFRawStream, decodePDFRawStream } from "pdf-lib";
+import { expect, test, type CDPSession, type Page } from "@playwright/test";
 
 // The Download engine (BUILD_PLAN Step 4.1, VISION D49, D38), run in the browser on the static build.
 // 1. /dev/pdf: the display list records alignment, justified lines, spaces between runs, italic, the whole font
@@ -14,6 +14,9 @@ import { expect, test, type Page } from "@playwright/test";
 // 3. Values typed in other scripts than the page's (Step 4.2: a Telugu name and a Hindi address on an English page,
 //    bold English labels on a Kannada page, …): Chrome draws every text element with exactly the fonts, and as many
 //    glyphs in each, as the PDF does, those are our Noto fonts (never a system font), and nothing is drawn as tofu.
+// 4. The script fixtures (Step 4.2 part 2, VISION §15): the ten languages each typed in its own script, short in
+//    Classic Gold and long in the other skeletons; the same font check, and copy and paste read back from the PDF
+//    file (ActualText, ToUnicode). PDFs, page images and Chrome's screenshots go to test-results/pdf/ for review.
 
 const OUT = "test-results/pdf";
 
@@ -210,6 +213,87 @@ function takeLines(lines: Line[], page: number, text: string): { fonts: Record<s
   return undefined;
 }
 
+type Fonts = Record<string, number>;
+type Probe = { text: string; screen: Fonts; pdf?: { fonts: Fonts; lines: number } };
+type Run = { pdf: string; lines: Line[]; warnings: string[]; mismatches: unknown[] };
+
+/**
+ * Compares a variant's page on screen with its PDF, element by element: every text element is drawn with our
+ * self-hosted Noto fonts (never a system font), with the same fonts and as many glyphs in each as the PDF's lines
+ * that hold its text; and the PDF uses exactly the fonts the page does.
+ */
+async function compareFonts(page: Page, cdp: CDPSession, id: string): Promise<{ probes: Probe[]; run: Run }> {
+  // Every element that holds text, in page order, with the text as drawn (text-transform applied).
+  const probes = await page.evaluate((v) => {
+    const out: { page: number; text: string }[] = [];
+    document.querySelectorAll(`[data-variant="${v}"] [data-page]`).forEach((pageEl, p) => {
+      for (const el of pageEl.querySelectorAll<HTMLElement>("*")) {
+        if (![...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent!.trim())) continue;
+        el.dataset.probe = String(out.length);
+        out.push({ page: p + 1, text: el.innerText.replace(/\s+/g, " ").trim() });
+      }
+    });
+    return out;
+  }, id);
+  const { root } = await cdp.send("DOM.getDocument", { depth: 0 });
+  const run: Run = await page.evaluate((v) => window.__doc!.pdf(v).pdf(), id);
+  expect(run.warnings, `${id} warnings`).toEqual([]);
+  expect(run.mismatches, `${id} widths`).toEqual([]);
+
+  const lines = [...run.lines];
+  const out: Probe[] = [];
+  for (const [i, probe] of probes.entries()) {
+    const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: root.nodeId, selector: `[data-variant="${id}"] [data-probe="${i}"]` });
+    const { fonts } = await cdp.send("CSS.getPlatformFontsForNode", { nodeId });
+    const screen: Fonts = {};
+    for (const f of fonts) {
+      // Only our self-hosted Noto fonts: a system font here would mean the PDF can't match the page.
+      expect.soft(f.isCustomFont, `${id} "${probe.text}" drawn with the system font ${f.familyName}`).toBe(true);
+      const name = (f as { postScriptName?: string }).postScriptName || f.familyName;
+      screen[name] = (screen[name] ?? 0) + f.glyphCount;
+    }
+    // A one-line element is one PDF line with the same text; a wrapped one is consecutive lines that join to it
+    // (lines are taken in page order). A space where a line wraps is drawn by neither, so it isn't compared.
+    const pdf = takeLines(lines, probe.page, probe.text);
+    out.push({ text: probe.text, screen, pdf });
+    if (pdf) {
+      const wraps = pdf.lines - 1;
+      const glyphs = (f: Fonts) => Object.values(f).reduce((a, b) => a + b, 0);
+      expect.soft(Object.keys(pdf.fonts).sort(), `${id} "${probe.text}": fonts, PDF vs screen`).toEqual(Object.keys(screen).sort());
+      if (!wraps) expect.soft(pdf.fonts, `${id} "${probe.text}": glyphs per font, PDF vs screen`).toEqual(screen);
+      else expect.soft(glyphs(screen) - glyphs(pdf.fonts), `${id} "${probe.text}": glyphs, PDF vs screen`).toBeGreaterThanOrEqual(0);
+      if (wraps) expect.soft(glyphs(screen) - glyphs(pdf.fonts), `${id} "${probe.text}": glyphs, PDF vs screen`).toBeLessThanOrEqual(wraps);
+    }
+  }
+  expect.soft(out.filter((p) => !p.pdf).map((p) => p.text), `${id} elements with no PDF lines`).toEqual([]);
+  // And the PDF uses exactly the fonts the page does.
+  const screenFonts = new Set(out.flatMap((p) => Object.keys(p.screen)));
+  const pdfFonts = new Set(run.lines.flatMap((l) => Object.keys(l.fonts)));
+  expect.soft([...pdfFonts].sort(), `${id} fonts in the PDF`).toEqual([...screenFonts].sort());
+  return { probes: out, run };
+}
+
+/**
+ * What copy and paste gives from each page of a PDF, read from the file itself: the /ActualText of every text run in
+ * the page's content stream, in order (VISION §15 "verify text selection"). Also returns the Type0 fonts that have
+ * no ToUnicode map (extractors that ignore ActualText fall back to it).
+ */
+async function copiedText(base64: string): Promise<{ pages: string[][]; fontsWithoutToUnicode: number }> {
+  const doc = await PDFDocument.load(Buffer.from(base64, "base64"), { updateMetadata: false });
+  const pages = doc.getPages().map((p) => {
+    const contents = p.node.Contents();
+    const streams = contents instanceof PDFArray ? contents.asArray().map((ref) => doc.context.lookup(ref)) : [contents];
+    let ops = "";
+    for (const stream of streams) if (stream instanceof PDFRawStream) ops += Buffer.from(decodePDFRawStream(stream).decode()).toString("latin1");
+    return [...ops.matchAll(/\/ActualText <FEFF([0-9A-Fa-f]*)>/g)].map((m) => Buffer.from(m[1], "hex").swap16().toString("utf16le"));
+  });
+  let fontsWithoutToUnicode = 0;
+  for (const [, object] of doc.context.enumerateIndirectObjects()) {
+    if (object instanceof PDFDict && object.get(PDFName.of("Subtype")) === PDFName.of("Type0") && !object.has(PDFName.of("ToUnicode"))) fontsWithoutToUnicode++;
+  }
+  return { pages, fontsWithoutToUnicode };
+}
+
 test("values in other scripts: the same fonts and glyphs on screen as in the PDF", async ({ page }) => {
   test.setTimeout(240_000);
   await page.setViewportSize({ width: 900, height: 1200 });
@@ -219,57 +303,8 @@ test("values in other scripts: the same fonts and glyphs on screen as in the PDF
   await cdp.send("DOM.enable");
   await cdp.send("CSS.enable");
 
-  type Fonts = Record<string, number>;
-  const byVariant: Record<string, { text: string; screen: Fonts; pdf?: { fonts: Fonts; lines: number } }[]> = {};
-  for (const id of MIXED) {
-    // Every element that holds text, in page order, with the text as drawn (text-transform applied).
-    const probes = await page.evaluate((v) => {
-      const out: { page: number; text: string }[] = [];
-      document.querySelectorAll(`[data-variant="${v}"] [data-page]`).forEach((pageEl, p) => {
-        for (const el of pageEl.querySelectorAll<HTMLElement>("*")) {
-          if (![...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent!.trim())) continue;
-          el.dataset.probe = String(out.length);
-          out.push({ page: p + 1, text: el.innerText.replace(/\s+/g, " ").trim() });
-        }
-      });
-      return out;
-    }, id);
-    const { root } = await cdp.send("DOM.getDocument", { depth: 0 });
-    const run = await page.evaluate((v) => window.__doc!.pdf(v).pdf(), id);
-    expect(run.warnings, `${id} warnings`).toEqual([]);
-    expect(run.mismatches, `${id} widths`).toEqual([]);
-
-    const lines = [...run.lines];
-    byVariant[id] = [];
-    for (const [i, probe] of probes.entries()) {
-      const { nodeId } = await cdp.send("DOM.querySelector", { nodeId: root.nodeId, selector: `[data-variant="${id}"] [data-probe="${i}"]` });
-      const { fonts } = await cdp.send("CSS.getPlatformFontsForNode", { nodeId });
-      const screen: Fonts = {};
-      for (const f of fonts) {
-        // Only our self-hosted Noto fonts: a system font here would mean the PDF can't match the page.
-        expect.soft(f.isCustomFont, `${id} "${probe.text}" drawn with the system font ${f.familyName}`).toBe(true);
-        const name = (f as { postScriptName?: string }).postScriptName || f.familyName;
-        screen[name] = (screen[name] ?? 0) + f.glyphCount;
-      }
-      // A one-line element is one PDF line with the same text; a wrapped one is consecutive lines that join to it
-      // (lines are taken in page order). A space where a line wraps is drawn by neither, so it isn't compared.
-      const pdf = takeLines(lines, probe.page, probe.text);
-      byVariant[id].push({ text: probe.text, screen, pdf });
-      if (pdf) {
-        const wraps = pdf.lines - 1;
-        const glyphs = (f: Fonts) => Object.values(f).reduce((a, b) => a + b, 0);
-        expect.soft(Object.keys(pdf.fonts).sort(), `${id} "${probe.text}": fonts, PDF vs screen`).toEqual(Object.keys(screen).sort());
-        if (!wraps) expect.soft(pdf.fonts, `${id} "${probe.text}": glyphs per font, PDF vs screen`).toEqual(screen);
-        else expect.soft(glyphs(screen) - glyphs(pdf.fonts), `${id} "${probe.text}": glyphs, PDF vs screen`).toBeGreaterThanOrEqual(0);
-        if (wraps) expect.soft(glyphs(screen) - glyphs(pdf.fonts), `${id} "${probe.text}": glyphs, PDF vs screen`).toBeLessThanOrEqual(wraps);
-      }
-    }
-    expect.soft(byVariant[id].filter((p) => !p.pdf).map((p) => p.text), `${id} elements with no PDF lines`).toEqual([]);
-    // And the PDF uses exactly the fonts the page does.
-    const screenFonts = new Set(byVariant[id].flatMap((p) => Object.keys(p.screen)));
-    const pdfFonts = new Set(run.lines.flatMap((l) => Object.keys(l.fonts)));
-    expect.soft([...pdfFonts].sort(), `${id} fonts in the PDF`).toEqual([...screenFonts].sort());
-  }
+  const byVariant: Record<string, Probe[]> = {};
+  for (const id of MIXED) byVariant[id] = (await compareFonts(page, cdp, id)).probes;
   await writeFile(`${OUT}/mixed-fonts.json`, JSON.stringify(byVariant, null, 2));
 
   const fontsOf = (id: string, text: string) => byVariant[id].find((p) => p.text === text)?.screen;
@@ -301,4 +336,63 @@ test("the second photo on page 1 is embedded in the PDF once more than without i
   for (const id of ["classic-gold-en-short", "minimal-ivory-en-short", "executive-navy-en-short", "sandalwood-en-short", "slate-brush-en-short"]) {
     expect.soft(await images(`${id}-two`), id).toBe((await images(id)) + 1);
   }
+});
+
+/** Step 4.2 part 2: the ten languages, each typed in its own script (test/fixtures/documents.ts scriptVariants). */
+const SCRIPT_LONG = ["minimal-ivory", "executive-navy", "sandalwood", "modern-two-column", "slate-brush"];
+const SCRIPT = LANGS.flatMap((lang, i) => [`classic-gold-${lang}-script`, `${SCRIPT_LONG[i % SCRIPT_LONG.length]}-${lang}-scriptLong`]);
+/** A few of each language's hardest sequences (conjuncts, reph, pre-base vowels, joiners, Indic digits), as copied. */
+const COPIED: Record<string, string[]> = {
+  en: ["Venkata Satya Sai Lakshmi Narasimha Teja Mandapati Ramakrishna"],
+  te: ["కృష్ణమూర్తి", "సాఫ్ట్\u200cవేర్", "౨౨", "స్త్రీ"],
+  hi: ["द्वितीय", "कार्यालय", "२२"],
+  ta: ["ஸ்ரீ", "கொ"],
+  kn: ["ಕರ್ನಾಟಕ", "೨೨"],
+  ml: ["ക്ഷ", "നാരായണൻ"],
+  mr: ["महाराष्ट्र", "र्\u200dय"],
+  gu: ["શ્રી", "૨૨"],
+  bn: ["ক্ষ", "র্য", "২২"],
+  pa: ["ਸ਼੍ਰੀ", "੨੨"],
+};
+
+test("script fixtures: ten languages typed in their own script, as PDFs that match the page and copy as typed", async ({ page }) => {
+  test.setTimeout(600_000);
+  await mkdir(OUT, { recursive: true });
+  const offsite = watchOffsite(page);
+  await page.setViewportSize({ width: 900, height: 1200 });
+  await page.goto("/dev/document");
+  await expect(page.locator("body")).toHaveAttribute("data-doc-ready", "1", { timeout: 60_000 });
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("DOM.enable");
+  await cdp.send("CSS.enable");
+
+  const report: Record<string, { pages: number; pdfKB: number; fonts: string[] }> = {};
+  for (const id of SCRIPT) {
+    const lang = id.split("-").at(-2)!;
+    const pages = page.locator(`[data-variant="${id}"] [data-page]`);
+    const count = await pages.count();
+    if (id.endsWith("-script")) expect.soft(count, `${id} pages`).toBe(1);
+
+    const { run } = await compareFonts(page, cdp, id);
+    await writeFile(`${OUT}/${id}.pdf`, Buffer.from(run.pdf, "base64"));
+    expect.soft(await pdfPages(run.pdf), `${id} PDF pages`).toEqual(Array.from({ length: count }, () => ({ width: 595.28, height: 841.89 })));
+
+    // Copy and paste: the PDF's own ActualText, page by page, is the text of every line the page draws, in order.
+    const copied = await copiedText(run.pdf);
+    expect.soft(copied.fontsWithoutToUnicode, `${id} fonts without a ToUnicode map`).toBe(0);
+    for (let p = 0; p < count; p++) {
+      const fromPdf = copied.pages[p].map((t) => t.replace(/ $/, ""));
+      expect.soft(fromPdf, `${id} page ${p + 1}: copied text vs the page's lines`).toEqual(run.lines.filter((l) => l.page === p + 1).map((l) => l.text));
+    }
+    const all = copied.pages.flat().join(" ");
+    if (id.endsWith("-script")) for (const sequence of COPIED[lang]) expect.soft(all, `${id} copies "${sequence}"`).toContain(sequence);
+
+    const images = await page.evaluate((v) => window.__doc!.pdf(v).images("jpeg"), id);
+    expect.soft(images.images.length, `${id} images`).toBe(count);
+    for (const [i, b64] of images.images.entries()) await writeFile(`${OUT}/${id}-page-${i + 1}.jpg`, Buffer.from(b64, "base64"));
+    for (let i = 0; i < count; i++) await pages.nth(i).screenshot({ path: `${OUT}/${id}-chrome-p${i + 1}.png`, scale: "device" });
+    report[id] = { pages: count, pdfKB: Math.round(Buffer.from(run.pdf, "base64").length / 1024), fonts: [...new Set(run.lines.flatMap((l) => Object.keys(l.fonts)))].sort() };
+  }
+  await writeFile(`${OUT}/script-fixtures.json`, JSON.stringify(report, null, 2));
+  expect(offsite).toEqual([]);
 });

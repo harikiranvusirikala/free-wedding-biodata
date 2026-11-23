@@ -1,5 +1,6 @@
 import { SAMPLE_PROFILE } from "../../src/biodata/defaults";
 import type { BiodataProfile, Field, LangCode } from "../../src/biodata/types";
+import { ENGLISH_PAGE, LONG_ADDRESS, LONG_NAME, SCRIPT_PAGES, type FixturePage } from "./scripts";
 
 // Document fixtures (BUILD_PLAN Step 3.2): the fictional sample profile in three lengths, for the /dev/document
 // page, its e2e screenshots and layout tests. Entirely made up (the 90000 number range is unassigned); nothing
@@ -8,9 +9,12 @@ import type { BiodataProfile, Field, LangCode } from "../../src/biodata/types";
 //   sample: SAMPLE_PROFILE exactly as it is (no motif, title or invocation: D21's defaults);
 //   long:   the sample plus long paragraphs and more family, a title and an invocation line, no photo;
 //   split:  a very long About me and Personal details only, so a paragraph must continue on page 2;
-//   mixed:  the short biodata with values typed in other scripts than the page's (Step 4.2), one page.
+//   mixed:  the short biodata with values typed in other scripts than the page's (Step 4.2), one page;
+//   script: a one-page biodata whose values are typed in the page's own language (Step 4.2 part 2, VISION §15),
+//           from the script fixture (scripts.ts), optional fields left empty;
+//   scriptLong: the same with a 60-character name, a two-line address and three paragraphs of About me.
 
-export type DocLength = "short" | "sample" | "long" | "split" | "mixed";
+export type DocLength = "short" | "sample" | "long" | "split" | "mixed" | "script" | "scriptLong";
 
 export interface DocVariant {
   id: string;
@@ -294,4 +298,129 @@ export function secondPhotoVariants(templates: readonly { id: string; skeleton: 
     out.push(two(variant(t.id, t.colors[0].id, "te", "short")), two(variant(t.id, t.colors[0].id, "en", "sample")));
   }
   return out;
+}
+
+/**
+ * The 60-character name of the script fixture (LONG_NAME) as a Telugu family would write it on a biodata in each
+ * language: the same fictional person, so the length is comparable, and each script's conjuncts (క్ష్మ, ङ्क, ਕ੍ਰਿ …).
+ */
+export const LONG_NAMES: Record<LangCode, string> = {
+  en: LONG_NAME,
+  te: "వెంకట సత్య సాయి లక్ష్మీ నరసింహ తేజ మండపాటి రామకృష్ణ",
+  hi: "वेंकट सत्य साई लक्ष्मी नरसिंह तेजा मंडपाटि रामकृष्ण",
+  ta: "வேங்கட சத்ய சாய் லக்ஷ்மி நரசிம்ம தேஜா மண்டபாடி ராமகிருஷ்ணா",
+  kn: "ವೆಂಕಟ ಸತ್ಯ ಸಾಯಿ ಲಕ್ಷ್ಮೀ ನರಸಿಂಹ ತೇಜ ಮಂಡಪಾಟಿ ರಾಮಕೃಷ್ಣ",
+  ml: "വെങ്കട സത്യ സായി ലക്ഷ്മി നരസിംഹ തേജ മണ്ഡപാടി രാമകൃഷ്ണ",
+  mr: "वेंकट सत्य साई लक्ष्मी नरसिंह तेजा मंडपाटी रामकृष्ण",
+  gu: "વેંકટ સત્ય સાઈ લક્ષ્મી નરસિંહ તેજા મંડપાટી રામકૃષ્ણ",
+  bn: "ভেঙ্কট সত্য সাই লক্ষ্মী নরসিংহ তেজা মণ্ডপাটি রামকৃষ্ণ",
+  pa: "ਵੈਂਕਟ ਸਤਿਆ ਸਾਈ ਲਕਸ਼ਮੀ ਨਰਸਿੰਘ ਤੇਜਾ ਮੰਡਪਾਟੀ ਰਾਮਕ੍ਰਿਸ਼ਨ",
+};
+
+/** The script fixture's rows by field: Indian-language pages share one row order, the English page has more rows. */
+function fixtureValues(page: FixturePage) {
+  const [personal, family] = page.sections;
+  const row = (rows: FixturePage["sections"][number]["rows"], i: number) => ({ label: rows[i][0], value: rows[i][1] });
+  if (page.lang === "en") {
+    const byLabel = (rows: FixturePage["sections"][number]["rows"], label: string) => row(rows, rows.findIndex(([l]) => l === label));
+    return {
+      name: byLabel(personal.rows, "Name").value,
+      born: byLabel(personal.rows, "Date of Birth"),
+      place: byLabel(personal.rows, "Place of Birth").value,
+      education: byLabel(personal.rows, "Education").value,
+      work: byLabel(personal.rows, "Profession").value,
+      father: byLabel(family.rows, "Father").value,
+      mother: byLabel(family.rows, "Mother").value,
+      address: byLabel(page.sections[2].rows, "Address").value,
+      phone: byLabel(page.sections[2].rows, "Phone").value,
+      about: page.about!.paragraphs.slice(0, 1),
+    };
+  }
+  return {
+    name: row(personal.rows, 0).value,
+    born: row(personal.rows, 1),
+    place: row(personal.rows, 2).value,
+    education: row(personal.rows, 3).value,
+    work: row(personal.rows, 4).value,
+    father: row(family.rows, 0).value,
+    mother: row(family.rows, 1).value,
+    address: row(family.rows, 2).value,
+    phone: row(family.rows, 3).value,
+    about: page.about!.paragraphs,
+  };
+}
+
+/**
+ * A biodata typed in the page's own language (Step 4.2 part 2, VISION §15): name, a date of birth typed as text in
+ * the script's digits, birth place, education and work in Personal details, father and mother, address and phone,
+ * and About me, all from the script fixture (each language's shaping stress: conjuncts, reph, pre-base vowel signs,
+ * ZWJ/ZWNJ, chillu letters, Indic digits, English inside Indic text). Every other field is left empty and so is
+ * left out (VISION §15: missing optional fields), and the sections that end up empty don't print.
+ */
+function makeScript(p: BiodataProfile, lang: LangCode, long: boolean): BiodataProfile {
+  const page = lang === "en" ? ENGLISH_PAGE : SCRIPT_PAGES.find((s) => s.lang === lang)!;
+  const v = fixtureValues(page);
+  const byKey = (key: string) => p.sections.find((s) => s.key === key);
+  for (const f of fields(p)) {
+    f.value = "";
+    delete f.optionKey;
+  }
+  const personal = byKey("personal");
+  if (personal?.kind !== "fields") throw new Error("the sample has Personal details");
+  // Birth place, qualification and occupation in Personal details, in the fixture's order.
+  for (const key of ["birthPlace", "highestQualification", "occupation"]) {
+    for (const s of p.sections) {
+      if (s.kind !== "fields" || s === personal) continue;
+      const at = s.fields.findIndex((f) => f.key === key);
+      if (at >= 0) personal.fields.push(...s.fields.splice(at, 1));
+    }
+  }
+  const set = (key: string, value: string, extra: Partial<Field> = {}) => {
+    const field = fields(p).find((f) => f.key === key);
+    if (!field) throw new Error(`no ${key} field`);
+    Object.assign(field, { value, visible: true }, extra);
+  };
+  set("fullName", long ? LONG_NAMES[lang] : v.name);
+  set("birthPlace", v.place);
+  set("highestQualification", v.education);
+  set("occupation", v.work);
+  set("phone", v.phone);
+  // The long address: the script's own, then the fixture's long English one (the English page's is that one already).
+  const twoLines = long && lang !== "en";
+  set("address", twoLines ? `${v.address}\n${LONG_ADDRESS}` : v.address, twoLines ? { multiline: true } : {});
+  set("aboutMe", long ? [...v.about, ...v.about, ...v.about].join("\n\n") : v.about.join("\n\n"));
+  // The date typed as text in the page's digits (౨౨-ఆగస్టు-౧౯౯౭), as families do, in a field of their own.
+  const name = personal.fields.findIndex((f) => f.key === "fullName");
+  personal.fields.splice(name + 1, 0, { id: "script-born", label: v.born.label, type: "text", value: v.born.value, visible: true });
+  const family = byKey("family");
+  if (family?.kind === "family") {
+    family.members = family.members.filter((m) => m.relationKey === "father" || m.relationKey === "mother");
+    for (const m of family.members) m.details = m.relationKey === "father" ? v.father : v.mother;
+  }
+  for (const s of p.sections) if (s.key === "references") s.visible = false;
+  p.options.showAge = false;
+  p.options.motif = long ? null : "ganesha";
+  return p;
+}
+
+/** The long script biodatas' designs, in turn: one of each other skeleton and both letterheads (Classic has the short ones). */
+const SCRIPT_LONG_DESIGNS = ["minimal-ivory", "executive-navy", "sandalwood", "modern-two-column", "slate-brush"] as const;
+
+/**
+ * Step 4.2 part 2: the ten document languages, each typed in its own script: `classic-gold-<lang>-script` (one page,
+ * with the photo and a motif) and `<design>-<lang>-scriptLong` in a design of another skeleton (long name, two-line
+ * address, three paragraphs, with the photo), for the fixture PDFs (e2e/pdf.spec.ts) and their review.
+ */
+export function scriptVariants(templates: readonly { id: string; colors: readonly { id: string }[] }[]): DocVariant[] {
+  const langs: LangCode[] = ["en", "te", "hi", "ta", "kn", "ml", "mr", "gu", "bn", "pa"];
+  return langs.flatMap((lang, i) => {
+    const designId = SCRIPT_LONG_DESIGNS[i % SCRIPT_LONG_DESIGNS.length];
+    const design = templates.find((t) => t.id === designId)!;
+    const make = (templateId: string, colorId: string, long: boolean): DocVariant => {
+      const profile = makeScript(base(templateId, lang, colorId), lang, long);
+      profile.photo = { id: "placeholder", frame: "3:4", crop: { x: 0.5, y: 0.5, zoom: 1, rotation: 0 } };
+      return { id: `${templateId}-${lang}-${long ? "scriptLong" : "script"}`, templateId, colorId, lang, length: long ? "scriptLong" : "script", photo: "3:4", profile };
+    };
+    return [make("classic-gold", "gold", false), make(design.id, design.colors[0].id, true)];
+  });
 }
