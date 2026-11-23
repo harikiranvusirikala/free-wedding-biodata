@@ -106,7 +106,7 @@ export default function Home() {
                     <div className="rounded-2xl border border-line bg-surface p-3 shadow-card transition-shadow group-hover:shadow-pop">
                       <PagePicture id={id} alt={t("templates.alt", { name: design.name })} />
                     </div>
-                    <p className="mt-2.5 flex items-center justify-between gap-2 px-1 text-[15px] font-semibold text-ink">
+                    <p className="mt-2.5 flex flex-col items-start gap-1 px-1 text-[15px] font-semibold text-ink sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                       {design.name}
                       <span className="rounded-full bg-sunken px-2 py-0.5 text-xs font-medium text-ink-3">{t(`templates.style.${design.skeleton}`)}</span>
                     </p>
