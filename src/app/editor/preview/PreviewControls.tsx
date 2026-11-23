@@ -98,6 +98,12 @@ function pickDesign(edit: Edit, template: TemplateDef) {
   edit((p) => (getTemplate(p.templateId).id === template.id ? p : setDesign(p, template.id, template.colors[0].id)));
 }
 
+/** The open design's chosen colour as a small dot (the phone sheet's Colour tab). */
+export function CurrentSwatch({ doc, className = "" }: { doc: DocModel; className?: string }) {
+  const palette = getPalette(getTemplate(doc.templateId), doc.colorId);
+  return <span aria-hidden className={`inline-block rounded-full ring-1 ring-line-strong ${className}`} style={{ background: palette.swatch }} />;
+}
+
 /** The open design's three colours as swatches (D39), named for screen readers; `labelled` shows the names too. */
 export function ColourPicker({ doc, edit, disabled, labelled = false }: { doc: DocModel; edit: Edit; disabled?: boolean; labelled?: boolean }) {
   const template = getTemplate(doc.templateId);
@@ -179,13 +185,14 @@ export function DesignChoices({ doc, edit, disabled, layout, onPicked }: { doc: 
 }
 
 /** Desktop: "Classic Gold ▾" opens the designs and the colours (mockup: editor's preview toolbar). */
-export function DesignPopover({ doc, edit, disabled }: { doc: DocModel; edit: Edit; disabled?: boolean }) {
+export function DesignPopover({ doc, edit, disabled, align = "start" }: { doc: DocModel; edit: Edit; disabled?: boolean; align?: "start" | "end" }) {
   const template = getTemplate(doc.templateId);
   const palette = getPalette(template, doc.colorId);
   return (
     <Popover
       label={t("preview.design")}
       testId="design-panel"
+      align={align}
       buttonLabel={t("preview.designButton", { name: template.name, colour: palette.name })}
       buttonClassName={`${button("secondary")} w-full min-w-0 justify-start px-3 aria-expanded:bg-sunken`}
       disabled={disabled}
@@ -264,6 +271,8 @@ interface TextControlsProps {
   disabled?: boolean;
   /** The phone/tablet sheet: one row each, the fit sentence shown beside the colours instead. */
   sheet?: boolean;
+  /** The phone sheet's trays (PreviewSheet): only the size (with the fit sentence), or only the label case and wording. */
+  part?: "size" | "labels";
 }
 
 /**
@@ -271,7 +280,7 @@ interface TextControlsProps {
  * The sheet keeps size and case on one row and opens the wording in a dialog, "Label wording" (the sheet has no room
  * for it beside the pages).
  */
-export function TextControls({ doc, options, layout, edit, disabled, sheet = false }: TextControlsProps) {
+export function TextControls({ doc, options, layout, edit, disabled, sheet = false, part }: TextControlsProps) {
   const [more, setMore] = useState(false);
   const latin = doc.lang === "en";
   const sizes = SIZE_OPTIONS.map((o) => ({ ...o, disabled }));
@@ -283,16 +292,15 @@ export function TextControls({ doc, options, layout, edit, disabled, sheet = fal
   const caseControl = <SegmentedControl label={t("preview.labels")} value={options.labelCase} options={cases} onChange={(v) => edit((p) => setLabelCase(p, v))} className={sheet ? "" : "w-full"} />;
   const labelStyle = options.labelStyle ?? "standard";
   if (sheet) {
-    return (
-      <div className="flex flex-col gap-2.5">
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-4">
-          <div className="min-w-0 sm:flex-1">{sizeControl}</div>
-          <div className="flex items-center justify-between gap-2.5 sm:justify-end">
-            <span className="text-[13px] text-ink-3">{t("preview.labels")}</span>
-            {caseControl}
-          </div>
-        </div>
-        {/* "Label wording", not "Labels": the row above is already labelled "Labels" (the case). Shows the choice. */}
+    const caseRow = (
+      <div className="flex items-center justify-between gap-2.5 sm:justify-end">
+        <span className="text-[13px] text-ink-3">{t("preview.labels")}</span>
+        {caseControl}
+      </div>
+    );
+    // "Label wording", not "Labels": the row above is already labelled "Labels" (the case). Shows the choice.
+    const wording = (
+      <>
         <button
           type="button"
           aria-haspopup="dialog"
@@ -313,6 +321,30 @@ export function TextControls({ doc, options, layout, edit, disabled, sheet = fal
             </button>
           </DialogActions>
         </Dialog>
+      </>
+    );
+    if (part === "size")
+      return (
+        <div className="flex flex-col gap-2">
+          {sizeControl}
+          <FitHint textSize={options.textSize} layout={layout} />
+        </div>
+      );
+    if (part === "labels")
+      return (
+        <div className="flex flex-col gap-1.5">
+          {caseRow}
+          {!latin && <p className="text-[12.5px] text-pretty text-ink-3">{t("preview.labels.latinOnly")}</p>}
+          {wording}
+        </div>
+      );
+    return (
+      <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:gap-4">
+          <div className="min-w-0 sm:flex-1">{sizeControl}</div>
+          {caseRow}
+        </div>
+        {wording}
       </div>
     );
   }
@@ -345,15 +377,14 @@ export function textSizeValue(textSize: TextSize, layout: LayoutInfo | null): st
 }
 
 /** Desktop: "T Auto · M ▾" opens the text size and label controls. */
-export function TextSizePopover(props: Omit<TextControlsProps, "sheet">) {
+export function TextSizePopover({ buttonClassName = "", ...props }: Omit<TextControlsProps, "sheet" | "part"> & { buttonClassName?: string }) {
   const value = textSizeValue(props.options.textSize, props.layout);
   return (
     <Popover
       label={t("preview.panel")}
       testId="text-size-panel"
-      align="end"
       buttonLabel={t("preview.textSize.button", { value })}
-      buttonClassName={`${button("secondary")} w-full min-w-0 justify-start px-3 aria-expanded:bg-sunken`}
+      buttonClassName={`${button("secondary")} min-w-0 justify-start gap-2 px-3 aria-expanded:bg-sunken ${buttonClassName}`}
       disabled={props.disabled}
       panelClassName="max-h-[calc(100dvh-11rem)] w-[21rem] overflow-y-auto overscroll-contain"
       button={

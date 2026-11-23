@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import { openStoredDraft, sampleDraft } from "./editor-helpers";
+import { openStoredDraft, sampleDraft, showTool } from "./editor-helpers";
 
 // Step 6.2 (VISION D16, WCAG 2.2 AA): axe-core's WCAG 2.0, 2.1 and 2.2 A/AA rules on every public page and the
 // editor's main states, in Day and Night, on a phone and a desktop. The biodata preview is left out: it is the printed
@@ -54,7 +54,12 @@ test("the editor meets WCAG 2.2 AA (axe): the form, the preview and a dialog, Da
     if (isMobile) {
       await page.getByTestId("preview-pill").click();
       await expect(page.getByRole("dialog", { name: "Preview" })).toBeVisible();
-      expect.soft(await violations(page), `preview sheet ${theme}`).toEqual([]);
+      // Each of the tool tabs' trays (Design opens first).
+      const sheet = page.getByRole("dialog", { name: "Preview" });
+      for (const tool of ["Design", "Colour", "Text", "Labels"] as const) {
+        await showTool(sheet, tool);
+        expect.soft(await violations(page), `preview sheet, ${tool} ${theme}`).toEqual([]);
+      }
       await page.keyboard.press("Escape");
       await expect(page.getByRole("dialog", { name: "Preview" })).toBeHidden();
     }

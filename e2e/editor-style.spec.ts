@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { getDocDictionary } from "../src/i18n/doc";
-import { SAVED, openStoredDraft, readStored, sampleDraft, storedField } from "./editor-helpers";
+import { SAVED, openStoredDraft, readStored, sampleDraft, showTool, storedField } from "./editor-helpers";
 import { meanPixelDifference, openOwnerStyleDraft, ownerStyleDraft } from "./style-helpers";
 
 // Step 4.5 (owner's M1 polish, refined after M1): the Telugu families' label wording in the preview's "Text and labels"
@@ -22,6 +22,7 @@ async function openStyle(page: Page, isMobile: boolean): Promise<Locator> {
         await page.getByTestId("preview-pill").click();
         await expect(sheet).toBeVisible();
       }
+      await showTool(sheet, "Labels");
       await sheet.getByRole("button", { name: /^Label wording/ }).click();
     }
     await expect(dialog).toBeVisible();
@@ -470,6 +471,7 @@ test("style controls and pages at every size, Day and Night", async ({ page, isM
   await expect(sheet).toBeHidden();
   await page.getByTestId("preview-pill").click();
   await expect(sheet).toBeVisible();
+  await showTool(sheet, "Labels");
   await shoot("style-sheet-phone");
   // The opener names the control and shows the choice; the row above stays "Labels" (Normal / ALL CAPS).
   await expect(sheet.getByRole("button", { name: /^Label wording/ })).toContainText("Telugu families");

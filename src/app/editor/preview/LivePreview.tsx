@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 import { toDocument, type DocModel } from "@/biodata/document";
 import { chartTitle } from "@/biodata/photo-pages";
@@ -18,7 +19,7 @@ import { printFromBrowserMenu } from "./export-files";
 import { fitScale, pageInView, pageTop, percent, resolveScale, stackHeight, stepZoom, PAGE_WIDTH, type Zoom } from "./layout-math";
 import { pageStatus } from "./page-status";
 import { DesignPopover, LanguageButton, TextSizePopover, type LayoutInfo } from "./PreviewControls";
-import { PreviewSheet } from "./PreviewSheet";
+import { PreviewSheet, usePhone } from "./PreviewSheet";
 
 // The live preview (BUILD_PLAN Step 3.3, VISION §5, §11, D1, D45): the real document, the same DocumentView, measure
 // and paginate as the PDF, the images and print, laid out from the draft as it is typed.
@@ -95,15 +96,21 @@ function usePaneSize(ref: RefObject<HTMLElement | null>) {
   return size;
 }
 
+/** The desktop header's language and text-size buttons: they fill their shrinking box, losing their arrow below xl. */
+const SHRINKING = "w-full min-w-0 justify-start gap-2 px-3 max-xl:[&>svg:last-child]:hidden";
+
 export interface LivePreviewProps {
   profile: BiodataProfile;
   edit: Edit;
   loadBlob: LoadBlob;
   readOnly: boolean;
+  /** The place beside the form's Simple / Detailed switch for the desktop design picker (FormLayoutSwitch). */
+  designSlot?: HTMLElement | null;
 }
 
-export function LivePreview({ profile, edit, loadBlob, readOnly }: LivePreviewProps) {
+export function LivePreview({ profile, edit, loadBlob, readOnly, designSlot }: LivePreviewProps) {
   const desktop = useSyncExternalStore(subscribeMedia, isDesktopNow, () => true);
+  const phone = usePhone();
   const [sheetOpen, setSheetOpen] = useState(false);
   const active = desktop || sheetOpen;
   const { shown, flush } = useSettledProfile(profile, active);
@@ -171,6 +178,7 @@ export function LivePreview({ profile, edit, loadBlob, readOnly }: LivePreviewPr
       onLayout={onLayout}
       fit={desktop ? "page" : "width"}
       zoomable={desktop}
+      scrolls={desktop || phone}
     />
   );
 
@@ -200,19 +208,26 @@ export function LivePreview({ profile, edit, loadBlob, readOnly }: LivePreviewPr
       className="sticky top-14 flex h-[calc(100dvh-3.5rem)] min-w-0 flex-col self-start border-l border-line bg-sunken/60"
       data-testid="live-preview"
     >
-      {/* Two rows: the pane's name with the four outputs (the main action top right, as in the mockup), then the
-          three look controls sharing the full width. */}
-      <div className="space-y-2.5 border-b border-line bg-surface/80 px-4 py-3 xl:px-5">
-        <div className="flex items-center gap-3">
-          <h2 className="min-w-0 flex-1 text-[15px] font-semibold tracking-tight text-ink">{t("preview.title")}</h2>
-          <ToolbarActions controls={controls} />
-        </div>
-        <div className="grid grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1fr)] gap-2">
-          <DesignPopover doc={doc} edit={edit} disabled={readOnly} />
-          <LanguageButton lang={profile.docLanguage} edit={edit} disabled={readOnly} className={`${button("secondary")} w-full justify-start px-3`} />
-          <TextSizePopover doc={doc} options={profile.options} layout={layout} edit={edit} disabled={readOnly} />
+      {/* One row: the printing language and the text size where the pane's name was (it stays for screen readers),
+          then the outputs, the main action top right. The design picker sits beside the form's Simple / Detailed
+          switch (owner's request 2026-11-23), so its open panel covers the form, not the page it changes. */}
+      <div className="border-b border-line bg-surface/80 px-4 py-3 xl:px-5">
+        <h2 className="sr-only">{t("preview.title")}</h2>
+        {/* One line at every desktop width: the two choices give way (their arrows go below 1280 px, then their
+            words shorten) so the outputs never wrap. */}
+        <div className="flex items-center gap-2">
+          <div className="min-w-0">
+            <LanguageButton lang={profile.docLanguage} edit={edit} disabled={readOnly} className={`${button("secondary")} ${SHRINKING}`} />
+          </div>
+          <div className="min-w-0">
+            <TextSizePopover doc={doc} options={profile.options} layout={layout} edit={edit} disabled={readOnly} buttonClassName={SHRINKING} />
+          </div>
+          <div className="ml-auto shrink-0">
+            <ToolbarActions controls={controls} />
+          </div>
         </div>
       </div>
+      {desktop && designSlot && createPortal(<DesignPopover doc={doc} edit={edit} disabled={readOnly} align="end" />, designSlot)}
       {pages}
       <ExportToast controls={controls} placement="pane" />
     </aside>
@@ -234,6 +249,7 @@ function PagesPane({
   onLayout,
   fit,
   zoomable,
+  scrolls,
 }: {
   hostRef: RefObject<HTMLDivElement | null>;
   doc: DocModel | null;
@@ -244,6 +260,8 @@ function PagesPane({
   onLayout: (info: DocumentLayoutInfo) => void;
   fit: "page" | "width";
   zoomable: boolean;
+  /** The pane scrolls its own pages: the desktop column and the phone sheet (a tablet's sheet scrolls as a whole). */
+  scrolls: boolean;
 }) {
   const pane = useRef<HTMLDivElement>(null);
   const size = usePaneSize(pane);
@@ -273,14 +291,14 @@ function PagesPane({
     <>
       <div
         ref={pane}
-        // The desktop column scrolls its pages; in the sheet the pages take their full height inside the sheet's own
-        // scrolling body (PreviewSheet), under the controls.
-        className={zoomable ? "relative min-h-0 flex-1 overflow-auto overscroll-contain outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-inset" : "relative"}
+        // The desktop column and the phone sheet scroll their pages; a tablet's sheet gives the pages their full height
+        // inside its own scrolling body (PreviewSheet), under the controls.
+        className={scrolls ? "relative min-h-0 flex-1 overflow-auto overscroll-contain outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-inset" : "relative"}
         // The pages hold nothing focusable, so the scrolling column itself takes the focus for keyboard scrolling
         // (WCAG 2.1.1; axe scrollable-region-focusable).
-        tabIndex={zoomable ? 0 : undefined}
-        role={zoomable ? "region" : undefined}
-        aria-label={zoomable ? t("preview.pane") : undefined}
+        tabIndex={scrolls ? 0 : undefined}
+        role={scrolls ? "region" : undefined}
+        aria-label={scrolls ? t("preview.pane") : undefined}
         onScroll={(event) => setCurrent(pageInView(event.currentTarget.scrollTop, event.currentTarget.clientHeight, scale, pageCount))}
         data-testid="preview-pane"
       >

@@ -4,11 +4,11 @@ import { useEffect, useId, useRef, useState, useSyncExternalStore, type PointerE
 import type { DocModel } from "@/biodata/document";
 import type { ProfileOptions } from "@/biodata/types";
 import { iconButton } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icons";
+import { Icon, type IconName } from "@/components/ui/icons";
 import { t } from "@/lib/i18n";
 import type { Edit } from "../FieldRow";
 import { SheetActions, type ExportControls } from "./ExportActions";
-import { ColourPicker, DesignChoices, FitHint, LanguageButton, TextControls, type LayoutInfo } from "./PreviewControls";
+import { ColourPicker, CurrentSwatch, DesignChoices, FitHint, LanguageButton, TextControls, type LayoutInfo } from "./PreviewControls";
 
 // The preview below 1024 px (BUILD_PLAN Step 3.3, VISION §5 tablet and mobile, D45; mockups editor-phone,
 // sheet-phone, preview-phone): a floating "Preview & download" pill (with the page count; hidden while the on-screen
@@ -17,8 +17,11 @@ import { ColourPicker, DesignChoices, FitHint, LanguageButton, TextControls, typ
 // pages, the design and colour chips, the text size and labels, and Download PDF / Share / Save as image / Print, so
 // a phone user finishes without leaving the editor.
 //
-// The controls and the pages scroll together (owner's request 2026-11-23: fixed controls left a phone only a strip
-// of the page); the header and the actions stay put.
+// On a phone the page comes first (owner's choice 2026-11-23, after the controls left only a strip of it): the page
+// fills the sheet and scrolls on its own, and a row of tool tabs above the actions (Design, Colour, Text, Labels)
+// opens one small tray at a time, so the page stays in view while a choice changes it. Tapping the open tab again
+// closes its tray and gives the page the whole height. On a tablet (and a phone on its side) the controls and the
+// pages scroll together under the header.
 //
 // The sheet stays mounted while closed (invisible, moved off-screen): its DocumentView keeps the page count for the
 // pill and is ready the moment it opens. Its controls are drawn only while it is open.
@@ -61,6 +64,17 @@ function subscribePhone(callback: () => void) {
   return () => query.removeEventListener("change", callback);
 }
 
+/** A phone held upright (below 640 px): the sheet's page-first layout. True before React starts (the static page). */
+export const usePhone = () => useSyncExternalStore(subscribePhone, () => window.matchMedia(PHONE).matches, () => true);
+
+type Tool = "design" | "colour" | "text" | "labels";
+const TOOLS: { id: Tool; icon?: IconName; label: () => string }[] = [
+  { id: "design", icon: "layout", label: () => t("preview.design") },
+  { id: "colour", label: () => t("preview.colour") },
+  { id: "text", icon: "type", label: () => t("preview.tool.text") },
+  { id: "labels", icon: "lines", label: () => t("preview.labels") },
+];
+
 /** What the open sheet makes inert behind it: the header, the skip link and the editor's panes. */
 const BEHIND = 'body a[href="#main"], header, [data-editor-pane]';
 
@@ -89,7 +103,9 @@ export function PreviewSheet({
   const pill = useRef<HTMLButtonElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
   const keyboardUp = useKeyboardUp();
-  const phone = useSyncExternalStore(subscribePhone, () => window.matchMedia(PHONE).matches, () => true);
+  const phone = usePhone();
+  const trayId = useId();
+  const [tool, setTool] = useState<Tool | null>("design");
   const [drag, setDrag] = useState<number | null>(null);
   const dragStart = useRef<{ y: number; t: number } | null>(null);
   const wasOpen = useRef(false);
@@ -193,21 +209,68 @@ export function PreviewSheet({
               </button>
             </div>
           </div>
-          {/* One scrolling column: the controls scroll away above the pages, so on a phone the page gets the whole
-              height between the header and the actions rather than a strip under fixed controls. */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain" data-testid="sheet-body">
-            {open && (
-              <div className="shrink-0 space-y-3 border-b border-line px-4 pb-3 sm:px-5" data-testid="sheet-controls">
-                <DesignChoices doc={doc} edit={edit} disabled={readOnly} layout="strip" />
-                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                  <ColourPicker doc={doc} edit={edit} disabled={readOnly} />
-                  <FitHint textSize={options.textSize} layout={layout} />
-                </div>
-                <TextControls doc={doc} options={options} layout={layout} edit={edit} disabled={readOnly} sheet />
+          {phone ? (
+            <>
+              {/* The page fills the space and scrolls on its own (LivePreview's PagesPane). */}
+              <div className="relative flex min-h-0 flex-1 flex-col bg-sunken" data-testid="sheet-body">
+                {children}
               </div>
-            )}
-            <div className="relative flex shrink-0 grow flex-col bg-sunken">{children}</div>
-          </div>
+              {open && (
+                <div className="shrink-0 border-t border-line" data-testid="sheet-tools">
+                  {tool && (
+                    <div id={trayId} role="group" aria-label={TOOLS.find((x) => x.id === tool)!.label()} className="px-4 pt-2.5 pb-2" data-testid="sheet-tray" data-tool={tool}>
+                      {tool === "design" && <DesignChoices doc={doc} edit={edit} disabled={readOnly} layout="strip" />}
+                      {tool === "colour" && (
+                        <div className="flex min-h-12 flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                          <ColourPicker doc={doc} edit={edit} disabled={readOnly} />
+                          <FitHint textSize={options.textSize} layout={layout} />
+                        </div>
+                      )}
+                      {tool === "text" && <TextControls doc={doc} options={options} layout={layout} edit={edit} disabled={readOnly} sheet part="size" />}
+                      {tool === "labels" && <TextControls doc={doc} options={options} layout={layout} edit={edit} disabled={readOnly} sheet part="labels" />}
+                    </div>
+                  )}
+                  <div className="flex border-t border-line" data-testid="sheet-tool-tabs">
+                    {TOOLS.map(({ id, icon, label }) => {
+                      const shown = tool === id;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          aria-expanded={shown}
+                          aria-controls={shown ? trayId : undefined}
+                          onClick={() => setTool(shown ? null : id)}
+                          className={`relative flex min-h-13 flex-1 flex-col items-center justify-center gap-1 text-[12px] font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-inset ${
+                            shown ? "text-brand-ink" : "text-ink-2 hover:text-ink"
+                          }`}
+                          data-tool={id}
+                        >
+                          {shown && <span aria-hidden className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-brand" />}
+                          {icon ? <Icon name={icon} className="size-5" /> : <CurrentSwatch doc={doc} className="size-[18px]" />}
+                          {label()}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            /* A tablet: one scrolling column, the controls above the pages. */
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain" data-testid="sheet-body">
+              {open && (
+                <div className="shrink-0 space-y-3 border-b border-line px-4 pb-3 sm:px-5" data-testid="sheet-controls">
+                  <DesignChoices doc={doc} edit={edit} disabled={readOnly} layout="strip" />
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                    <ColourPicker doc={doc} edit={edit} disabled={readOnly} />
+                    <FitHint textSize={options.textSize} layout={layout} />
+                  </div>
+                  <TextControls doc={doc} options={options} layout={layout} edit={edit} disabled={readOnly} sheet />
+                </div>
+              )}
+              <div className="relative flex shrink-0 grow flex-col bg-sunken">{children}</div>
+            </div>
+          )}
           <div className="border-t border-line bg-surface px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5">
             <SheetActions controls={controls} />
           </div>

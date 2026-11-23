@@ -807,6 +807,7 @@
   "preview.colour": "Colour",
   "preview.colourOption": "{name} colour",
   "preview.textSize": "Text size",
+  "preview.tool.text": "Text",
   "preview.textSize.auto": "Auto",
   "preview.textSize.autoChosen": "Auto · {size}",
   "preview.textSize.fixed": "Size {size}",

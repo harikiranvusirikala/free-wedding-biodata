@@ -14,7 +14,12 @@ import { useManage } from "./ManageProvider";
 
 const LAYOUTS: readonly FormLayout[] = ["simple", "detailed"];
 
-export const FormLayoutSwitch = memo(function FormLayoutSwitch({ layout, readOnly }: { layout: FormLayout; readOnly: boolean }) {
+
+/**
+ * `designSlot`: where the desktop preview puts its design picker (LivePreview, owner's request 2026-11-23), beside the
+ * switch, so the open design panel covers the form, not the page it changes. Empty, and so hidden, below 1024 px.
+ */
+export const FormLayoutSwitch = memo(function FormLayoutSwitch({ layout, readOnly, designSlot }: { layout: FormLayout; readOnly: boolean; designSlot?: (el: HTMLDivElement | null) => void }) {
   const manage = useManage();
   const hintId = useId();
 
@@ -31,7 +36,7 @@ export const FormLayoutSwitch = memo(function FormLayoutSwitch({ layout, readOnl
 
   return (
     <div
-      className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-2 shadow-card sm:flex-row sm:items-center sm:gap-3.5 sm:pr-4"
+      className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-2 shadow-card sm:flex-row sm:items-center sm:gap-3.5 sm:pr-4 lg:flex-wrap lg:gap-y-1.5 lg:pr-2"
       data-testid="form-layout"
     >
       <SegmentedControl
@@ -42,7 +47,9 @@ export const FormLayoutSwitch = memo(function FormLayoutSwitch({ layout, readOnl
         describedBy={hintId}
         className="w-full shrink-0 sm:w-auto [&>button]:min-w-20"
       />
-      <p id={hintId} className="min-w-0 px-1.5 pb-0.5 text-[13.5px] leading-snug text-pretty text-ink-2 sm:p-0">
+      <div ref={designSlot} className="min-w-0 empty:hidden lg:ml-auto lg:w-56" />
+      {/* On a desktop the hint takes the line under the switch and the design picker. */}
+      <p id={hintId} className="min-w-0 px-1.5 pb-0.5 text-[13.5px] leading-snug text-pretty text-ink-2 sm:p-0 lg:order-last lg:basis-full lg:px-1.5 lg:pb-1">
         {t(`layout.hint.${layout}`)}
       </p>
     </div>

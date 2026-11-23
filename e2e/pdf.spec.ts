@@ -146,16 +146,24 @@ test("feature page: the display list carries what the writers need, and the PDF 
   expect(offsite).toEqual([]);
 });
 
-test("real templates in ten languages: PDF and page images, page counts, sizes, widths, timings", async ({ page }) => {
-  test.setTimeout(600_000);
-  const offsite = watchOffsite(page);
+/** The real templates are written in parts that run side by side (one test took over four minutes alone). */
+const PDF_SHARDS = 4;
+
+async function openDocumentPage(page: Page) {
   await mkdir(OUT, { recursive: true });
   await page.setViewportSize({ width: 900, height: 1200 });
   await page.goto("/dev/document");
   await expect(page.locator("body")).toHaveAttribute("data-doc-ready", "1", { timeout: 60_000 });
+}
+
+for (let shard = 0; shard < PDF_SHARDS; shard++)
+test(`real templates in ten languages, part ${shard + 1} of ${PDF_SHARDS}: PDF and page images, page counts, sizes, widths, timings`, async ({ page }) => {
+  test.setTimeout(300_000);
+  const offsite = watchOffsite(page);
+  await openDocumentPage(page);
 
   const timings: Record<string, { pdfMs: number; imagesMs: number; pdfKB: number; jpegKB: number[] }> = {};
-  for (const id of VARIANTS) {
+  for (const id of VARIANTS.filter((_, i) => i % PDF_SHARDS === shard)) {
     const pages = page.locator(`[data-variant="${id}"] [data-page]`);
     const count = await pages.count();
     expect(count, id).toBeGreaterThan(0);
@@ -175,6 +183,16 @@ test("real templates in ten languages: PDF and page images, page counts, sizes, 
 
     timings[id] = { pdfMs: Math.round(run.ms), imagesMs: Math.round(images.ms), pdfKB: Math.round(run.bytes / 1024), jpegKB: images.bytes.map((b) => Math.round(b / 1024)) };
   }
+  await writeFile(`${OUT}/timings-part-${shard + 1}.json`, JSON.stringify({ desktop: timings }, null, 2));
+  expect(offsite).toEqual([]);
+});
+
+test("the Download engine's timings on a slowed CPU, and a PNG page", async ({ page }) => {
+  test.setTimeout(180_000);
+  const offsite = watchOffsite(page);
+  await openDocumentPage(page);
+  // Warm up as the parts above do (fonts and WebAssembly loaded) before timing.
+  await page.evaluate(() => window.__doc!.pdf("classic-gold-en-short").pdf());
 
   // A mid-range phone stand-in: the CPU slowed 4×, warm (fonts and WebAssembly already loaded).
   const cdp = await page.context().newCDPSession(page);
@@ -190,7 +208,7 @@ test("real templates in ten languages: PDF and page images, page counts, sizes, 
   const png = await page.evaluate(() => window.__doc!.pdf("classic-gold-en-short").images("png"));
   await writeFile(`${OUT}/classic-gold-en-short-page-1.png`, Buffer.from(png.images[0], "base64"));
 
-  const report = { desktop: timings, cpu4x: slow, pngKB: Math.round(png.bytes[0] / 1024) };
+  const report = { cpu4x: slow, pngKB: Math.round(png.bytes[0] / 1024) };
   await writeFile(`${OUT}/timings.json`, JSON.stringify(report, null, 2));
   console.log("Download engine:", JSON.stringify(report));
   expect(offsite).toEqual([]);

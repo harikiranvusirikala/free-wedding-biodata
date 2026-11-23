@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { DESIGN_COUNT } from "../test/fixtures/documents";
-import { SAVED, openStoredDraft, readStored, sampleDraft } from "./editor-helpers";
+import { SAVED, openStoredDraft, readStored, sampleDraft, showTool } from "./editor-helpers";
 
 // Step 3.3: the live preview. Desktop: the right column shows the real pages (the same DocumentView as the PDF),
 // follows typing and the design, colour, text size, label and language choices, counts and pages through the pages
@@ -80,9 +80,14 @@ test.describe("desktop", () => {
     const paper = () => pageOne(page).evaluate((el) => getComputedStyle(el).backgroundColor);
 
     // Design: Paisley, in its first colour (Copper), then its Teal.
-    await page.getByRole("button", { name: /^Design: Classic Gold/ }).click();
+    // The picker sits beside the form's Simple / Detailed switch, so its panel covers the form, not the page.
+    const designButton = page.getByTestId("form-layout").getByRole("button", { name: /^Design: Classic Gold/ });
+    await designButton.click();
     const panel = page.getByTestId("design-panel");
     await expect(panel.getByRole("radio")).toHaveCount(DESIGN_COUNT + 3);
+    const panelBox = (await panel.boundingBox())!;
+    const pagesBox = (await page.getByTestId("live-preview").boundingBox())!;
+    expect(panelBox.x + panelBox.width).toBeLessThanOrEqual(pagesBox.x + 1);
     await expect(panel.getByRole("radio", { name: "Classic Gold" })).toHaveAttribute("aria-checked", "true");
     await panel.getByRole("radio", { name: "Paisley" }).click();
     await expect.poll(paper).toBe("rgb(253, 247, 239)");
@@ -191,28 +196,42 @@ test.describe("phone", () => {
     const pageBox = (await sheet.locator('[data-page="1"]').boundingBox())!;
     expect(pageBox.width).toBeGreaterThan(330);
     expect(pageBox.width).toBeLessThanOrEqual(390);
-    await expect(sheet.getByTestId("fit-hint")).toHaveText("Takes 2 pages, even at the smallest size");
-    // The controls scroll away with the pages: below them, the page fills the space between the header and the
-    // actions instead of a strip under fixed controls.
-    await sheet.locator('[data-page="1"]').evaluate((el) => el.scrollIntoView({ block: "start" }));
-    const shown = await sheet.getByTestId("sheet-body").evaluate((body) => {
-      const p = body.querySelector('[data-page="1"]')!.getBoundingClientRect();
-      const b = body.getBoundingClientRect();
-      return { visible: Math.min(p.bottom, b.bottom) - Math.max(p.top, b.top), body: b.height };
-    });
-    expect(shown.visible).toBeGreaterThan(0.8 * Math.min(shown.body, 500));
-    await sheet.getByTestId("sheet-body").evaluate((el) => el.scrollTo({ top: 0 }));
     await expect(sheet.getByRole("button", { name: "Download PDF" })).toBeVisible();
     await expect(sheet.getByRole("button", { name: "Print", exact: true })).toHaveCount(0);
     await expect(sheet.getByRole("button", { name: "Save as image" })).toBeVisible();
 
+    // The page comes first: it scrolls on its own, and the tool tabs open one tray at a time, Design first.
+    const tabs = sheet.getByTestId("sheet-tool-tabs");
+    const pane = sheet.getByTestId("preview-pane");
+    const tab = (name: string) => tabs.getByRole("button", { name, exact: true });
+    await expect(tab("Design")).toHaveAttribute("aria-expanded", "true");
+    await expect(sheet.getByTestId("design-choices").getByRole("radio")).toHaveCount(DESIGN_COUNT);
+    const withTray = (await pane.boundingBox())!.height;
+    expect(await pane.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    // Tapping the open tab closes its tray: the page gets the whole height.
+    await tab("Design").click();
+    await expect(tab("Design")).toHaveAttribute("aria-expanded", "false");
+    await expect(sheet.getByTestId("sheet-tray")).toHaveCount(0);
+    const sheetBox = (await sheet.boundingBox())!;
+    await expect.poll(async () => (await pane.boundingBox())!.height).toBeGreaterThan(Math.max(withTray + 80, 0.6 * sheetBox.height));
+
+    await showTool(sheet, "Design");
     await sheet.getByTestId("design-choices").getByRole("radio", { name: "Kalyanam" }).click();
     await expect(sheet.getByTestId("design-choices").getByRole("radio", { name: "Kalyanam" })).toHaveAttribute("aria-checked", "true");
+    // The page stays in view while a choice changes it.
+    await expect(sheet.locator('[data-page="1"]')).toBeInViewport();
+    await showTool(sheet, "Colour");
+    await expect(sheet.getByTestId("design-choices")).toHaveCount(0);
+    await expect(sheet.getByTestId("fit-hint")).toHaveText("Takes 2 pages, even at the smallest size");
     await sheet.getByTestId("colour-picker").getByRole("radio").nth(1).click();
     const id = new URL(page.url()).searchParams.get("d")!;
     await expect.poll(async () => (await readStored(page, id)).templateId).toBe("kalyanam");
+    await showTool(sheet, "Text");
     await sheet.getByRole("radiogroup", { name: "Text size" }).getByRole("radio", { name: "S", exact: true }).click();
     await expect(page.locator('[data-testid="preview-pages"] [data-doc-ready="1"]')).toHaveAttribute("data-doc-step", "s");
+    await showTool(sheet, "Labels");
+    await expect(sheet.getByRole("radiogroup", { name: "Labels", exact: true })).toBeVisible();
+    await expect(sheet.getByRole("button", { name: /^Label wording/ })).toBeVisible();
 
     await page.keyboard.press("Escape");
     await expect(sheet).toBeHidden();

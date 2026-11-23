@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { setPhoto } from "@/biodata/edits";
 import type { BiodataProfile } from "@/biodata/types";
 import type { PhotoChange } from "@/components/photo/PhotoField";
@@ -38,6 +38,8 @@ import { LivePreview } from "./preview/LivePreview";
 export function DraftEditor({ controller, repo, db }: { controller: AutosaveController; repo: ProfileRepo; db: BiodataDb }) {
   const { profile, status } = useAutosave(controller);
   const conflict = status.state === "error" && status.kind === "conflict";
+  // The desktop design picker's place beside the Simple / Detailed switch (FormLayoutSwitch, LivePreview).
+  const [designSlot, setDesignSlot] = useState<HTMLDivElement | null>(null);
   // The form's order, also the rail's and the chips': the top card (Step 2.0), the photo (Step 3.1), the sections,
   // then more photos (Step 4.2b), whose pages print after the biodata.
   const ids = useMemo(() => [TOP_ID, PHOTO_ID, ...profile.sections.map((s) => s.id), PHOTO_PAGES_ID], [profile.sections]);
@@ -157,7 +159,7 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
               {/* Below lg the bottom padding keeps the last card clear of the floating Preview pill. */}
               <div className="mx-auto w-full max-w-3xl min-w-0 space-y-4 px-4 pt-4 pb-24 sm:px-6 sm:pt-6 lg:mx-0 lg:max-w-none lg:px-5 lg:pb-8" data-testid="editor-form" data-editor-pane>
                 <SaveProblem status={status} onRetry={() => void controller.flush()} backup={backupNow} />
-                <FormLayoutSwitch layout={profile.options.formLayout} readOnly={conflict} />
+                <FormLayoutSwitch layout={profile.options.formLayout} readOnly={conflict} designSlot={setDesignSlot} />
                 <TopCard
                   options={profile.options}
                   lang={profile.docLanguage}
@@ -212,7 +214,7 @@ export function DraftEditor({ controller, repo, db }: { controller: AutosaveCont
                 </aside>
               </div>
               {/* The live preview (Step 3.3): the right column on desktop; a pill and a sheet below 1024 px. */}
-              <LivePreview profile={profile} edit={edit} loadBlob={loadBlob} readOnly={conflict} />
+              <LivePreview profile={profile} edit={edit} loadBlob={loadBlob} readOnly={conflict} designSlot={designSlot} />
             </div>
           </ManageProvider>
         </EditorFrame>

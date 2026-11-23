@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { SAMPLE_PROFILE } from "../src/biodata/defaults";
 import type { BiodataProfile } from "../src/biodata/types";
 
@@ -172,4 +172,11 @@ export async function drawnPhoto(page: Page, width: number, height: number, hue:
     [width, height, hue, label, grain, jpeg] as const,
   );
   return Buffer.from(base64, "base64");
+}
+
+/** The phone sheet's tool tabs (Design, Colour, Text, Labels): opens that tab's tray unless it is already open. */
+export async function showTool(sheet: Locator, name: "Design" | "Colour" | "Text" | "Labels") {
+  const tab = sheet.getByTestId("sheet-tool-tabs").getByRole("button", { name, exact: true });
+  if ((await tab.getAttribute("aria-expanded")) !== "true") await tab.click();
+  await expect(tab).toHaveAttribute("aria-expanded", "true");
 }

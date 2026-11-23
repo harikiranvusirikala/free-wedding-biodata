@@ -293,13 +293,13 @@ export function SheetActions({ controls }: { controls: ExportControls }) {
   );
 }
 
-/** What an export is doing, did, or why it failed: over the desktop pane, above its footer; above the sheet's buttons. */
+/** What an export is doing, did, or why it failed: over the desktop pane, above its footer; at the top of the phone sheet (its tool tabs sit above the buttons); above a tablet sheet's buttons. */
 export function ExportToast({ controls, placement }: { controls: ExportControls; placement: "pane" | "sheet" }) {
   const { toast, dismiss } = controls;
   if (!toast) return null;
   return (
     <div
-      className={`pointer-events-none inset-x-0 z-[60] flex justify-center px-4 ${placement === "sheet" ? "fixed bottom-[calc(6rem+env(safe-area-inset-bottom))]" : "absolute bottom-16"}`}
+      className={`pointer-events-none inset-x-0 z-[60] flex justify-center px-4 ${placement === "sheet" ? "fixed top-[calc(8dvh+4.75rem)] sm:top-auto sm:bottom-[calc(6rem+env(safe-area-inset-bottom))]" : "absolute bottom-16"}`}
       data-testid="export-toast"
     >
       <Toast key={toast.id} tone={toast.tone === "neutral" ? "neutral" : toast.tone} role={toast.tone === "danger" ? "alert" : "status"} className="py-1.5! pr-1.5!">

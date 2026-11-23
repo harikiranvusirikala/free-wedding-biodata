@@ -38,11 +38,18 @@ const NEW_DESIGNS = [
 test.skip(({ isMobile }) => isMobile, "pages are a fixed A4 size; one project is enough");
 test.use({ deviceScaleFactor: 2 });
 
+/**
+ * The variants are checked in parts that run side by side (one test took eight minutes alone and set the length of the
+ * whole run): part k takes every SHARDS-th variant from the k-th. Each part loads the dev page and lays out all of them.
+ */
+const SHARDS = 6;
+
 /** Case and whitespace don't matter: lines wrap anywhere and English headings print in capitals. */
 const squash = (s: string) => s.toLowerCase().replace(/\s+/g, "");
 
-test("document pages: page counts, no overflow, display list text, screenshots, no other origin", async ({ page }) => {
-  test.setTimeout(900_000); // ≈ 250 variants since Step 4.4 (20 designs, second photo)
+for (let shard = 0; shard < SHARDS; shard++)
+test(`document pages, part ${shard + 1} of ${SHARDS}: page counts, no overflow, display list text, screenshots, no other origin`, async ({ page }) => {
+  test.setTimeout(300_000); // ≈ 250 variants since Step 4.4 (20 designs, second photo), a sixth in each part
   const offsite: string[] = [];
   page.on("request", (request) => {
     const url = new URL(request.url());
@@ -61,7 +68,7 @@ test("document pages: page counts, no overflow, display list text, screenshots, 
   for (const [design, lang] of NEW_DESIGNS) for (const id of [`${design}-en-short`, `${design}-en-long`, `${design}-te-short`, `${design}-${lang}-short`]) expect(ids).toContain(id);
 
   // Soft checks: every variant is checked and screenshotted even when one fails.
-  for (const v of variants) {
+  for (const v of variants.filter((_, i) => i % SHARDS === shard)) {
     const section = page.locator(`[data-variant="${v.id}"]`);
     const pages = section.locator("[data-page]");
 
