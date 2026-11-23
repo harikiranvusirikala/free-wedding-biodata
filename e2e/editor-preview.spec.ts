@@ -192,6 +192,16 @@ test.describe("phone", () => {
     expect(pageBox.width).toBeGreaterThan(330);
     expect(pageBox.width).toBeLessThanOrEqual(390);
     await expect(sheet.getByTestId("fit-hint")).toHaveText("Takes 2 pages, even at the smallest size");
+    // The controls scroll away with the pages: below them, the page fills the space between the header and the
+    // actions instead of a strip under fixed controls.
+    await sheet.locator('[data-page="1"]').evaluate((el) => el.scrollIntoView({ block: "start" }));
+    const shown = await sheet.getByTestId("sheet-body").evaluate((body) => {
+      const p = body.querySelector('[data-page="1"]')!.getBoundingClientRect();
+      const b = body.getBoundingClientRect();
+      return { visible: Math.min(p.bottom, b.bottom) - Math.max(p.top, b.top), body: b.height };
+    });
+    expect(shown.visible).toBeGreaterThan(0.8 * Math.min(shown.body, 500));
+    await sheet.getByTestId("sheet-body").evaluate((el) => el.scrollTo({ top: 0 }));
     await expect(sheet.getByRole("button", { name: "Download PDF" })).toBeVisible();
     await expect(sheet.getByRole("button", { name: "Print", exact: true })).toHaveCount(0);
     await expect(sheet.getByRole("button", { name: "Save as image" })).toBeVisible();

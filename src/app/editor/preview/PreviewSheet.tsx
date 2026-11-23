@@ -17,6 +17,9 @@ import { ColourPicker, DesignChoices, FitHint, LanguageButton, TextControls, typ
 // pages, the design and colour chips, the text size and labels, and Download PDF / Share / Save as image / Print, so
 // a phone user finishes without leaving the editor.
 //
+// The controls and the pages scroll together (owner's request 2026-11-23: fixed controls left a phone only a strip
+// of the page); the header and the actions stay put.
+//
 // The sheet stays mounted while closed (invisible, moved off-screen): its DocumentView keeps the page count for the
 // pill and is ready the moment it opens. Its controls are drawn only while it is open.
 
@@ -190,17 +193,21 @@ export function PreviewSheet({
               </button>
             </div>
           </div>
-          {open && (
-            <div className="space-y-3 border-b border-line px-4 pb-3 sm:px-5" data-testid="sheet-controls">
-              <DesignChoices doc={doc} edit={edit} disabled={readOnly} layout="strip" />
-              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-                <ColourPicker doc={doc} edit={edit} disabled={readOnly} />
-                <FitHint textSize={options.textSize} layout={layout} />
+          {/* One scrolling column: the controls scroll away above the pages, so on a phone the page gets the whole
+              height between the header and the actions rather than a strip under fixed controls. */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain" data-testid="sheet-body">
+            {open && (
+              <div className="shrink-0 space-y-3 border-b border-line px-4 pb-3 sm:px-5" data-testid="sheet-controls">
+                <DesignChoices doc={doc} edit={edit} disabled={readOnly} layout="strip" />
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                  <ColourPicker doc={doc} edit={edit} disabled={readOnly} />
+                  <FitHint textSize={options.textSize} layout={layout} />
+                </div>
+                <TextControls doc={doc} options={options} layout={layout} edit={edit} disabled={readOnly} sheet />
               </div>
-              <TextControls doc={doc} options={options} layout={layout} edit={edit} disabled={readOnly} sheet />
-            </div>
-          )}
-          <div className="relative flex min-h-0 flex-1 flex-col bg-sunken">{children}</div>
+            )}
+            <div className="relative flex shrink-0 grow flex-col bg-sunken">{children}</div>
+          </div>
           <div className="border-t border-line bg-surface px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-5">
             <SheetActions controls={controls} />
           </div>

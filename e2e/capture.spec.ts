@@ -84,12 +84,19 @@ test.describe("desktop", () => {
 test.describe("phone", () => {
   test.skip(({ isMobile }) => !isMobile, "the phone screen");
 
-  test("the Simple form on a phone, with the preview pill", async ({ page }) => {
+  test("the preview sheet on a phone, scrolled down to the page", async ({ page }) => {
     await mkdir(OUT, { recursive: true });
     await openSample(page, "capture-phone");
-    await page.locator('[data-section="personal"]').evaluate((el) => el.scrollIntoView({ block: "start" }));
-    await expect(page.getByTestId("preview-pill")).toBeVisible();
-    await page.waitForTimeout(300);
+    await page.getByTestId("preview-pill").click();
+    const sheet = page.getByRole("dialog", { name: "Preview" });
+    await expect(sheet.locator('[data-doc-ready="1"] [data-page="1"]')).toContainText("Sai Teja Mandapati");
+    await page.waitForTimeout(400); // the sheet's slide-in
+    // The controls scroll away above the page; keep the colour row in view as a hint of them.
+    await sheet.getByTestId("sheet-body").evaluate((body) => {
+      const pageTop = body.querySelector('[data-page="1"]')!.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop;
+      body.scrollTo({ top: Math.max(0, pageTop - 24) });
+    });
+    await page.waitForTimeout(200);
     await page.screenshot({ path: `${OUT}/editor-phone.png`, animations: "disabled" });
   });
 });

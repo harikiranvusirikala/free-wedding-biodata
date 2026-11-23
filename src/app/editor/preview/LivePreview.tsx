@@ -273,7 +273,9 @@ function PagesPane({
     <>
       <div
         ref={pane}
-        className="relative min-h-0 flex-1 overflow-auto overscroll-contain"
+        // The desktop column scrolls its pages; in the sheet the pages take their full height inside the sheet's own
+        // scrolling body (PreviewSheet), under the controls.
+        className={zoomable ? "relative min-h-0 flex-1 overflow-auto overscroll-contain" : "relative"}
         onScroll={(event) => setCurrent(pageInView(event.currentTarget.scrollTop, event.currentTarget.clientHeight, scale, pageCount))}
         data-testid="preview-pane"
       >
