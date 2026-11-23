@@ -44,6 +44,31 @@ CAPTURE=1 npx playwright test e2e/capture.spec.ts   # retake docs/screenshots/ f
 
 New to the code? Start with [docs/PROJECT_GUIDE.md](docs/PROJECT_GUIDE.md).
 
+## Deploy
+
+The site is a set of static files (`out/`), hosted on Vercel's free plan:
+
+1. Import the GitHub repository in Vercel. The framework is detected as Next.js; keep the default build command (`npm run build`, which also fills the offline worker) and output.
+2. No environment variables are needed. Production (the `main` branch) is the only build search engines may index and the only one that loads Google Tag Manager (`src/lib/site.ts`: `isLiveSite`, `gtmId`); previews ask search engines to stay away.
+3. `vercel.json` sets the security headers: a strict Content-Security-Policy on `/editor` (nothing can be sent to another site), a looser one on the public pages for Tag Manager, and `no-cache` on `/sw.js`. Check them after a deployment with `curl -I https://<your-deployment>/editor`.
+4. After the first production deployment: verify the site in Google Search Console (the tag is in `src/lib/site.ts`, `GOOGLE_SITE_VERIFICATION`) and submit `https://<your-site>/sitemap.xml`.
+
+A copy of the app puts its own address, Tag Manager container and Search Console code in `src/lib/site.ts` (or deletes the last two).
+
+## Roll back
+
+- **A bad deployment:** in Vercel, open Deployments, pick the last good production deployment and choose *Promote to Production* (or *Instant Rollback*). Then `git revert` the bad commits on `main` so the next deployment doesn't bring them back.
+- **The offline worker itself misbehaves:** deploy a build whose `out/sw.js` is left unfilled (build with `next build` alone instead of `npm run build`). An unfilled worker (`VERSION "dev"`) deletes every copy it kept and unregisters itself the next time each browser checks for an update, and the site then works as a plain website. Restore the normal build command afterwards.
+- Drafts are never touched by either: they live in each person's browser (IndexedDB), not in the deployment.
+
+## Troubleshooting
+
+- **"My drafts are gone":** drafts live only in the browser and device where they were made. Clearing the browser's data (or a private window closing) deletes them; a backup file (drafts menu → *Download a backup*) brings them back on any device.
+- **The editor shows an old version:** the offline worker updates in the background; close every tab of the site and open it again. The Storage card says "Works offline" once the new version is kept.
+- **"This browser can't save drafts":** IndexedDB is blocked (some private modes, or site data turned off). Use a normal window, or allow site data for this site.
+- **Indian-language text in the PDF:** every script is drawn with the bundled Noto fonts, so the PDF matches the preview on any device. Scripts outside the ten (such as Odia or Urdu) can't be printed yet.
+- **Build fails with "binding to a port: Operation not permitted":** Turbopack starts helper processes on local ports; run the build where the shell may open ports (a normal terminal).
+
 ## Documents
 
 - [docs/VISION.md](docs/VISION.md): what the product is and the decisions behind it.
