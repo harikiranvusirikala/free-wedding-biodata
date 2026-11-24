@@ -36,7 +36,7 @@ export const FormLayoutSwitch = memo(function FormLayoutSwitch({ layout, readOnl
 
   return (
     <div
-      className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-2 shadow-card sm:flex-row sm:items-center sm:gap-3.5 sm:pr-4 lg:flex-wrap lg:gap-y-1.5 lg:pr-2"
+      className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-2 shadow-card sm:flex-row sm:items-center sm:gap-3.5 lg:pr-2"
       data-testid="form-layout"
     >
       <SegmentedControl
@@ -48,8 +48,8 @@ export const FormLayoutSwitch = memo(function FormLayoutSwitch({ layout, readOnl
         className="w-full shrink-0 sm:w-auto [&>button]:min-w-20"
       />
       <div ref={designSlot} className="min-w-0 empty:hidden lg:ml-auto lg:w-56" />
-      {/* On a desktop the hint takes the line under the switch and the design picker. */}
-      <p id={hintId} className="min-w-0 px-1.5 pb-0.5 text-[13.5px] leading-snug text-pretty text-ink-2 sm:p-0 lg:order-last lg:basis-full lg:px-1.5 lg:pb-1">
+      {/* Said by screen readers, not shown (owner's request 2026-11-24: the line made the bar untidy). */}
+      <p id={hintId} className="sr-only">
         {t(`layout.hint.${layout}`)}
       </p>
     </div>
